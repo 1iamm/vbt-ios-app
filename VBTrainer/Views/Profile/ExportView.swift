@@ -32,7 +32,7 @@ struct ExportView: View {
             }
 
             Section {
-                Text("数据导出后，App **不会**保留任何副本。VBTrainer 不上传服务器。")
+                Text("导出的数据为你本地的副本，App 不保留导出文件。HealthKit 健康数据（心率/HRV/睡眠/温度）始终在本机处理，**永远不上云**。")
                     .font(Tokens.Font.footnote)
                     .foregroundStyle(Tokens.Color.secondaryLabel)
             }

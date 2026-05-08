@@ -48,7 +48,7 @@ struct ProfileView: View {
                 }
 
                 Section("隐私") {
-                    Text("所有训练、心率、HRV、睡眠数据 **仅存储在你的设备上**。VBTrainer 不上传任何数据到服务器。")
+                    Text("V1 阶段：所有数据仅存储在你的设备上。\n\n后续版本：心率 / HRV / 睡眠 / 温度等 HealthKit 数据**永远只在本机**；训练记录可选开启云同步（用于跨设备恢复 + 完整历史）。所有上云行为均需你明确同意。")
                         .font(Tokens.Font.footnote)
                         .foregroundStyle(Tokens.Color.secondaryLabel)
                 }

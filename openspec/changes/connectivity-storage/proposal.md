@@ -1,5 +1,8 @@
 # Proposal: Connectivity & Storage
 
+> ⚠️ **历史文档说明（2026-05-08 修订）**
+> 本 change 的"数据全本地，零服务器"陈述是 V1 阶段的事实，**V1.5 起改为 Hybrid 模型**（opt-in 云同步用于看历史 + 跨设备恢复）。详见 [docs/CLOUD_ARCHITECTURE.md](../../../docs/CLOUD_ARCHITECTURE.md)。
+
 ## Why
 
 Proposal 2 输出 `WorkoutSnapshot`（值类型），但目前只在内存中。本 proposal 把它持久化到 SwiftData，并通过 WatchConnectivity 把训练完成的数据从 Watch 传到 iPhone，构成"采集→存储→展示"的真实链路。

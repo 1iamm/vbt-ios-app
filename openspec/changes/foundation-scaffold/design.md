@@ -1,3 +1,12 @@
+> ⚠️ **历史文档说明（2026-05-08 修订）**
+> 本 change 是 V1 起步时的设计文档，部分内容在实施过程中或之后修订：
+> - **部署目标**：原计划 iOS 16 / watchOS 9，**实施时改为 iOS 17 / watchOS 10**（SwiftData @Model 强制要求）。tasks.md 1.3 已记录修订
+> - **类名**：原计划 `ExerciseSet`，实施时改为 `WorkoutSet`（避开 Swift `Set` 类型冲突）
+> - **数据策略**：原 V1 决定"数据全本地，不传服务器"，**V1.5 起改为 Hybrid Local-First + Opt-in Cloud Sync**（详见 [docs/CLOUD_ARCHITECTURE.md](../../../docs/CLOUD_ARCHITECTURE.md)）
+> - **下方原文保留作为决策审计追踪，不再代表当前架构**
+
+---
+
 ## Context
 
 VBTrainer 项目从空仓库起步。已有：

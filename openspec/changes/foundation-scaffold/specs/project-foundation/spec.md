@@ -1,3 +1,10 @@
+> ⚠️ **历史文档说明（2026-05-08 修订）**
+> 本 spec 写于 V1 起步。下方部分要求在实施时被更新：
+> - **部署目标**：原文写「iOS 16.0 / watchOS 9.0」，**实施时改为 iOS 17 / watchOS 10**（SwiftData @Model 强制要求）
+> 当前生效约束以 `project.yml` 和 `.claude/CLAUDE.md §3` 为准。
+
+---
+
 ## ADDED Requirements
 
 ### Requirement: Xcode 双 Target 工程结构
