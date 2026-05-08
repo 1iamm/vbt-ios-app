@@ -471,9 +471,28 @@ HRmax = 208 − 0.7×年龄（用户实测优先）。Z1 50-60% / Z2 60-70% / Z3
 
 ---
 
-## 8. V2 路线图（AI 介入）
+## 8. V1.5 / V2 / V3 路线图（云架构 + AI 介入）
 
-> V1 上线、自用 + 朋友试用 4-6 周后启动 V2。
+> V1 上线、自用 + 朋友试用 4-6 周后启动 V1.5；V1.5 上线后 4-6 周启动 V2。
+>
+> 详细技术架构见 [docs/CLOUD_ARCHITECTURE.md](docs/CLOUD_ARCHITECTURE.md)
+
+### V1.5 云同步（M6 - M9）
+
+**V1.5.1 鉴权 + 云后端**
+- 后端：Supabase（海外起步）
+- 鉴权：Sign in with Apple
+- 仅海外区 App Store 上线
+
+**V1.5.2 选择性云同步**
+- Onboarding 加 2 个开关：「启用云同步」（默认关）/「帮助改进 AI」（默认关）
+- 只同步训练衍生数据：Workout / Set / Rep / Template / PR
+- **不**同步 HealthKit 原始数据（心率/HRV/睡眠/温度）— Apple 红线
+- 跨设备恢复：换手机后 Apple ID 登录即可恢复历史
+
+**V1.5.3 隐私政策**
+- 起草并发布 Privacy Policy
+- App Store Review 重点说明 HealthKit 边界
 
 ### V2 核心：让 AI 当私教
 
@@ -505,11 +524,25 @@ HRmax = 208 − 0.7×年龄（用户实测优先）。Z1 50-60% / Z2 60-70% / Z3
 - 私教远程查看学员数据 + 调整计划
 - 订阅模式：个人 ¥99/月 / 私教 ¥299/月
 
-**V2.7 服务端化**
-- 引入轻量后端（Vercel / Cloud Functions）
-- 用户账号系统
-- 数据云备份（用户明示同意）
-- HealthKit 数据脱敏后上传供 AI 分析
+**V2.7 AI 训练数据池**
+- 用户 opt-in 后，训练数据脱敏（k-匿名 + bucketing）进入 AI 训练池
+- 用于持续改进 readiness 公式 / 计划生成质量 / 速度阈值校准
+- **HealthKit 原始数据永远不进入此池**（仅训练衍生数据）
+
+### V3 中国大陆扩张（M15+）
+
+**V3.1 公司主体**
+- 注册公司 / 个体工商户
+- ICP 备案 + 网信办备案 + 算法备案
+
+**V3.2 数据本地化**
+- 中国大陆用户数据迁阿里云 RDS for PostgreSQL
+- 双区域（海外 Supabase + 中国大陆阿里云）数据隔离
+
+**V3.3 中国大陆 App Store 上架**
+- 注册中国大陆 Apple Developer 账号
+- 集成微信支付 / 支付宝
+- 重新过审（中国 App Store 审核独立）
 
 ---
 
