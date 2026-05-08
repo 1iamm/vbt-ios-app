@@ -52,6 +52,9 @@ targets:
       - path: VBTrainer
       - path: Shared
     resources: []
+    dependencies:
+      - target: VBTrainerWatch Watch App
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.vbtrainer.app
@@ -64,6 +67,7 @@ targets:
         INFOPLIST_KEY_NSHealthShareUsageDescription: "VBTrainer 读取心率、睡眠、HRV、体温等健康数据，用于训练前身体准备度评估和训练中心率监测。所有数据仅在本机处理，不上传服务器。"
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: "VBTrainer 将训练记录写入 Apple 健康，方便你跨 App 查看训练历史。"
         INFOPLIST_KEY_CFBundleDisplayName: "VBTrainer"
+        CODE_SIGN_ENTITLEMENTS: VBTrainer/VBTrainer.entitlements
 
   # ─────────────────────────────────────────────────────────────
   # watchOS App (Modern Watch App — standalone target)
@@ -89,6 +93,7 @@ targets:
         INFOPLIST_KEY_WKCompanionAppBundleIdentifier: com.vbtrainer.app
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        CODE_SIGN_ENTITLEMENTS: "VBTrainerWatch Watch App/VBTrainerWatch.entitlements"
 
   # ─────────────────────────────────────────────────────────────
   # Tests (algorithm unit tests — populated in Proposal 2+)

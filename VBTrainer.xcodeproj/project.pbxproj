@@ -73,6 +73,7 @@
 		5C6449DAD2C72EC4A35369E9 /* RepEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF6988B479EC5DB5866635F /* RepEvent.swift */; };
 		5DDFFDB942E8711A9B1F0F3D /* ReadinessSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = B78E84ADFACD68CFE9C5003A /* ReadinessSnapshot.swift */; };
 		5E82B12F98260C1A55C21290 /* Rep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 873EDB1EE1B33B4E706B662F /* Rep.swift */; };
+		61145DDB2F106DBFDCC81038 /* VBTrainerWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 14515C08B272DE20424B55DD /* VBTrainerWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		616DD8A2314D069D3E107823 /* TemplateItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C6270BEC1DFC9BC7A738CDC /* TemplateItem.swift */; };
 		63A9FC21813415B52CBB5808 /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 593380F7EC806FBFF7C49B7E /* Tokens.swift */; };
 		63CEB7A39497F37EAAA57EF0 /* VelocityLossCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1FC3A823BC6F34F55A4D4D4 /* VelocityLossCalculator.swift */; };
@@ -176,6 +177,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		07AAD6827C8AFBBE954A1CBF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2C412330613ACB0CC0A4B2D4 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = FEA3752596C3D80F5BEF885C;
+			remoteInfo = "VBTrainerWatch Watch App";
+		};
 		6230F802CF9162698C5DB97A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 2C412330613ACB0CC0A4B2D4 /* Project object */;
@@ -184,6 +192,20 @@
 			remoteInfo = VBTrainer;
 		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C0F059F845B39B958760BEE0 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				61145DDB2F106DBFDCC81038 /* VBTrainerWatch Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		040793722487585BD687F7FF /* ReadinessRingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessRingCard.swift; sourceTree = "<group>"; };
@@ -214,7 +236,7 @@
 		3B022E4460ED5F163EB85388 /* ReadinessCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessCalculatorTests.swift; sourceTree = "<group>"; };
 		3D3E556E0623DBEB57E04A1A /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
 		3DDAB483744249B19D96D2C4 /* ReadinessCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessCalculator.swift; sourceTree = "<group>"; };
-		47DCBAE23144CB47319B2228 /* VBTrainerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = VBTrainerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		47DCBAE23144CB47319B2228 /* VBTrainerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VBTrainerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4842559AE225408225D4FD30 /* RepDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepDetector.swift; sourceTree = "<group>"; };
 		4A8AD119BAF280F74418ACBC /* WorkoutSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSet.swift; sourceTree = "<group>"; };
 		4C6270BEC1DFC9BC7A738CDC /* TemplateItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateItem.swift; sourceTree = "<group>"; };
@@ -226,6 +248,7 @@
 		5DE65582D68362E92046C681 /* ExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportView.swift; sourceTree = "<group>"; };
 		620FE65C12C2D744A49151AC /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		639E293504390C1283B706AE /* UserProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfile.swift; sourceTree = "<group>"; };
+		66517A0D8FEE468C6CB3E2C8 /* VBTrainer.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VBTrainer.entitlements; sourceTree = "<group>"; };
 		66A96BA622B779D89CABAFB3 /* WatchNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchNavigation.swift; sourceTree = "<group>"; };
 		6793EFF149E0ED9C98B9EC47 /* ModelSchema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelSchema.swift; sourceTree = "<group>"; };
 		68B45F953766BF05F0E8C641 /* PlansView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlansView.swift; sourceTree = "<group>"; };
@@ -241,6 +264,7 @@
 		8573129F4AD45FB7111513E1 /* ActiveWorkoutSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWorkoutSession.swift; sourceTree = "<group>"; };
 		873EDB1EE1B33B4E706B662F /* Rep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rep.swift; sourceTree = "<group>"; };
 		8A7418502194831509A8EE77 /* SyntheticMotionGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntheticMotionGenerator.swift; sourceTree = "<group>"; };
+		8C1DBDAE44591A4C1527CB6D /* VBTrainerWatch.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = VBTrainerWatch.entitlements; sourceTree = "<group>"; };
 		915BBD673BEA3CF7F76D6219 /* HeartRateZonesDonut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateZonesDonut.swift; sourceTree = "<group>"; };
 		925A63C82310EDD68A1D64DD /* ExerciseLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseLibrary.swift; sourceTree = "<group>"; };
 		945F5F0DB2D9194262F354C1 /* JumpDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpDetectorTests.swift; sourceTree = "<group>"; };
@@ -320,9 +344,9 @@
 			isa = PBXGroup;
 			children = (
 				47FABE800312226CB79CA0A3 /* App */,
-				5785D4A9785AF2D18842AA23 /* Resources */,
 				A1F9FFD23BB4850F768A4DB0 /* Services */,
 				DF934F0A5003D08A92ED139F /* Views */,
+				66517A0D8FEE468C6CB3E2C8 /* VBTrainer.entitlements */,
 			);
 			path = VBTrainer;
 			sourceTree = "<group>";
@@ -344,13 +368,6 @@
 				18E00C7D277EA2D2BBA22FF1 /* VBTrainerApp.swift */,
 			);
 			path = App;
-			sourceTree = "<group>";
-		};
-		5785D4A9785AF2D18842AA23 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Resources;
 			sourceTree = "<group>";
 		};
 		60AA80BC387090152C0DEB41 /* Services */ = {
@@ -399,13 +416,6 @@
 				9ED44CB046CFD2AA2D2A2EE4 /* PaperCitation.swift */,
 			);
 			path = Citations;
-			sourceTree = "<group>";
-		};
-		7FB7FD447E35F88B7EE54A31 /* Resources */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Resources;
 			sourceTree = "<group>";
 		};
 		94E9C618EEF30795676E9B78 /* History */ = {
@@ -574,21 +584,13 @@
 		F7F3CA8CBFE602757FEF39FC /* VBTrainerWatch Watch App */ = {
 			isa = PBXGroup;
 			children = (
-				FAE34C311F5EEC04CEB4D6B5 /* Algorithms */,
 				1F9AD5A213C726238EBA1D3D /* App */,
-				7FB7FD447E35F88B7EE54A31 /* Resources */,
 				FB97FA69F511FFCFF80A69E4 /* Sensors */,
 				A7FEB019EE941FD1937D06F3 /* Services */,
 				75B7EA9C629FAE3DABB2C4CF /* Views */,
+				8C1DBDAE44591A4C1527CB6D /* VBTrainerWatch.entitlements */,
 			);
 			path = "VBTrainerWatch Watch App";
-			sourceTree = "<group>";
-		};
-		FAE34C311F5EEC04CEB4D6B5 /* Algorithms */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Algorithms;
 			sourceTree = "<group>";
 		};
 		FB97FA69F511FFCFF80A69E4 /* Sensors */ = {
@@ -610,10 +612,12 @@
 			buildPhases = (
 				269105795D66BBF91D3E4F46 /* Sources */,
 				E0332D222B8A7A0BDD7CD320 /* Resources */,
+				C0F059F845B39B958760BEE0 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				4318ABE43B89E8315B7CF49B /* PBXTargetDependency */,
 			);
 			name = VBTrainer;
 			packageProductDependencies = (
@@ -672,7 +676,6 @@
 						ProvisioningStyle = Automatic;
 					};
 					ABD7CD5248583DE50E12AC4B = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 					FEA3752596C3D80F5BEF885C = {
@@ -916,6 +919,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		4318ABE43B89E8315B7CF49B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = FEA3752596C3D80F5BEF885C /* VBTrainerWatch Watch App */;
+			targetProxy = 07AAD6827C8AFBBE954A1CBF /* PBXContainerItemProxy */;
+		};
 		A5DDDA9A2477EE6F5EDF45F5 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 980D2C66E5B11F3991533F68 /* VBTrainer */;
@@ -928,6 +936,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = X3VJ3KCDDZ;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -945,6 +954,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = VBTrainer/VBTrainer.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_TEAM = X3VJ3KCDDZ;
 				INFOPLIST_KEY_CFBundleDisplayName = VBTrainer;
@@ -969,6 +979,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "VBTrainerWatch Watch App/VBTrainerWatch.entitlements";
 				DEVELOPMENT_TEAM = X3VJ3KCDDZ;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "VBTrainer 读取心率、HRV、睡眠数据。所有数据仅在本机处理。";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "VBTrainer 将训练记录写入 Apple 健康。";
@@ -990,6 +1001,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = VBTrainer/VBTrainer.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_TEAM = X3VJ3KCDDZ;
 				INFOPLIST_KEY_CFBundleDisplayName = VBTrainer;
@@ -1084,6 +1096,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = X3VJ3KCDDZ;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -1164,6 +1177,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = "VBTrainerWatch Watch App/VBTrainerWatch.entitlements";
 				DEVELOPMENT_TEAM = X3VJ3KCDDZ;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "VBTrainer 读取心率、HRV、睡眠数据。所有数据仅在本机处理。";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "VBTrainer 将训练记录写入 Apple 健康。";
