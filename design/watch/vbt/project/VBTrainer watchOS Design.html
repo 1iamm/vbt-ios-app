@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>VBTrainer · watchOS Design</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { background: #f0eee9; }
+  #root { width: 100%; height: 100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel" src="extras.jsx"></script>
+<script type="text/babel" src="screens-prd.jsx"></script>
+
+<script type="text/babel">
+const { useState } = React;
+
+// Spec sheets — short, dense, designer-handoff style
+const specHome = [
+  ['Button',         'Ø 248pt · #FF9500'],
+  ['Button label',   '44pt 700 white'],
+  ['Inset ring',     '6pt rgba(255,255,255,0.10)'],
+  ['Hint label',     '13pt 500 systemGray'],
+  ['Last value',     '14pt 500 white'],
+  ['Top padding',    '20pt'],
+  ['Center offset',  'vertical center +10pt'],
+];
+const specReadiness = [
+  ['Ring',           'Ø 240pt · 14pt stroke'],
+  ['Score',          '65pt 800 #FFFFFF'],
+  ['Ring color',     'green ≥80 · orange 60–79 · red <60'],
+  ['Metric row',     '11pt 500 sub · 14pt 600 white'],
+  ['Row spacing',    '4pt vertical'],
+  ['Side padding',   '22pt'],
+];
+const specCMJ = [
+  ['Countdown #',    '130pt 800 #FF9500'],
+  ['Go label',       '70pt 800 #30D158'],
+  ['Result #',       '80pt 800 white'],
+  ['Result unit',    '18pt 500 systemGray'],
+  ['Attempt rows',   '15pt 600 · best in green'],
+  ['Haptic on jump', '.start (sharp)'],
+];
+const specPicker = [
+  ['Row height',     '60pt'],
+  ['Icon Ø',         '40pt'],
+  ['Title CN',       '15pt 600 white'],
+  ['Sub EN',         '9pt 500 sub +0.5'],
+  ['Selected dot',   '4pt orange'],
+  ['Crown scroll',   '1 row per click'],
+];
+const specWeight = [
+  ['Number',         '100pt 800 white'],
+  ['Unit',           '22pt 500 sub'],
+  ['Last hint',      '11pt 500 sub'],
+  ['Crown step',     '+2.5kg per detent'],
+  ['Crown 2× tap',   'switch to 0.5kg fine'],
+  ['Long-press #',   'numeric keypad'],
+];
+const specLive = [
+  ['Header',         '11pt 600 sub · 32pt from top'],
+  ['Rep label',      '11pt 500 stateColor'],
+  ['Velocity #',     '100pt 800 stateColor'],
+  ['Unit',           '18pt 500 sub'],
+  ['Bottom row',     '19pt 700 white tabular'],
+  ['End button',     '44pt H · 27pt radius · #FF453A'],
+  ['Tap (not btn)',  'cycle: m/s → VL% → bpm'],
+  ['Long-press',     'safe menu: pause / skip / end'],
+];
+const specRest = [
+  ['Top summary',    '11pt 600 white · 10pt sub'],
+  ['Ring',           'Ø 250pt · 10pt stroke'],
+  ['Countdown',      '55pt 800 white · m:ss'],
+  ['Bottom rec',     '14pt 700 #30D158'],
+  ['Crown',          '−5s per click'],
+  ['Tap',            '+30s'],
+  ['Swipe left',     'skip rest'],
+];
+const specSummary = [
+  ['Stat row',       '38pt 800 white'],
+  ['Stat label',     '9pt 500 sub +0.6'],
+  ['Sub unit',       '11pt 500 sub'],
+  ['Done button',    '50pt H · green/18%'],
+  ['Auto-advance',   '3s → plan progress'],
+];
+const specPlan = [
+  ['Row spacing',    '22pt vertical'],
+  ['Dot Ø',          '24pt'],
+  ['Connector',      '2pt rgba(255,255,255,0.12)'],
+  ['Done',           'gray strikethrough'],
+  ['Current',        'orange dot + white text'],
+  ['Pending',        'hollow dot · 70% white'],
+];
+
+// ─────────────────────────────────────────────
+// Always-On dimmed variant cluster
+// ─────────────────────────────────────────────
+function DimmedNote() {
+  return (
+    <div style={{
+      width: 320, padding: 22, borderRadius: 14, background:'#fafaf7',
+      border:'1px solid rgba(0,0,0,0.05)',
+      fontFamily:'ui-sans-serif,-apple-system,system-ui,sans-serif',
+    }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color:'#8E8E93',
+        letterSpacing:'0.08em', textTransform:'uppercase' }}>Always-On 适配</div>
+      <div style={{ fontSize: 22, fontWeight: 600, marginTop: 4, color:'#000' }}>
+        同一布局 · 低功耗状态
+      </div>
+      <ul style={{ marginTop: 14, paddingLeft: 18, color:'#333', fontSize: 13, lineHeight: 1.6 }}>
+        <li>整体亮度降至 32%（OLED 像素级，非滤镜）</li>
+        <li>所有颜色降饱和 30%；橙→暗橙、绿→暗绿</li>
+        <li>动画停止，倒计时按秒整跳（不平滑过渡）</li>
+        <li>训练中 rep 计数 + 最后速度仍可读 · 心率刷新降至 1Hz</li>
+        <li>抬腕检测唤醒 → 0.1s 内恢复 100% 亮度</li>
+        <li>轻按副按钮立即满亮 · 5s 后自动回低亮</li>
+      </ul>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Mode-cycle row for the live screen
+// ─────────────────────────────────────────────
+function LiveCycle() {
+  const [mode, setMode] = useState('velocity');
+  return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap: 12 }}>
+      <LiveWorkout state="good" mode={mode}/>
+      <div style={{ display:'flex', gap: 6, fontFamily: T.font }}>
+        {[['velocity','m/s'],['vl','VL%'],['hr','BPM']].map(([k, l]) => (
+          <button key={k} onClick={() => setMode(k)}
+            style={{
+              fontFamily:'inherit', fontSize: 11, fontWeight: 600,
+              padding: '6px 12px', borderRadius: 12,
+              border: 'none', cursor: 'pointer',
+              background: mode === k ? '#000' : 'rgba(0,0,0,0.06)',
+              color: mode === k ? '#fff' : '#444',
+              letterSpacing: '0.05em', textTransform: 'uppercase',
+            }}>{l}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// Watch face mock that hosts the corner complication
+// ─────────────────────────────────────────────
+function CornerHost() {
+  return (
+    <div style={{
+      width: 396, height: 484, borderRadius: 55,
+      background:'#0a0a0a', position:'relative', color: T.fg,
+      fontFamily: T.font, overflow:'hidden',
+    }}>
+      {/* digital time, faux face */}
+      <div style={{ position:'absolute', top: 60, left: 0, right: 0, textAlign:'center' }}>
+        <div style={{ fontSize: 110, fontWeight: 800, letterSpacing:'-0.04em',
+          color:'#fff', fontVariantNumeric:'tabular-nums' }}>10:24</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: T.sub, marginTop: 4,
+          letterSpacing:'0.08em', textTransform:'uppercase' }}>周三 · 5月 8日</div>
+      </div>
+      {/* corner complication anchored bottom-left */}
+      <div style={{ position:'absolute', bottom: 8, left: 8 }}>
+        <div style={{ width: 88, height: 88, position:'relative' }}>
+          <svg width="88" height="88" viewBox="0 0 88 88"
+            style={{ position:'absolute', inset:0 }}>
+            <path d="M 6 82 A 76 76 0 0 1 82 6" stroke={T.orange} strokeWidth="3"
+              strokeLinecap="round" fill="none" strokeDasharray="120" strokeDashoffset="46"/>
+          </svg>
+          <div style={{ position:'absolute', left: 8, bottom: 8 }}>
+            <div style={{ fontSize: 22, fontWeight: 800, color: T.orange,
+              letterSpacing:'-0.04em', lineHeight: 1, fontVariantNumeric:'tabular-nums' }}>0.62</div>
+            <div style={{ fontSize: 9, fontWeight: 600, color: T.sub,
+              letterSpacing:'0.06em', textTransform:'uppercase', marginTop: 1 }}>VBT</div>
+          </div>
+        </div>
+      </div>
+      {/* circular complication top-right */}
+      <div style={{ position:'absolute', top: 16, right: 16 }}>
+        <div style={{ width: 64, height: 64, borderRadius:'50%', position:'relative',
+          display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <Ring size={64} stroke={4} progress={0.62} color={T.orange}/>
+          <div style={{ fontSize: 18, fontWeight: 800, letterSpacing:'-0.04em' }}>0.62</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Notepad({ children, w = 320, accent = '#FF9500' }) {
+  return (
+    <div style={{
+      width: w, padding: 22, borderRadius: 14, background:'#fafaf7',
+      border:'1px solid rgba(0,0,0,0.05)',
+      fontFamily:'ui-sans-serif,-apple-system,system-ui,sans-serif',
+      color:'#1c1c1e',
+      borderLeft: `3px solid ${accent}`,
+    }}>{children}</div>
+  );
+}
+
+// ─────────────────────────────────────────────
+// MAIN
+// ─────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas>
+
+      {/* Hero — system principles up front */}
+      <DCSection id="00-system" title="00 · System" subtitle="6 colors, 5 type sizes, 5 haptics — the entire design system fits on one card.">
+        <DCArtboard id="palette"    label="Palette"           width={480} height={420}><PaletteCard/></DCArtboard>
+        <DCArtboard id="type"       label="Type Scale"        width={540} height={420}><TypeCard/></DCArtboard>
+        <DCArtboard id="haptics"    label="Haptics × Visual"  width={700} height={420}><HapticsCard/></DCArtboard>
+        <DCArtboard id="gestures"   label="Gestures"          width={700} height={420}><GestureCard/></DCArtboard>
+        <DCArtboard id="sizing"     label="Sizing · 41/45/49" width={720} height={360}><SizingCard/></DCArtboard>
+        <DCArtboard id="principles" label="5 Principles"      width={700} height={520}><PrinciplesCard/></DCArtboard>
+      </DCSection>
+
+      {/* Pre-workout */}
+      <DCSection id="A-pre" title="A · 训练前" subtitle="抬腕 → 评估 → 选动作 → 输入重量 (5 屏)">
+        <DCArtboard id="01-home"      label="01 · Home"        width={W} height={H}><Home/></DCArtboard>
+        <DCArtboard id="01-home-spec" label="01 · spec"        width={380} height={H}><SpecCard title="01 · Home" lines={specHome}/></DCArtboard>
+
+        <DCArtboard id="02-readiness"      label="02 · Readiness"   width={W} height={H}><Readiness/></DCArtboard>
+        <DCArtboard id="02-readiness-spec" label="02 · spec"        width={380} height={H}><SpecCard title="02 · Readiness" lines={specReadiness}/></DCArtboard>
+
+        <DCArtboard id="03-cmj-1" label="03a · 倒计时" width={W} height={H}><CMJCountdown n={3}/></DCArtboard>
+        <DCArtboard id="03-cmj-2" label="03b · 跳"     width={W} height={H}><CMJGo/></DCArtboard>
+        <DCArtboard id="03-cmj-3" label="03c · 结果"   width={W} height={H}><CMJResult/></DCArtboard>
+        <DCArtboard id="03-cmj-spec" label="03 · spec" width={380} height={H}><SpecCard title="03 · CMJ Test" lines={specCMJ}/></DCArtboard>
+
+        <DCArtboard id="04-picker"      label="04 · 选动作"   width={W} height={H}><ExercisePicker/></DCArtboard>
+        <DCArtboard id="04-picker-spec" label="04 · spec"     width={380} height={H}><SpecCard title="04 · Exercise Picker" lines={specPicker}/></DCArtboard>
+
+        <DCArtboard id="05-weight"      label="05 · 输入重量" width={W} height={H}><WeightInput/></DCArtboard>
+        <DCArtboard id="05-weight-spec" label="05 · spec"     width={380} height={H}><SpecCard title="05 · Weight Input" lines={specWeight}/></DCArtboard>
+      </DCSection>
+
+      {/* During workout — the heart of the design */}
+      <DCSection id="B-live" title="B · 训练中 · 核心" subtitle="一屏一信息。颜色即状态。点击切换显示模式。">
+        {/* The four states of the live screen, side-by-side for comparison */}
+        <DCArtboard id="06-live-good"      label="06 · 达标 (white)"   width={W} height={H}><LiveWorkout state="good"      velocity="0.62"/></DCArtboard>
+        <DCArtboard id="06-live-excellent" label="06 · 优秀 (green)"   width={W} height={H}><LiveWorkout state="excellent" velocity="0.71"/></DCArtboard>
+        <DCArtboard id="06-live-slow"      label="06 · 偏慢 (orange)"  width={W} height={H}><LiveWorkout state="slow"      velocity="0.48"/></DCArtboard>
+        <DCArtboard id="06-live-fail"      label="06 · 未达标 (red)"   width={W} height={H}><LiveWorkout state="fail"      velocity="0.31"/></DCArtboard>
+
+        {/* Display mode cycle */}
+        <DCArtboard id="06-live-vl" label="06 · VL% 模式" width={W} height={H}><LiveWorkout state="good" mode="vl"/></DCArtboard>
+        <DCArtboard id="06-live-hr" label="06 · 心率模式" width={W} height={H}><LiveWorkout state="good" mode="hr"/></DCArtboard>
+
+        <DCArtboard id="06-live-spec" label="06 · spec"   width={380} height={H}><SpecCard title="06 · Live Workout" lines={specLive}/></DCArtboard>
+
+        <DCArtboard id="07-rest"      label="07 · 组间休息" width={W} height={H}><Rest/></DCArtboard>
+        <DCArtboard id="07-rest-spec" label="07 · spec"     width={380} height={H}><SpecCard title="07 · Rest Timer" lines={specRest}/></DCArtboard>
+      </DCSection>
+
+      {/* Post-workout */}
+      <DCSection id="C-post" title="C · 训练后" subtitle="3 个数字 → 下一动作">
+        <DCArtboard id="08-summary"      label="08 · 训练总结" width={W} height={H}><Summary/></DCArtboard>
+        <DCArtboard id="08-summary-spec" label="08 · spec"     width={380} height={H}><SpecCard title="08 · Summary" lines={specSummary}/></DCArtboard>
+
+        <DCArtboard id="09-plan"      label="09 · 计划进度" width={W} height={H}><PlanProgress/></DCArtboard>
+        <DCArtboard id="09-plan-spec" label="09 · spec"     width={380} height={H}><SpecCard title="09 · Plan Progress" lines={specPlan}/></DCArtboard>
+      </DCSection>
+
+      {/* Always-on adapations */}
+      <DCSection id="D-aod" title="D · Always-On 常亮模式" subtitle="同一布局 · 32% 亮度 · 静止帧">
+        <DCArtboard id="aod-home"      label="Home · AOD"        width={W} height={H}><Home alwaysOn/></DCArtboard>
+        <DCArtboard id="aod-live"      label="Live · AOD"        width={W} height={H}><LiveWorkout alwaysOn state="good"/></DCArtboard>
+        <DCArtboard id="aod-rest"      label="Rest · AOD"        width={W} height={H}><Rest alwaysOn/></DCArtboard>
+        <DCArtboard id="aod-summary"   label="Summary · AOD"     width={W} height={H}><Summary alwaysOn/></DCArtboard>
+        <DCArtboard id="aod-note"      label="说明"               width={340} height={H}><DimmedNote/></DCArtboard>
+      </DCSection>
+
+      {/* Smart Stack widget + complications */}
+      <DCSection id="E-ext" title="E · iPhone Widget · Complications">
+        <DCArtboard id="widget" label="Smart Stack · medium" width={760} height={210}>
+          <SmartStackWidget/>
+        </DCArtboard>
+        <DCArtboard id="comp-circ" label="Circular" width={160} height={160}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:'100%', height:'100%' }}>
+            <CompCircular/>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="comp-rect" label="Rectangular" width={360} height={140}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:'100%', height:'100%' }}>
+            <CompRectangular/>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="comp-corner" label="Corner (in face)" width={W} height={H}>
+          <CornerHost/>
+        </DCArtboard>
+        <DCArtboard id="comp-note" label="Complication 用法" width={340} height={H}>
+          <Notepad w={340}>
+            <div style={{ fontSize: 12, fontWeight: 600, color:'#8E8E93',
+              letterSpacing:'0.08em', textTransform:'uppercase' }}>Complications</div>
+            <div style={{ fontSize: 22, fontWeight: 600, marginTop: 4 }}>三种规格 · 同一信息</div>
+            <ul style={{ paddingLeft: 18, fontSize: 13, lineHeight: 1.7, color:'#333', marginTop: 14 }}>
+              <li><strong>Circular</strong> · 适合 Modular / Infograph 中心位 — 数字 + 进度环</li>
+              <li><strong>Rectangular</strong> · Modular Large 顶位 — 动作名 + 速度 + 副指标</li>
+              <li><strong>Corner</strong> · Infograph 四角 — 弧形进度 + 单一巨字</li>
+              <li>训练空闲时变灰；训练中变橙（实时刷新）</li>
+              <li>点击直达"训练中"页（不经过首页）</li>
+            </ul>
+          </Notepad>
+        </DCArtboard>
+      </DCSection>
+
+      {/* PRD-driven additional screens — V1 product depth */}
+      <DCSection id="G-prd" title="G · PRD V1 补全" subtitle="训练中边缘状态 + 单边动作 + 计划模板下发 + Onboarding">
+        <DCArtboard id="10-pr"         label="10 · PR 庆祝"        width={W} height={H}><PRCelebration/></DCArtboard>
+        <DCArtboard id="11-vlstop"     label="11 · VL 强制停组"   width={W} height={H}><VLStopWarning/></DCArtboard>
+        <DCArtboard id="12-plan-next"  label="12 · 下一项 (计划)" width={W} height={H}><PlanNext/></DCArtboard>
+        <DCArtboard id="13-rpe"        label="13 · RPE 输入"      width={W} height={H}><RPEInput/></DCArtboard>
+        <DCArtboard id="14-unilateral" label="14 · 单边动作"     width={W} height={H}><UnilateralLive/></DCArtboard>
+        <DCArtboard id="15-onboard"    label="15 · Onboarding 3/6" width={W} height={H}><OnboardingBodyType/></DCArtboard>
+        <DCArtboard id="16-crown"      label="16 · Crown 档位"   width={W} height={H}><CrownStepSelector/></DCArtboard>
+        <DCArtboard id="prd-mapping"   label="PRD · 模块映射"   width={760} height={H}><PRDMapping/></DCArtboard>
+      </DCSection>
+
+      {/* iPhone companion — comprehensive chart from PRD M6.2 */}
+      <DCSection id="H-phone" title="H · iPhone 复盘" subtitle="M6.2 · 心率 + 速度散点 + 动作切换 + 休息区间 + VL 警戒线">
+        <DCArtboard id="phone-summary" label="iPhone · 训练详情" width={420} height={820}>
+          <PhoneSummary/>
+        </DCArtboard>
+      </DCSection>
+
+      {/* Flow */}
+      <DCSection id="F-flow" title="F · 交互流程">
+        <DCArtboard id="flow" label="屏幕跳转图" width={1180} height={580}>
+          <FlowDiagram/>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+
+</body>
+</html>

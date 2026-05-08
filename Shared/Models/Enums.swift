@@ -1,0 +1,95 @@
+// Enums.swift
+// VBTrainer · 2026-05
+//
+// All enum types used across models. Defined as String-backed to make them
+// SwiftData-friendly and JSON-exportable (CSV/JSON export in later proposals).
+//
+// Adding a case requires a SwiftData schema migration; design accordingly.
+
+import Foundation
+
+public enum Sex: String, Codable, CaseIterable, Sendable {
+    case male, female, other
+}
+
+public enum BodyType: String, Codable, CaseIterable, Sendable {
+    case lean         // 瘦
+    case standard     // 标准
+    case stocky       // 偏壮
+    case muscular     // 健美
+    case powerlifter  // 力量型
+}
+
+public enum TrainingExperience: String, Codable, CaseIterable, Sendable {
+    case lessThan1Year = "<1y"
+    case oneToThree    = "1-3y"
+    case threeToFive   = "3-5y"
+    case moreThan5Years = ">5y"
+}
+
+public enum TrainingGoal: String, Codable, CaseIterable, Sendable {
+    case power      // 爆发
+    case strength   // 力量
+    case muscle     // 增肌
+    case fatLoss    // 减脂
+    case general    // 综合
+}
+
+public enum WeightUnit: String, Codable, CaseIterable, Sendable {
+    case kg, lb
+}
+
+public enum Side: String, Codable, CaseIterable, Sendable {
+    case both, left, right
+}
+
+/// Velocity variant used to assess a rep.
+/// Reference: Sánchez-Medina et al. (2010) — exercises with significant
+/// braking phase use MPV; simple concentric-dominant lifts use MV;
+/// explosive movements (CMJ, snatch) use PV.
+public enum VelocityVariant: String, Codable, CaseIterable, Sendable {
+    case mv   // mean velocity
+    case mpv  // mean propulsive velocity
+    case pv   // peak velocity
+}
+
+/// Per-rep target met status (drives haptic feedback).
+public enum MetStatus: String, Codable, CaseIterable, Sendable {
+    case excellent   // ≥ upper bound
+    case met         // within target band
+    case borderline  // slightly below lower bound
+    case failed      // well below lower bound
+}
+
+public enum ReadinessTier: String, Codable, CaseIterable, Sendable {
+    case green        // ≥80
+    case yellow       // 60-79
+    case red          // <60
+    case insufficient // not enough baseline data yet
+}
+
+public enum PRKind: String, Codable, CaseIterable, Sendable {
+    case maxWeight
+    case e1RM
+    case maxVolume
+    case maxSingleRepVelocity
+    case maxCMJ
+}
+
+public enum ExerciseCategory: String, Codable, CaseIterable, Sendable {
+    case barbell, dumbbell, bodyweight, machine, jump
+}
+
+public enum CitationTopic: String, Codable, CaseIterable, Sendable {
+    case appleWatchValidation
+    case repDetection
+    case velocityIntegration
+    case velocityLoss
+    case v1RM
+    case lvpAndE1RM
+    case velocityVariant
+    case heartRate
+    case hrvReadiness
+    case sleep
+    case cmjNeuromuscular
+}
