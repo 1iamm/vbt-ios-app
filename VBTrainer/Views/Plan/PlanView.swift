@@ -760,7 +760,13 @@ struct SchedulePlanSheet: View {
 
         if syncToCalendar {
             #if os(iOS)
-            let granted = EventKitService.shared.isAuthorized || (await EventKitService.shared.requestWriteAccess())
+            // `||`'s right side is an autoclosure that can't host async; split.
+            let granted: Bool
+            if EventKitService.shared.isAuthorized {
+                granted = true
+            } else {
+                granted = await EventKitService.shared.requestWriteAccess()
+            }
             if granted {
                 do {
                     let id = try EventKitService.shared.upsert(
