@@ -19,6 +19,8 @@ public enum VBTSchemaV1 {
         ReadinessSnapshot.self,
         Template.self,
         TemplateItem.self,
+        TemplateSetSpec.self,
+        DayPlan.self,
         PersonalRecord.self,
     ]
 }

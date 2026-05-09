@@ -66,6 +66,8 @@ targets:
         INFOPLIST_KEY_NSMotionUsageDescription: "VBTrainer 需要使用动作传感器记录训练数据，仅在主动训练时采集。"
         INFOPLIST_KEY_NSHealthShareUsageDescription: "VBTrainer 读取心率、睡眠、HRV、体温等健康数据，用于训练前身体准备度评估和训练中心率监测。所有数据仅在本机处理，不上传服务器。"
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: "VBTrainer 将训练记录写入 Apple 健康，方便你跨 App 查看训练历史。"
+        INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription: "VBTrainer 将你安排的训练写入 iPhone 日历的「训练」日历，可在锁屏与日历 App 看到，并提前 30 分钟提醒。"
+        INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription: "用于把训练计划和已完成训练同步进 iPhone 日历，并维持双向编辑。"
         INFOPLIST_KEY_CFBundleDisplayName: "VBTrainer"
         CODE_SIGN_ENTITLEMENTS: VBTrainer/VBTrainer.entitlements
 
