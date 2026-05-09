@@ -8,6 +8,7 @@ import SwiftUI
 
 struct WatchRootView: View {
     @StateObject private var nav = WatchNavigation()
+    @StateObject private var liveController = LiveWorkoutController()
 
     var body: some View {
         NavigationStack(path: $nav.path) {
@@ -17,6 +18,7 @@ struct WatchRootView: View {
                 }
         }
         .environmentObject(nav)
+        .environmentObject(liveController)
     }
 
     @ViewBuilder
