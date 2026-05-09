@@ -202,7 +202,6 @@ public final class EventKitService {
         return nil
         #endif
     }
-}
 
     // MARK: - Helpers
 
