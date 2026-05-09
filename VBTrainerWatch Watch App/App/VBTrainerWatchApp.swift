@@ -23,6 +23,10 @@ struct VBTrainerWatchApp: App {
     init() {
         // Activate WCSession on launch.
         _ = WatchConnectivityService.shared
+        // Request HealthKit authorization up-front so HKWorkoutSession can be
+        // created the moment the user starts a workout (otherwise MotionManager
+        // throws and 100Hz CoreMotion is throttled).
+        Task { try? await HealthKitAuthorization.requestWorkoutAuthorization() }
     }
 
     var body: some Scene {

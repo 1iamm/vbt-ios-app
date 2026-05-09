@@ -415,18 +415,18 @@ struct WatchWeightInputView: View {
 
 struct WatchLiveWorkoutView: View {
     @EnvironmentObject var nav: WatchNavigation
+    @EnvironmentObject var controller: LiveWorkoutController
     let exerciseId: String
     let weightKg: Double
 
-    @State private var rep: Int = 5
-    @State private var velocity: Double = 0.62
-    @State private var heartRate: Int = 142
-    @State private var status: MetStatus = .met
-    @State private var vlPercent: Double = 18.0
+    /// Set true before pushing to a child screen so .onDisappear doesn't
+    /// cancel the still-active session (NavigationStack disappears the
+    /// pushed-from view too).
+    @State private var didPushToChild = false
 
     private var exercise: Exercise? { ExerciseLookup.exercise(byId: exerciseId) }
     private var velocityColor: Color {
-        switch status {
+        switch controller.metStatus {
         case .excellent:  return Tokens.Color.success
         case .met:        return fg
         case .borderline: return Tokens.Color.warning
@@ -451,7 +451,7 @@ struct WatchLiveWorkoutView: View {
                         Image(systemName: "heart.fill")
                             .font(.system(size: 10))
                             .foregroundStyle(Tokens.Color.Data.heartRate)
-                        Text("\(heartRate)")
+                        Text("\(controller.heartRate)")
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(fg)
                     }
@@ -464,25 +464,36 @@ struct WatchLiveWorkoutView: View {
                 // Center: huge velocity
                 VStack(spacing: 0) {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(String(format: "%.2f", velocity))
+                        Text(String(format: "%.2f", controller.velocity))
                             .font(.system(size: 76, weight: .heavy, design: .rounded))
                             .foregroundStyle(velocityColor)
                             .monospacedDigit()
-                            .contentTransition(.numericText(value: velocity))
+                            .contentTransition(.numericText(value: controller.velocity))
                         Text("m/s")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(sub)
                     }
-                    Text("Rep \(rep) · VL \(Int(vlPercent))%")
+                    Text("Rep \(controller.rep) · VL \(Int(controller.vlPercent))%")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(sub)
+                    if let err = controller.errorMessage {
+                        Text(err)
+                            .font(.system(size: 10))
+                            .foregroundStyle(Tokens.Color.danger)
+                            .padding(.top, 2)
+                            .multilineTextAlignment(.center)
+                    }
                 }
 
                 Spacer()
 
                 // Bottom: end button
                 Button {
-                    nav.push(.rest(secondsRemaining: 90))
+                    Task {
+                        await controller.endSet()
+                        didPushToChild = true
+                        nav.push(.rest(secondsRemaining: 90))
+                    }
                 } label: {
                     Text("结束本组")
                         .font(.system(size: 14, weight: .semibold))
@@ -497,6 +508,14 @@ struct WatchLiveWorkoutView: View {
             }
         }
         .navigationBarBackButtonHidden(true)
+        .task {
+            await controller.start(exerciseId: exerciseId, weightKg: weightKg)
+        }
+        .onDisappear {
+            if !didPushToChild {
+                Task { await controller.cancel() }
+            }
+        }
     }
 }
 
@@ -504,6 +523,7 @@ struct WatchLiveWorkoutView: View {
 
 struct WatchRestView: View {
     @EnvironmentObject var nav: WatchNavigation
+    @EnvironmentObject var controller: LiveWorkoutController
     let totalSeconds: Int
     @State private var remaining: Int
 
@@ -548,7 +568,18 @@ struct WatchRestView: View {
                         .buttonStyle(.plain)
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(sub)
-                    Button("下一组") { nav.pop() }
+                    Button("下一组") {
+                        Task {
+                            await controller.startNextSet(
+                                weightKg: controller.currentWeightKg,
+                                velocityVariant: controller.currentVelocityVariant,
+                                targetRange: controller.currentTargetRange,
+                                vlCeiling: controller.currentVLCeiling,
+                                side: controller.currentSide
+                            )
+                            nav.pop()
+                        }
+                    }
                         .buttonStyle(.plain)
                         .font(.system(size: 14, weight: .semibold))
                         .padding(.horizontal, 14).padding(.vertical, 8)
@@ -576,26 +607,27 @@ struct WatchRestView: View {
 
 struct WatchSummaryView: View {
     @EnvironmentObject var nav: WatchNavigation
-    var totalReps: Int = 18
-    var avgVelocity: Double = 0.58
-    var avgVL: Int = 18
-    var avgHR: Int = 138
+    @EnvironmentObject var controller: LiveWorkoutController
 
     var body: some View {
         WatchScreenChrome(title: "训练总结") {
             VStack(spacing: 10) {
                 Spacer().frame(height: 30)
                 HStack {
-                    summaryStat("总Reps", "\(totalReps)", color: fg)
-                    summaryStat("平均速度", String(format: "%.2f", avgVelocity), color: Tokens.Color.Data.velocity, unit: "m/s")
+                    summaryStat("总Reps", "\(controller.totalReps)", color: fg)
+                    summaryStat("平均速度", String(format: "%.2f", controller.avgVelocity), color: Tokens.Color.Data.velocity, unit: "m/s")
                 }
                 HStack {
-                    summaryStat("VL%", "\(avgVL)", color: Tokens.Color.Data.velocityLoss, unit: "%")
-                    summaryStat("心率", "\(avgHR)", color: Tokens.Color.Data.heartRate, unit: "bpm")
+                    summaryStat("VL%", "\(controller.avgVLPercent)", color: Tokens.Color.Data.velocityLoss, unit: "%")
+                    summaryStat("心率", "\(controller.avgHeartRate)", color: Tokens.Color.Data.heartRate, unit: "bpm")
                 }
                 Spacer()
                 Button {
-                    nav.popToRoot()
+                    Task {
+                        let snap = await controller.complete()
+                        WatchConnectivityService.shared.send(message: .workoutSnapshot(snap))
+                        nav.popToRoot()
+                    }
                 } label: {
                     Text("完成")
                         .font(.system(size: 16, weight: .semibold))

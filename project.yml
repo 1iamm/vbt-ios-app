@@ -91,6 +91,7 @@ targets:
         INFOPLIST_KEY_NSHealthUpdateUsageDescription: "VBTrainer 将训练记录写入 Apple 健康。"
         INFOPLIST_KEY_WKApplication: YES
         INFOPLIST_KEY_WKCompanionAppBundleIdentifier: com.vbtrainer.app
+        INFOPLIST_KEY_WKBackgroundModes: ["workout-processing"]
         WATCHOS_DEPLOYMENT_TARGET: "10.0"
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         CODE_SIGN_ENTITLEMENTS: "VBTrainerWatch Watch App/VBTrainerWatch.entitlements"
