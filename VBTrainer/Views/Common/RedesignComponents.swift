@@ -15,6 +15,33 @@
 
 import SwiftUI
 
+// MARK: - 0. Empty-state card
+
+/// Generic empty state used by History / Stats / Trends / PR list. Was
+/// inlined inside the V1 TodayView.swift; lifted here when V4 redesign
+/// removed that file's body.
+struct EmptyStateCard: View {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(spacing: Tokens.Space.sm) {
+            Image(systemName: "tray")
+                .font(.system(size: 32))
+                .foregroundStyle(Tokens.Color.tertiaryLabel)
+            Text(title)
+                .font(Tokens.Font.headline)
+            Text(subtitle)
+                .font(Tokens.Font.footnote)
+                .foregroundStyle(Tokens.Color.secondaryLabel)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(Tokens.Space.xxl)
+        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
+    }
+}
+
 // MARK: - 1. Today header
 
 struct TodayHeader: View {
