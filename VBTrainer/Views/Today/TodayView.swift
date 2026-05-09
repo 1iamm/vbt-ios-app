@@ -22,6 +22,7 @@ struct TodayView: View {
 
     @State private var hasRefreshed = false
     @State private var pendingPlanTemplate: Template?
+    @State private var showingTweaks = false
 
     private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
     private var accent: Color { GoalTheme.accent(for: goal) }
@@ -81,6 +82,11 @@ struct TodayView: View {
                 }
             }
             .background(Tokens.Color.groupedBg.ignoresSafeArea())
+            .overlay(alignment: .topTrailing) {
+                TweaksButton { showingTweaks = true }
+                    .padding(.top, 4)
+                    .padding(.trailing, 12)
+            }
             .navigationBarHidden(true)
             .task {
                 guard !hasRefreshed else { return }
@@ -89,6 +95,12 @@ struct TodayView: View {
             }
             .navigationDestination(item: $pendingPlanTemplate) { tpl in
                 PlanView(template: tpl, plannedDate: Date())
+            }
+            .sheet(isPresented: $showingTweaks) {
+                if let profile = profiles.first {
+                    TweaksQuickSwitcher(profile: profile)
+                        .presentationDetents([.medium, .large])
+                }
             }
         }
     }
