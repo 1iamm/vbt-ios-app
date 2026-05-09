@@ -266,8 +266,9 @@ struct ComprehensiveChartView: View {
     @ViewBuilder
     private func setBandView(proxy: ChartProxy, plot: CGSize) -> some View {
         let yOffset: CGFloat = -22
-        let chartFrame = proxy.plotAreaFrame
-        let frame = chartFrame.map { CGRect(origin: .zero, size: proxy.plotAreaSize) } ?? CGRect(origin: .zero, size: plot)
+        // proxy.plotAreaFrame is `Anchor<CGRect>?`, not a usable rect; we
+        // already get the plot size from the ChartProxy.plotAreaSize, so
+        // anchor x=0 in the local coordinate space.
         ZStack(alignment: .topLeading) {
             ForEach(setIntervals.indices, id: \.self) { i in
                 let iv = setIntervals[i]
@@ -294,7 +295,7 @@ struct ComprehensiveChartView: View {
                                     .offset(y: -12)
                             }
                     }
-                    .offset(x: frame.minX + x, y: yOffset)
+                    .offset(x: x, y: yOffset)
                 }
             }
         }
