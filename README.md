@@ -47,6 +47,25 @@
 
 签名走个人证书（Personal Team），仅供自用真机部署。**7 天证书过期后需重新部署**。上架 App Store 需要付费 Apple Developer（¥99/年），V1 末再考虑。
 
+### 一次性签名配置
+
+`xcodegen generate` 会重写 `.pbxproj`，每次都会冲掉 Xcode UI 里手选的 Team。所以 Team ID 通过 `Signing.xcconfig` 持久化（首次 clone 后做一次）：
+
+```bash
+# 1. 编辑 Signing.xcconfig，填你的 Team ID（10 位字母数字）
+#    Team ID 在 https://developer.apple.com/account → Membership 查
+nano Signing.xcconfig
+# 改成： DEVELOPMENT_TEAM = ABC123XYZ4
+
+# 2. 让 git 忽略你的本地修改（Team ID 不进 commit）
+git update-index --skip-worktree Signing.xcconfig
+
+# 3. 现在 xcodegen 生成的 project 自动带正确 Team
+xcodegen generate
+```
+
+之后每次跑 `xcodegen generate` 不再需要任何手动操作。
+
 ---
 
 ## 打开 / 编译
