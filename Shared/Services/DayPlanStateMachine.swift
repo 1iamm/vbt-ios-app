@@ -32,6 +32,7 @@ public enum DayPlanStateMachine {
         plan.status = .completed
         plan.completedWorkoutId = workoutId
         try? context.save()
+        DayPlanEventBus.shared.publish(.completed(planId: plan.id, workoutId: workoutId))
         return plan
     }
 
@@ -46,6 +47,7 @@ public enum DayPlanStateMachine {
         guard plan.status == .scheduled else { return }
         plan.status = .inProgress
         try? context.save()
+        DayPlanEventBus.shared.publish(.inProgress(planId: plan.id))
     }
 
     /// Called when the user explicitly cancels the day's plan or deletes the
@@ -58,6 +60,7 @@ public enum DayPlanStateMachine {
         guard plan.status != .completed else { return } // never demote a completed plan
         plan.status = .skipped
         try? context.save()
+        DayPlanEventBus.shared.publish(.skipped(planId: plan.id))
     }
 
     // MARK: - Reconciliation
@@ -78,10 +81,12 @@ public enum DayPlanStateMachine {
         fd.fetchLimit = 100
         let stale = (try? context.fetch(fd)) ?? []
         guard !stale.isEmpty else { return }
+        let ids = stale.map(\.id)
         for plan in stale {
             plan.status = .missed
         }
         try? context.save()
+        DayPlanEventBus.shared.publish(.missed(planIds: ids))
     }
 
     /// Backfill: existing DayPlans created before status was introduced have

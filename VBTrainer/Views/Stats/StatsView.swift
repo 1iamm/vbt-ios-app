@@ -45,6 +45,7 @@ struct StatsView: View {
 
     private var headlineCard: some View {
         let h = WeekOverWeekStats.headline(context: context)
+        let weekly = WeeklyAdherenceCalculator.compute(context: context)
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("本周 vs 上周")
@@ -54,6 +55,10 @@ struct StatsView: View {
                     .font(.system(size: 11))
                     .foregroundStyle(Tokens.Color.tertiaryLabel)
             }
+            Text(narrativeLine(headline: h, weekly: weekly))
+                .font(.system(size: 13))
+                .foregroundStyle(Tokens.Color.label)
+                .lineSpacing(2)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
                 deltaTile(label: "训练量",
                           value: h.thisWeekVolume >= 1000 ?
@@ -80,6 +85,39 @@ struct StatsView: View {
         .padding(.horizontal, Tokens.Space.lg)
         .padding(.top, 8)
         .padding(.bottom, 8)
+    }
+
+    private func narrativeLine(headline h: WeekOverWeekHeadline, weekly: WeeklyAdherence) -> String {
+        // Compose: 满训提示 + 训练量趋势 + 完成率
+        var parts: [String] = []
+        if weekly.isFullyCompleted {
+            parts.append("本周满训 (\(weekly.completed)/\(weekly.planned))")
+        } else if weekly.planned > 0 {
+            parts.append("已完成 \(weekly.completed)/\(weekly.planned)")
+            if weekly.missed > 0 { parts.append("漏 \(weekly.missed)") }
+        } else if h.thisWeekCount > 0 {
+            parts.append("本周 \(h.thisWeekCount) 次训练")
+        }
+        if h.lastWeekVolume > 0 {
+            let delta = h.deltaPercent(h.thisWeekVolume, h.lastWeekVolume)
+            if abs(delta) >= 5 {
+                let direction = delta > 0 ? "高于" : "低于"
+                parts.append("训练量\(direction)上周 \(Int(abs(delta)))%")
+            } else if h.thisWeekVolume > 0 {
+                parts.append("训练量与上周持平")
+            }
+        }
+        if h.thisWeekAvgVelocity > 0 && h.lastWeekAvgVelocity > 0 {
+            let delta = h.deltaPercent(h.thisWeekAvgVelocity, h.lastWeekAvgVelocity)
+            if abs(delta) >= 3 {
+                let direction = delta > 0 ? "更快" : "略慢"
+                parts.append("平均速度\(direction)")
+            }
+        }
+        if parts.isEmpty {
+            return "本周训练数据建立中"
+        }
+        return parts.joined(separator: " · ")
     }
 
     private var weekRangeLabel: String {

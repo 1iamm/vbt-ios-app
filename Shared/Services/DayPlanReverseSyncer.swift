@@ -88,14 +88,14 @@ public final class DayPlanReverseSyncer {
         }
 
         // 2. Detect deletions: DayPlans whose stored eventKitIdentifier no
-        //    longer appears in the calendar → mark .skipped (preserve row so
-        //    history can show the user cancelled, instead of pretending it
-        //    never existed).
+        //    longer appears in the calendar → mark .skipped via the state
+        //    machine (so the event bus fires; preserve the row so history
+        //    can show the user cancelled, not pretend it never existed).
         for plan in plans where plan.eventKitIdentifier != nil
                               && plan.status != .completed
                               && plan.status != .skipped {
             if !presentIdents.contains(plan.eventKitIdentifier!) {
-                plan.status = .skipped
+                DayPlanStateMachine.markSkipped(planId: plan.id, in: context)
             }
         }
 

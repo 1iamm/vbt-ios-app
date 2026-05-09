@@ -25,6 +25,7 @@ struct TodayView: View {
     @State private var pendingWorkoutDetail: WorkoutDetailRoute?
     @State private var showingTweaks = false
     @State private var cmjPromptShown = false
+    @State private var pendingCelebration: CelebrationCard.Kind?
 
     struct WorkoutDetailRoute: Identifiable, Hashable {
         let id: UUID
@@ -48,6 +49,11 @@ struct TodayView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
                     TodayHeader(snapshot: readinessSnaps.first, goalAccent: accent)
+
+                    let weekly = WeeklyAdherenceCalculator.compute(context: context)
+                    if weekly.planned > 0 {
+                        weekStripCard(weekly: weekly)
+                    }
 
                     if let plan = todayPlan, let template = todayTemplate {
                         SectionHeader(title: bannerSectionTitle(for: plan.status))
@@ -97,11 +103,36 @@ struct TodayView: View {
                     .padding(.top, 4)
                     .padding(.trailing, 12)
             }
+            .overlay(alignment: .top) {
+                if let kind = pendingCelebration {
+                    CelebrationCard(kind: kind, onDismiss: dismissCelebration, accent: accent)
+                        .padding(.top, 8)
+                }
+            }
             .navigationBarHidden(true)
             .task {
                 guard !hasRefreshed else { return }
                 hasRefreshed = true
                 await ReadinessRefresher.refresh(in: context.container)
+            }
+            .task {
+                // Subscribe to DayPlan event bus and surface celebrations.
+                for await event in DayPlanEventBus.shared.stream {
+                    if case let .completed(_, workoutId) = event {
+                        await MainActor.run {
+                            if let kind = CelebrationResolver.resolve(
+                                completedWorkoutId: workoutId, context: context) {
+                                withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+                                    pendingCelebration = kind
+                                }
+                                Task {
+                                    try? await Task.sleep(nanoseconds: 6_000_000_000)
+                                    await MainActor.run { dismissCelebration() }
+                                }
+                            }
+                        }
+                    }
+                }
             }
             .navigationDestination(item: $pendingPlanTemplate) { tpl in
                 PlanView(template: tpl, plannedDate: Date())
@@ -312,6 +343,49 @@ struct TodayView: View {
             // Re-attempt or reschedule — fastest path is opening Plan
             pendingPlanTemplate = template
         }
+    }
+
+    private func dismissCelebration() {
+        withAnimation(.easeInOut(duration: 0.2)) { pendingCelebration = nil }
+    }
+
+    @ViewBuilder
+    private func weekStripCard(weekly: WeeklyAdherence) -> some View {
+        let cal = Calendar.current
+        let dayStatus: [Date: DayPlanStatus] = {
+            var map: [Date: DayPlanStatus] = [:]
+            for plan in allPlans where plan.date >= weekly.weekStart && plan.date < weekly.weekEnd {
+                map[cal.startOfDay(for: plan.date)] = plan.status
+            }
+            return map
+        }()
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("本周 \(weekly.completed)/\(weekly.planned)")
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                Text(weekStripCaption(weekly))
+                    .font(.system(size: 11))
+                    .foregroundStyle(Tokens.Color.tertiaryLabel)
+            }
+            WeekProgressStrip(
+                weekStart: weekly.weekStart,
+                dayStatus: dayStatus,
+                accent: accent
+            )
+        }
+        .padding(12)
+        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .padding(.horizontal, Tokens.Space.lg)
+        .padding(.bottom, 14)
+    }
+
+    private func weekStripCaption(_ w: WeeklyAdherence) -> String {
+        if w.isFullyCompleted { return "满训" }
+        if w.missed > 0 { return "已漏 \(w.missed)" }
+        if w.skipped > 0 { return "跳过 \(w.skipped)" }
+        if w.inProgress > 0 { return "训练中" }
+        return "进行中"
     }
 
     private func handleSecondary(plan: DayPlan, template: Template) {

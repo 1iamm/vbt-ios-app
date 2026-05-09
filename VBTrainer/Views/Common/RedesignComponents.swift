@@ -660,7 +660,68 @@ struct IOSCalendarMonth: View {
     }
 }
 
-// MARK: - 9. Start chips bar (horizontal scroll)
+// MARK: - 9. Week progress strip
+
+/// 7 dots representing the current ISO week. Each dot's color = its
+/// DayPlan.status (or empty when no plan that day).
+struct WeekProgressStrip: View {
+    let weekStart: Date
+    let dayStatus: [Date: DayPlanStatus]   // start-of-day → status
+    let accent: Color
+
+    private var days: [Date] {
+        (0..<7).compactMap {
+            Calendar.current.date(byAdding: .day, value: $0, to: weekStart)
+        }
+    }
+
+    private static let weekdayLabels = ["一","二","三","四","五","六","日"]
+
+    var body: some View {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        return HStack(spacing: 0) {
+            ForEach(Array(days.enumerated()), id: \.offset) { i, day in
+                let key = cal.startOfDay(for: day)
+                let status = dayStatus[key]
+                let isToday = cal.isDate(day, inSameDayAs: today)
+                VStack(spacing: 4) {
+                    Text(Self.weekdayLabels[i])
+                        .font(.system(size: 9, weight: .medium))
+                        .tracking(0.4)
+                        .foregroundStyle(isToday ? accent : Tokens.Color.tertiaryLabel)
+                    dot(for: status, isToday: isToday)
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func dot(for status: DayPlanStatus?, isToday: Bool) -> some View {
+        switch status {
+        case .completed:
+            Circle().fill(accent).frame(width: 9, height: 9)
+        case .inProgress:
+            Circle().fill(Tokens.Color.success).frame(width: 9, height: 9)
+                .overlay(Circle().stroke(.white, lineWidth: 1.5))
+        case .skipped:
+            Circle().fill(Tokens.Color.tertiaryLabel.opacity(0.5))
+                .frame(width: 9, height: 9)
+        case .missed:
+            Circle().stroke(Tokens.Color.warning, lineWidth: 1.5)
+                .frame(width: 9, height: 9)
+        case .scheduled:
+            Circle().fill(accent.opacity(0.18))
+                .overlay(Circle().stroke(accent, lineWidth: 1))
+                .frame(width: 9, height: 9)
+        case .none:
+            Circle().fill(Tokens.Color.fill).frame(width: 7, height: 7)
+        }
+    }
+}
+
+// MARK: - 10. Start chips bar (horizontal scroll)
 
 struct StartChipsBar<T: Hashable>: View {
     struct Chip: Identifiable {
