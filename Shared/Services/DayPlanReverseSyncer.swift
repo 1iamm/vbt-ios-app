@@ -88,10 +88,14 @@ public final class DayPlanReverseSyncer {
         }
 
         // 2. Detect deletions: DayPlans whose stored eventKitIdentifier no
-        //    longer appears in the calendar → unschedule (delete the plan).
-        for plan in plans where plan.eventKitIdentifier != nil && !plan.completed {
+        //    longer appears in the calendar → mark .skipped (preserve row so
+        //    history can show the user cancelled, instead of pretending it
+        //    never existed).
+        for plan in plans where plan.eventKitIdentifier != nil
+                              && plan.status != .completed
+                              && plan.status != .skipped {
             if !presentIdents.contains(plan.eventKitIdentifier!) {
-                context.delete(plan)
+                plan.status = .skipped
             }
         }
 

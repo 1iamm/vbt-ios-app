@@ -169,15 +169,79 @@ struct SectionHeader: View {
 struct ScheduledTrainingCard: View {
     let templateName: String
     let source: String?
-    let onStartFromWatch: () -> Void
-    let onEdit: () -> Void
+    let status: DayPlanStatus
+    let summary: ScheduledSummary?
+    let onPrimary: () -> Void
+    let onSecondary: () -> Void
     var accent: Color = Tokens.Color.accent
 
+    /// Optional headline numbers shown when status == .completed.
+    struct ScheduledSummary {
+        let durationMin: Int
+        let totalVolumeKg: Double
+        let setCount: Int
+        let avgVL: Double
+    }
+
+    private struct Theme {
+        let bgOpacity: Double
+        let strokeOpacity: Double
+        let badgeText: String
+        let badgeColor: Color
+        let primaryLabel: String
+        let primaryIcon: String
+        let primaryFilled: Bool
+        let secondaryLabel: String?
+        let footerHint: String?
+    }
+
+    private var theme: Theme {
+        switch status {
+        case .scheduled:
+            return Theme(bgOpacity: 0.08, strokeOpacity: 0.22,
+                         badgeText: "已安排", badgeColor: accent,
+                         primaryLabel: "从 Watch 开始", primaryIcon: "applewatch",
+                         primaryFilled: true,
+                         secondaryLabel: "编辑",
+                         footerHint: nil)
+        case .inProgress:
+            return Theme(bgOpacity: 0.10, strokeOpacity: 0.30,
+                         badgeText: "训练中", badgeColor: Tokens.Color.success,
+                         primaryLabel: "在 Watch 上继续", primaryIcon: "waveform",
+                         primaryFilled: true,
+                         secondaryLabel: nil,
+                         footerHint: "结束后自动同步回这里")
+        case .completed:
+            return Theme(bgOpacity: 0.06, strokeOpacity: 0.18,
+                         badgeText: "已完成", badgeColor: Tokens.Color.success,
+                         primaryLabel: "看复盘", primaryIcon: "chart.xyaxis.line",
+                         primaryFilled: false,
+                         secondaryLabel: "再练一次",
+                         footerHint: nil)
+        case .skipped:
+            return Theme(bgOpacity: 0.04, strokeOpacity: 0.10,
+                         badgeText: "已跳过", badgeColor: Tokens.Color.secondaryLabel,
+                         primaryLabel: "重新安排", primaryIcon: "calendar",
+                         primaryFilled: false,
+                         secondaryLabel: nil,
+                         footerHint: nil)
+        case .missed:
+            return Theme(bgOpacity: 0.04, strokeOpacity: 0.14,
+                         badgeText: "未完成", badgeColor: Tokens.Color.warning,
+                         primaryLabel: "补今天 / 看原计划",
+                         primaryIcon: "arrow.triangle.2.circlepath",
+                         primaryFilled: false,
+                         secondaryLabel: nil,
+                         footerHint: "昨日漏练，可以以原计划补做或跳过")
+        }
+    }
+
     var body: some View {
+        let theme = self.theme
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(accent)
+                    .fill(theme.badgeColor)
                     .frame(width: 4, height: 36)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(templateName)
@@ -190,45 +254,98 @@ struct ScheduledTrainingCard: View {
                     }
                 }
                 Spacer(minLength: 0)
-                Text("已安排")
+                Text(theme.badgeText)
                     .font(.system(size: 9, weight: .semibold))
                     .tracking(0.5)
-                    .foregroundStyle(accent)
+                    .foregroundStyle(theme.badgeColor)
                     .padding(.horizontal, 7).padding(.vertical, 3)
-                    .background(accent.opacity(0.16), in: Capsule())
+                    .background(theme.badgeColor.opacity(0.18), in: Capsule())
             }
+
+            if status == .completed, let s = summary {
+                completedSummary(s)
+            }
+
             HStack(spacing: 8) {
-                Button(action: onStartFromWatch) {
+                Button(action: onPrimary) {
                     HStack(spacing: 6) {
-                        Image(systemName: "applewatch")
+                        Image(systemName: theme.primaryIcon)
                             .font(.system(size: 13, weight: .semibold))
-                        Text("从 Watch 开始")
+                        Text(theme.primaryLabel)
                             .font(.system(size: 14, weight: .bold))
                     }
-                    .foregroundStyle(.white)
+                    .foregroundStyle(theme.primaryFilled ? .white : accent)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(accent, in: RoundedRectangle(cornerRadius: 12))
-                    .shadow(color: accent.opacity(0.5), radius: 10, x: 0, y: 4)
+                    .background(theme.primaryFilled ? accent : Tokens.Color.card,
+                                in: RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: theme.primaryFilled ? accent.opacity(0.5) : .clear,
+                            radius: theme.primaryFilled ? 10 : 0, x: 0, y: 4)
                 }
                 .buttonStyle(.plain)
-                Button(action: onEdit) {
-                    Text("编辑")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(Tokens.Color.label)
-                        .padding(.horizontal, 14).padding(.vertical, 12)
-                        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 12))
+                if let secondaryLabel = theme.secondaryLabel {
+                    Button(action: onSecondary) {
+                        Text(secondaryLabel)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Tokens.Color.label)
+                            .padding(.horizontal, 14).padding(.vertical, 12)
+                            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+            }
+
+            if let hint = theme.footerHint {
+                Text(hint)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Tokens.Color.secondaryLabel)
             }
         }
         .padding(16)
-        .background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 16))
+        .background(accent.opacity(theme.bgOpacity), in: RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(accent.opacity(0.22), lineWidth: 1)
+                .stroke(accent.opacity(theme.strokeOpacity), lineWidth: 1)
         )
         .padding(.horizontal, Tokens.Space.lg)
+    }
+
+    private func completedSummary(_ s: ScheduledSummary) -> some View {
+        HStack(spacing: 12) {
+            stat(value: "\(s.durationMin)", unit: "min", label: "时长")
+            Divider().frame(height: 28)
+            stat(value: s.totalVolumeKg >= 1000
+                  ? String(format: "%.1f", s.totalVolumeKg / 1000)
+                  : String(format: "%.0f", s.totalVolumeKg),
+                 unit: s.totalVolumeKg >= 1000 ? "t" : "kg", label: "训练量")
+            Divider().frame(height: 28)
+            stat(value: "\(s.setCount)", unit: "组", label: "组数")
+            Divider().frame(height: 28)
+            stat(value: String(format: "%.0f", s.avgVL), unit: "%", label: "VL")
+        }
+        .frame(maxWidth: .infinity)
+        .padding(10)
+        .background(Tokens.Color.card.opacity(0.5), in: RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func stat(value: String, unit: String, label: String) -> some View {
+        VStack(spacing: 1) {
+            HStack(alignment: .firstTextBaseline, spacing: 1) {
+                Text(value)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .tracking(-0.3)
+                Text(unit)
+                    .font(.system(size: 9))
+                    .foregroundStyle(Tokens.Color.tertiaryLabel)
+            }
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .tracking(0.4)
+                .foregroundStyle(Tokens.Color.tertiaryLabel)
+                .textCase(.uppercase)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

@@ -132,7 +132,11 @@ struct HistoryView: View {
             let key = cal.startOfDay(for: j.performedAt)
             out[key, default: []].append(.cmj)
         }
-        for plan in allPlans where !plan.completed {
+        // Plans render a 已计划 dot only when scheduled / inProgress and the
+        // day doesn't already carry a completed-workout dot. Skipped / missed
+        // plans get no calendar dot — they're surfaced in the list views.
+        for plan in allPlans
+            where plan.status == .scheduled || plan.status == .inProgress {
             let key = cal.startOfDay(for: plan.date)
             if !out.keys.contains(key) {
                 out[key, default: []].append(.planned)

@@ -19,9 +19,14 @@ public final class DayPlan {
     public var templateId: UUID
     public var scheduledTimeMinutes: Int   // minutes after midnight (0-1439)
     public var eventKitIdentifier: String? // EKEvent.eventIdentifier when synced
-    public var completed: Bool
+    public var completed: Bool             // legacy boolean; kept in sync with statusRaw
     public var completedWorkoutId: UUID?
     public var createdAt: Date
+
+    /// Lifecycle status — source of truth for Today banner / dot color /
+    /// AI engine inputs. `completed` Bool is kept in sync for legacy readers.
+    public var statusRaw: String = DayPlanStatus.scheduled.rawValue
+    public var statusUpdatedAt: Date = Date()
 
     public init(
         id: UUID = UUID(),
@@ -31,7 +36,8 @@ public final class DayPlan {
         eventKitIdentifier: String? = nil,
         completed: Bool = false,
         completedWorkoutId: UUID? = nil,
-        createdAt: Date = Date()
+        createdAt: Date = Date(),
+        status: DayPlanStatus = .scheduled
     ) {
         self.id = id
         self.date = Calendar.current.startOfDay(for: date)
@@ -41,6 +47,18 @@ public final class DayPlan {
         self.completed = completed
         self.completedWorkoutId = completedWorkoutId
         self.createdAt = createdAt
+        self.statusRaw = status.rawValue
+        self.statusUpdatedAt = createdAt
+    }
+
+    public var status: DayPlanStatus {
+        get { DayPlanStatus(rawValue: statusRaw) ?? .scheduled }
+        set {
+            statusRaw = newValue.rawValue
+            statusUpdatedAt = Date()
+            // Keep legacy `completed` Bool in sync.
+            completed = (newValue == .completed)
+        }
     }
 
     public var scheduledHHMM: String {

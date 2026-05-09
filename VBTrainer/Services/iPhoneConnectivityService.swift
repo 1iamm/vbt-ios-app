@@ -69,6 +69,14 @@ extension iPhoneConnectivityService: WCSessionDelegate {
             case .workoutSnapshot(let snap):
                 let workout = try WorkoutStore.save(snap, in: context)
                 PersonalRecordDetector.checkAndRecord(workout: workout, in: context)
+                // Drive the DayPlan state machine — match this workout to a
+                // scheduled plan on the same calendar day and mark it
+                // completed. No-op if no plan exists.
+                DayPlanStateMachine.markCompleted(
+                    for: workout.id,
+                    workoutDay: workout.startedAt,
+                    in: context
+                )
                 NotificationCenter.default.post(name: .vbtWorkoutImported, object: snap.id)
             case .jumpTest(let jumpSnap):
                 _ = JumpTestStore.save(

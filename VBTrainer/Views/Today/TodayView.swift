@@ -22,8 +22,13 @@ struct TodayView: View {
 
     @State private var hasRefreshed = false
     @State private var pendingPlanTemplate: Template?
+    @State private var pendingWorkoutDetail: WorkoutDetailRoute?
     @State private var showingTweaks = false
     @State private var cmjPromptShown = false
+
+    struct WorkoutDetailRoute: Identifiable, Hashable {
+        let id: UUID
+    }
 
     private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
     private var accent: Color { GoalTheme.accent(for: goal) }
@@ -45,15 +50,14 @@ struct TodayView: View {
                     TodayHeader(snapshot: readinessSnaps.first, goalAccent: accent)
 
                     if let plan = todayPlan, let template = todayTemplate {
-                        SectionHeader(title: "已安排今日")
+                        SectionHeader(title: bannerSectionTitle(for: plan.status))
                         ScheduledTrainingCard(
                             templateName: template.name,
                             source: scheduledSource(plan: plan),
-                            onStartFromWatch: {
-                                TemplateSyncService.push(template: template, on: plan.date)
-                                Haptics.success()
-                            },
-                            onEdit: { pendingPlanTemplate = template },
+                            status: plan.status,
+                            summary: completedSummary(for: plan),
+                            onPrimary: { handlePrimary(plan: plan, template: template) },
+                            onSecondary: { handleSecondary(plan: plan, template: template) },
                             accent: accent
                         )
                         .padding(.bottom, 12)
@@ -101,6 +105,9 @@ struct TodayView: View {
             }
             .navigationDestination(item: $pendingPlanTemplate) { tpl in
                 PlanView(template: tpl, plannedDate: Date())
+            }
+            .navigationDestination(item: $pendingWorkoutDetail) { route in
+                WorkoutDetailView(workoutId: route.id)
             }
             .sheet(isPresented: $showingTweaks) {
                 if let profile = profiles.first {
@@ -257,6 +264,68 @@ struct TodayView: View {
         f.locale = Locale(identifier: "zh-Hans")
         f.dateFormat = "M·d"
         return f.string(from: date)
+    }
+
+    // MARK: - Status-driven banner
+
+    private func bannerSectionTitle(for status: DayPlanStatus) -> String {
+        switch status {
+        case .scheduled:  return "已安排今日"
+        case .inProgress: return "训练中"
+        case .completed:  return "今日已完成"
+        case .skipped:    return "今日跳过"
+        case .missed:     return "昨日未完成"
+        }
+    }
+
+    private func completedSummary(for plan: DayPlan) -> ScheduledTrainingCard.ScheduledSummary? {
+        guard plan.status == .completed,
+              let workoutId = plan.completedWorkoutId,
+              let workout = workouts.first(where: { $0.id == workoutId })
+        else { return nil }
+        let dur = Int(workout.durationSeconds / 60)
+        let vol = workout.totalVolumeKg
+        let setCount = workout.sets.count
+        let perSetVL = workout.sets.map(\.velocityLossPercent).filter { $0 > 0 }
+        let avgVL = perSetVL.isEmpty ? 0 : perSetVL.reduce(0, +) / Double(perSetVL.count)
+        return .init(durationMin: dur, totalVolumeKg: vol, setCount: setCount, avgVL: avgVL)
+    }
+
+    private func handlePrimary(plan: DayPlan, template: Template) {
+        switch plan.status {
+        case .scheduled:
+            // Push to Watch + give haptic
+            TemplateSyncService.push(template: template, on: plan.date)
+            Haptics.success()
+        case .inProgress:
+            // Best effort: nudge Watch by re-pushing the template
+            TemplateSyncService.push(template: template, on: plan.date)
+        case .completed:
+            // 看复盘 → push WorkoutDetailView
+            if let id = plan.completedWorkoutId {
+                pendingWorkoutDetail = WorkoutDetailRoute(id: id)
+            }
+        case .skipped:
+            // Re-schedule by opening PlanView
+            pendingPlanTemplate = template
+        case .missed:
+            // Re-attempt or reschedule — fastest path is opening Plan
+            pendingPlanTemplate = template
+        }
+    }
+
+    private func handleSecondary(plan: DayPlan, template: Template) {
+        switch plan.status {
+        case .scheduled:
+            // 编辑 → PlanView
+            pendingPlanTemplate = template
+        case .completed:
+            // 再练一次 → push template (creates new workout outside the plan)
+            TemplateSyncService.push(template: template, on: Date())
+            Haptics.success()
+        case .inProgress, .skipped, .missed:
+            break
+        }
     }
 }
 
