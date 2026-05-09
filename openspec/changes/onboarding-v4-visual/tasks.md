@@ -1,0 +1,8 @@
+- [x] 1. OnboardingView 重写为 4 步
+- [x] 2. 顶部 dots 进度（当前步加宽 + accent）
+- [x] 3. 步骤切换动画（trailing/leading + opacity）
+- [x] 4. 价值主张步：3 行 fact + 图标盒子
+- [x] 5. 个人画像步：2 个 fieldGroup + segmented Picker
+- [x] 6. 底部 CTA：圆形返回 + accent capsule + 阴影
+- [x] 7. accent 绑 goal（GoalTheme），切目标即时重染
+- [ ] 8. 用户在 macOS 本机编译 + 真机走一次首启 onboarding 流程
