@@ -258,6 +258,8 @@ struct WeeklyPlanView: View {
         Calendar.current.compare(date, to: Date(), toGranularity: .day) == .orderedAscending
     }
 
+    @State private var reverseSyncEnabled = false
+
     private var syncOptions: some View {
         VStack(spacing: 0) {
             optionRow(icon: "tag", label: "写入到日历",
@@ -266,9 +268,42 @@ struct WeeklyPlanView: View {
             optionRow(icon: "bell", label: "提前提醒", trailing: "30 分钟")
             Divider().padding(.leading, 44)
             optionRow(icon: "arrow.uturn.right", label: "循环", trailing: "每周")
+            Divider().padding(.leading, 44)
+            HStack(spacing: 12) {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Tokens.Color.secondaryLabel)
+                    .frame(width: 20)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("反向读取")
+                        .font(.system(size: 14))
+                    Text("日历里改时间 / 删除事件 → 计划跟着变")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Tokens.Color.tertiaryLabel)
+                }
+                Spacer()
+                Toggle("", isOn: $reverseSyncEnabled)
+                    .labelsHidden()
+                    .tint(.green)
+                    .onChange(of: reverseSyncEnabled) { _, newValue in
+                        if newValue {
+                            Task {
+                                let granted = await EventKitService.shared.requestFullAccess()
+                                reverseSyncEnabled = granted
+                                if granted {
+                                    DayPlanReverseSyncer.shared.runReconcile()
+                                }
+                            }
+                        }
+                    }
+            }
+            .padding(.horizontal, 14).padding(.vertical, 12)
         }
         .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
         .padding(.horizontal, Tokens.Space.lg)
+        .onAppear {
+            reverseSyncEnabled = EventKitService.shared.hasReadAccess
+        }
     }
 
     private func optionRow(icon: String, label: String, trailing: String) -> some View {

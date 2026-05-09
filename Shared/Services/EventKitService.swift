@@ -68,6 +68,39 @@ public final class EventKitService {
         #endif
     }
 
+    /// Whether we have read access (full access, iOS 17+) — required for
+    /// reading back user-edited events in pullChanges(...).
+    public var hasReadAccess: Bool {
+        #if canImport(EventKit) && os(iOS)
+        if #available(iOS 17.0, *) {
+            return EKEventStore.authorizationStatus(for: .event) == .fullAccess
+        } else {
+            return EKEventStore.authorizationStatus(for: .event) == .authorized
+        }
+        #else
+        return false
+        #endif
+    }
+
+    /// Request full (read+write) access. Needed for reverse sync. The user's
+    /// system sheet message comes from `NSCalendarsFullAccessUsageDescription`.
+    @discardableResult
+    public func requestFullAccess() async -> Bool {
+        #if canImport(EventKit) && os(iOS)
+        do {
+            if #available(iOS 17.0, *) {
+                return try await store.requestFullAccessToEvents()
+            } else {
+                return try await store.requestAccess(to: .event)
+            }
+        } catch {
+            return false
+        }
+        #else
+        return false
+        #endif
+    }
+
     // MARK: - Sync
 
     /// Create or update the calendar event for a DayPlan. Returns the
@@ -114,6 +147,62 @@ public final class EventKitService {
         try store.remove(event, span: .thisEvent)
         #endif
     }
+
+    // MARK: - Reverse sync (calendar → DayPlan)
+
+    /// Snapshot of one event read back from the calendar, used to update
+    /// DayPlan when the user edited the event in iPhone Calendar app.
+    public struct EventChange: Sendable, Equatable {
+        public let identifier: String
+        public let title: String
+        public let start: Date
+        public let isDeleted: Bool
+    }
+
+    /// Read all events in our 训练 calendar within the given date range.
+    /// Returns a list of EventChange snapshots the caller (DayPlanReverseSyncer)
+    /// reconciles against the local DayPlan store. Requires full access.
+    public func pullChanges(in range: ClosedRange<Date>) -> [EventChange] {
+        #if canImport(EventKit) && os(iOS)
+        guard hasReadAccess else { return [] }
+        guard let calendar = store.calendars(for: .event)
+            .first(where: { $0.title == Self.calendarName }) else { return [] }
+        let predicate = store.predicateForEvents(
+            withStart: range.lowerBound,
+            end: range.upperBound,
+            calendars: [calendar]
+        )
+        let events = store.events(matching: predicate)
+        return events.map { ev in
+            EventChange(
+                identifier: ev.eventIdentifier,
+                title: ev.title ?? "",
+                start: ev.startDate,
+                isDeleted: false
+            )
+        }
+        #else
+        return []
+        #endif
+    }
+
+    /// Subscribe to system "EventStore changed" notifications. The provided
+    /// closure runs on the main actor each time the user edits the calendar.
+    /// Returns an opaque NSObject token; retain it to keep the subscription
+    /// alive (typically stored on the syncer).
+    @MainActor
+    public func subscribeToChanges(_ handler: @escaping () -> Void) -> Any? {
+        #if canImport(EventKit) && os(iOS)
+        return NotificationCenter.default.addObserver(
+            forName: .EKEventStoreChanged,
+            object: store,
+            queue: .main
+        ) { _ in handler() }
+        #else
+        return nil
+        #endif
+    }
+}
 
     // MARK: - Helpers
 

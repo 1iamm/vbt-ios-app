@@ -22,6 +22,10 @@ struct VBTrainerApp: App {
 
     init() {
         iPhoneConnectivityService.shared.bind(container: container)
+        // Start reverse-sync watcher (no-op until user grants Calendar access).
+        Task { @MainActor in
+            DayPlanReverseSyncer.shared.bind(container: container)
+        }
     }
 
     var body: some Scene {
