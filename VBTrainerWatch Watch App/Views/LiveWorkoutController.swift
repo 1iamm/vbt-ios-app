@@ -43,6 +43,12 @@ public final class LiveWorkoutController: ObservableObject {
     public private(set) var currentVLCeiling: Double?
     public private(set) var currentSide: Side = .both
 
+    /// Per-set specs from the iPhone-side plan. When non-empty, each set's
+    /// weight/reps/rest are pulled from `plannedSpecs[plannedSetCursor]`
+    /// instead of repeating `currentWeightKg`.
+    public private(set) var plannedSpecs: [TemplateSetSpecSnapshot] = []
+    public private(set) var plannedSetCursor: Int = 0  // 0-based index into plannedSpecs
+
     // MARK: - Internal
 
     private var session = ActiveWorkoutSession()
@@ -66,14 +72,20 @@ public final class LiveWorkoutController: ObservableObject {
     ) async {
         // Idempotent: if already running this workout, no-op.
         if isRunning { return }
-        // Fresh start: rebuild session and reset all mirrors.
+        // Fresh start: rebuild session and reset all mirrors. preparePlanned()
+        // may have already populated currentTargetRange / currentVLCeiling /
+        // currentExerciseId before this call — keep those when a plan is loaded.
         resetForNewWorkout()
-        currentExerciseId = exerciseId
-        currentWeightKg = weightKg
+        let usingPlan = !plannedSpecs.isEmpty
+        currentExerciseId = usingPlan ? currentExerciseId : exerciseId
+        currentWeightKg = usingPlan ? (plannedSpecs.first?.weightKg ?? weightKg) : weightKg
         currentVelocityVariant = velocityVariant
-        currentTargetRange = targetRange
-        currentVLCeiling = vlCeiling
+        currentTargetRange = usingPlan ? (currentTargetRange ?? targetRange) : targetRange
+        currentVLCeiling = usingPlan ? (currentVLCeiling ?? vlCeiling) : vlCeiling
         currentSide = side
+        if usingPlan, let firstRest = plannedSpecs.first?.restSeconds {
+            lastResolvedRest = firstRest
+        }
         let stream = await session.events
         consumerTask = Task { [weak self] in
             for await event in stream {
@@ -101,26 +113,71 @@ public final class LiveWorkoutController: ObservableObject {
     public func endSet() async {
         guard isRunning else { return }
         await session.endSet()
+        plannedSetCursor += 1
     }
 
+    /// Inspect the next planned set's parameters (used by Rest screen to
+    /// auto-fill the "下一组" button). Returns nil when no plan or finished.
+    public var nextPlannedParams: (weightKg: Double, reps: Int, rest: Int, isWarmUp: Bool)? {
+        guard !plannedSpecs.isEmpty, plannedSetCursor < plannedSpecs.count else { return nil }
+        let s = plannedSpecs[plannedSetCursor]
+        return (s.weightKg, s.reps, s.restSeconds, s.kindRaw == "warmUp")
+    }
+
+    /// Start the next set. When a plan is loaded, params come from
+    /// `plannedSpecs[plannedSetCursor]`; otherwise the caller's args are used.
     public func startNextSet(
-        weightKg: Double,
-        velocityVariant: VelocityVariant = .mv,
+        weightKg: Double? = nil,
+        velocityVariant: VelocityVariant? = nil,
         targetRange: ClosedRange<Double>? = nil,
         vlCeiling: Double? = nil,
-        side: Side = .both
+        side: Side? = nil
     ) async {
+        let resolvedWeight: Double
+        let resolvedRest: Int?
+        if let next = nextPlannedParams {
+            resolvedWeight = next.weightKg
+            resolvedRest = next.rest
+        } else {
+            resolvedWeight = weightKg ?? currentWeightKg
+            resolvedRest = nil
+        }
         do {
             try await session.startNextSet(
-                weightKg: weightKg,
-                velocityVariant: velocityVariant,
-                targetRange: targetRange,
-                vlCeiling: vlCeiling,
-                side: side
+                weightKg: resolvedWeight,
+                velocityVariant: velocityVariant ?? currentVelocityVariant,
+                targetRange: targetRange ?? currentTargetRange,
+                vlCeiling: vlCeiling ?? currentVLCeiling,
+                side: side ?? currentSide
             )
+            currentWeightKg = resolvedWeight
+            if let r = resolvedRest {
+                // store rest for UI (RestView reads it for countdown)
+                lastResolvedRest = r
+            }
             setBaselineVelocity = nil
         } catch {
             errorMessage = "下一组启动失败：\(error.localizedDescription)"
+        }
+    }
+
+    /// Most recent set's planned rest seconds (used by RestView countdown).
+    public private(set) var lastResolvedRest: Int = 90
+
+    /// Prepare the controller for a planned multi-set item (called before
+    /// pushing the LiveWorkout route). After this, `start(...)` will use
+    /// the first spec's params.
+    public func preparePlanned(item: TemplateItemSnapshot) {
+        plannedSpecs = item.setSpecs.sorted { $0.index < $1.index }
+        plannedSetCursor = 0
+        if let first = plannedSpecs.first {
+            currentExerciseId = item.exerciseId
+            currentWeightKg = first.weightKg
+            currentVLCeiling = item.vlCeiling
+            if let lo = item.targetVelocityMin, let hi = item.targetVelocityMax {
+                currentTargetRange = lo...hi
+            }
+            lastResolvedRest = first.restSeconds
         }
     }
 
@@ -132,6 +189,7 @@ public final class LiveWorkoutController: ObservableObject {
         isRunning = false
         consumerTask?.cancel()
         consumerTask = nil
+        clearPlanned()
         return snapshot
     }
 
@@ -225,8 +283,16 @@ public final class LiveWorkoutController: ObservableObject {
         setBaselineVelocity = nil
         consumerTask?.cancel()
         consumerTask = nil
+        // Note: plannedSpecs / plannedSetCursor / lastResolvedRest are intentionally
+        // NOT reset here — preparePlanned(item:) sets them BEFORE start() is invoked
+        // so the controller can step through the plan. complete() clears them.
         // The actor's events stream is finished after complete(); rebuild.
         session = ActiveWorkoutSession()
+    }
+
+    private func clearPlanned() {
+        plannedSpecs = []
+        plannedSetCursor = 0
     }
 
     deinit {

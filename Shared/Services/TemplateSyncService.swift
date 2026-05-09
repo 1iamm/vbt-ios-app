@@ -18,7 +18,17 @@ public enum TemplateSyncService {
         let items: [TemplateItemSnapshot] = template.items
             .sorted(by: { $0.index < $1.index })
             .map { item in
-                TemplateItemSnapshot(
+                let specs: [TemplateSetSpecSnapshot] = item.orderedSetSpecs.map { s in
+                    TemplateSetSpecSnapshot(
+                        id: s.id,
+                        index: s.index,
+                        kindRaw: s.kind.rawValue,
+                        weightKg: s.weightKg,
+                        reps: s.reps,
+                        restSeconds: s.restSeconds
+                    )
+                }
+                return TemplateItemSnapshot(
                     id: item.id,
                     index: item.index,
                     exerciseId: item.exerciseId,
@@ -29,7 +39,8 @@ public enum TemplateSyncService {
                     targetVelocityMax: item.targetVelocityMax,
                     vlCeiling: item.vlCeiling,
                     restSeconds: item.restSeconds,
-                    sideRaw: item.sideRaw
+                    sideRaw: item.sideRaw,
+                    setSpecs: specs
                 )
             }
         return TemplateSnapshot(
