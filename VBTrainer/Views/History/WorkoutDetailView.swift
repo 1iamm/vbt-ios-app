@@ -28,11 +28,16 @@ struct WorkoutDetailView: View {
     private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
     private var accent: Color { GoalTheme.accent(for: goal) }
 
+    @State private var editingFeedback = false
+    @State private var draftRPE: Int = 7
+    @State private var draftNotes: String = ""
+
     var body: some View {
         ScrollView {
             if let workout {
                 VStack(alignment: .leading, spacing: 0) {
                     hero(workout: workout)
+                    feedbackCard(workout: workout)
                     timelineEntry(workout: workout)
                     exerciseGroups(workout: workout)
                     Spacer().frame(height: 24)
@@ -55,6 +60,21 @@ struct WorkoutDetailView: View {
                     }
                     .tint(accent)
                 }
+            }
+        }
+        .sheet(isPresented: $editingFeedback) {
+            if let workout {
+                NavigationStack {
+                    FeedbackEditorSheet(
+                        rpe: $draftRPE, notes: $draftNotes,
+                        accent: accent
+                    ) {
+                        workout.rpe = draftRPE
+                        workout.notes = draftNotes.isEmpty ? nil : draftNotes
+                        try? context.save()
+                    }
+                }
+                .presentationDetents([.medium])
             }
         }
     }
@@ -132,6 +152,90 @@ struct WorkoutDetailView: View {
                 .tracking(0.4)
                 .foregroundStyle(Tokens.Color.tertiaryLabel)
                 .textCase(.uppercase)
+        }
+    }
+
+    // MARK: - Subjective feedback (RPE + notes)
+
+    @ViewBuilder
+    private func feedbackCard(workout: Workout) -> some View {
+        let hasRPE = workout.rpe != nil
+        let hasNotes = workout.notes?.isEmpty == false
+        let hasFeedback = hasRPE || hasNotes
+        Button {
+            draftRPE = workout.rpe ?? 7
+            draftNotes = workout.notes ?? ""
+            editingFeedback = true
+        } label: {
+            HStack(spacing: 10) {
+                if hasFeedback {
+                    if let rpe = workout.rpe {
+                        rpeBadge(rpe)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        if let rpe = workout.rpe {
+                            Text("RPE \(rpe) · \(rpeLabel(rpe))")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        if let notes = workout.notes, !notes.isEmpty {
+                            Text(notes)
+                                .font(.system(size: 12))
+                                .foregroundStyle(Tokens.Color.secondaryLabel)
+                                .lineLimit(2)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "pencil")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Tokens.Color.tertiaryLabel)
+                } else {
+                    Image(systemName: "plus.circle")
+                        .font(.system(size: 16))
+                        .foregroundStyle(accent)
+                    Text("补写感受 · RPE / 笔记")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(accent)
+                    Spacer()
+                }
+            }
+            .padding(14)
+            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, Tokens.Space.lg)
+        .padding(.bottom, 12)
+    }
+
+    private func rpeBadge(_ rpe: Int) -> some View {
+        ZStack {
+            Circle().stroke(Tokens.Color.fill, lineWidth: 4)
+            Circle()
+                .trim(from: 0, to: CGFloat(rpe) / 10.0)
+                .stroke(rpeRingColor(rpe), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            Text("\(rpe)")
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .monospacedDigit()
+        }
+        .frame(width: 38, height: 38)
+    }
+
+    private func rpeRingColor(_ rpe: Int) -> Color {
+        switch rpe {
+        case 1...4:  return Tokens.Color.success
+        case 5...7:  return accent
+        case 8...9:  return Tokens.Color.warning
+        default:     return Tokens.Color.danger
+        }
+    }
+
+    private func rpeLabel(_ rpe: Int) -> String {
+        switch rpe {
+        case 1...3: return "轻松"
+        case 4...5: return "中等"
+        case 6...7: return "偏重"
+        case 8...9: return "很重"
+        default:    return "极限"
         }
     }
 
@@ -316,6 +420,102 @@ struct WorkoutDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
+    }
+}
+
+// MARK: - Feedback editor sheet (RPE + notes)
+
+struct FeedbackEditorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var rpe: Int
+    @Binding var notes: String
+    let accent: Color
+    let onSave: () -> Void
+
+    private let presetTags = ["状态好", "状态一般", "技术问题", "腰累", "腿沉", "心率高"]
+
+    var body: some View {
+        Form {
+            Section("RPE · 主观负荷 (1-10)") {
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("\(rpe)")
+                            .font(.system(size: 36, weight: .heavy, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(rpeColor)
+                        Spacer()
+                        Text(rpeLabel)
+                            .font(.system(size: 13))
+                            .foregroundStyle(Tokens.Color.secondaryLabel)
+                    }
+                    Slider(value: Binding(
+                        get: { Double(rpe) },
+                        set: { rpe = Int($0.rounded()) }
+                    ), in: 1...10, step: 1)
+                    .tint(accent)
+                }
+                .padding(.vertical, 4)
+            }
+
+            Section("笔记") {
+                TextField("今天的状态 / 技术问题 / 想做的调整", text: $notes, axis: .vertical)
+                    .lineLimit(3...6)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(presetTags, id: \.self) { tag in
+                            Button {
+                                if !notes.contains(tag) {
+                                    notes = notes.isEmpty ? tag : "\(notes) · \(tag)"
+                                }
+                            } label: {
+                                Text(tag)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundStyle(accent)
+                                    .padding(.horizontal, 9).padding(.vertical, 4)
+                                    .background(accent.opacity(0.14), in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
+        .navigationTitle("感受")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button("取消") { dismiss() }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("保存") {
+                    onSave()
+                    dismiss()
+                }
+                .bold()
+                .foregroundStyle(accent)
+            }
+        }
+    }
+
+    private var rpeColor: Color {
+        switch rpe {
+        case 1...4: return Tokens.Color.success
+        case 5...7: return accent
+        case 8...9: return Tokens.Color.warning
+        default:    return Tokens.Color.danger
+        }
+    }
+
+    private var rpeLabel: String {
+        switch rpe {
+        case 1: return "极轻 · 暖身"
+        case 2...3: return "轻松"
+        case 4...5: return "中等"
+        case 6...7: return "偏重 · 挑战"
+        case 8: return "很重 · 接近极限"
+        case 9: return "极重 · 1-2 reps in reserve"
+        default: return "极限 · 不能再多一组"
+        }
     }
 }
 

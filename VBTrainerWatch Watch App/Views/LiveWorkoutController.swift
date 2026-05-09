@@ -183,7 +183,17 @@ public final class LiveWorkoutController: ObservableObject {
 
     @discardableResult
     public func complete() async -> WorkoutSnapshot {
-        let snapshot = await session.complete()
+        return await completeWithFeedback(rpe: nil, notes: nil)
+    }
+
+    /// Complete the session and stamp the snapshot with subjective feedback
+    /// before returning. Watch's Summary screen passes the user's RPE +
+    /// post-workout note here so the snapshot reaching iPhone is complete.
+    @discardableResult
+    public func completeWithFeedback(rpe: Int?, notes: String?) async -> WorkoutSnapshot {
+        var snapshot = await session.complete()
+        if let rpe { snapshot.rpe = rpe }
+        if let notes, !notes.isEmpty { snapshot.notes = notes }
         finishedSnapshot = snapshot
         isCompleted = true
         isRunning = false

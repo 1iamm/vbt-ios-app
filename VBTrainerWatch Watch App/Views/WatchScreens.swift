@@ -607,38 +607,135 @@ struct WatchSummaryView: View {
     @EnvironmentObject var nav: WatchNavigation
     @EnvironmentObject var controller: LiveWorkoutController
 
-    var body: some View {
-        WatchScreenChrome(title: "训练总结") {
-            VStack(spacing: 10) {
-                Spacer().frame(height: 30)
-                HStack {
-                    summaryStat("总Reps", "\(controller.totalReps)", color: fg)
-                    summaryStat("平均速度", String(format: "%.2f", controller.avgVelocity), color: Tokens.Color.Data.velocity, unit: "m/s")
-                }
-                HStack {
-                    summaryStat("VL%", "\(controller.avgVLPercent)", color: Tokens.Color.Data.velocityLoss, unit: "%")
-                    summaryStat("心率", "\(controller.avgHeartRate)", color: Tokens.Color.Data.heartRate, unit: "bpm")
-                }
-                Spacer()
-                Button {
-                    Task {
-                        let snap = await controller.complete()
-                        WatchConnectivityService.shared.send(message: .workoutSnapshot(snap))
-                        nav.popToRoot()
-                    }
-                } label: {
-                    Text("完成")
-                        .font(.system(size: 16, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(accent, in: Capsule())
-                        .foregroundStyle(fg)
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
+    /// Subjective load 1–10 (Borg CR-10). Default 7 = "moderate-hard" — close
+    /// to the actual mode for strength training, lets users single-tap accept
+    /// without scrolling for typical sessions.
+    @State private var rpe: Int = 7
+    @State private var feeling: Feeling = .normal
+
+    enum Feeling: String, CaseIterable {
+        case strong = "强"
+        case normal = "正常"
+        case bad = "拉胯"
+
+        var emoji: String {
+            switch self {
+            case .strong: return "💪"
+            case .normal: return "·"
+            case .bad:    return "😩"
             }
         }
+    }
+
+    var body: some View {
+        WatchScreenChrome(title: "训练总结") {
+            ScrollView {
+                VStack(spacing: 10) {
+                    Spacer().frame(height: 24)
+                    HStack {
+                        summaryStat("总Reps", "\(controller.totalReps)", color: fg)
+                        summaryStat("平均速度", String(format: "%.2f", controller.avgVelocity), color: Tokens.Color.Data.velocity, unit: "m/s")
+                    }
+                    HStack {
+                        summaryStat("VL%", "\(controller.avgVLPercent)", color: Tokens.Color.Data.velocityLoss, unit: "%")
+                        summaryStat("心率", "\(controller.avgHeartRate)", color: Tokens.Color.Data.heartRate, unit: "bpm")
+                    }
+
+                    rpeSection
+
+                    feelingSection
+
+                    Button {
+                        Task {
+                            let notes = "感受：\(feeling.rawValue)"
+                            let snap = await controller.completeWithFeedback(rpe: rpe, notes: notes)
+                            WatchConnectivityService.shared.send(message: .workoutSnapshot(snap))
+                            nav.popToRoot()
+                        }
+                    } label: {
+                        Text("完成")
+                            .font(.system(size: 16, weight: .semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(accent, in: Capsule())
+                            .foregroundStyle(fg)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, 8)
+                }
+            }
+        }
+    }
+
+    private var rpeSection: some View {
+        VStack(spacing: 4) {
+            Text("RPE")
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(sub)
+                .tracking(0.6)
+            Text("\(rpe)")
+                .font(.system(size: 38, weight: .heavy, design: .rounded))
+                .foregroundStyle(rpeColor)
+                .focusable()
+                .digitalCrownRotation(
+                    Binding(get: { Double(rpe) },
+                            set: { rpe = max(1, min(10, Int($0.rounded()))) }),
+                    from: 1, through: 10, by: 1, sensitivity: .medium,
+                    isContinuous: false, isHapticFeedbackEnabled: true
+                )
+            Text(rpeLabel)
+                .font(.system(size: 10))
+                .foregroundStyle(sub)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private var rpeColor: Color {
+        switch rpe {
+        case 1...4:  return Tokens.Color.success
+        case 5...7:  return fg
+        case 8...9:  return Tokens.Color.warning
+        default:     return Tokens.Color.danger
+        }
+    }
+
+    private var rpeLabel: String {
+        switch rpe {
+        case 1: return "极轻"
+        case 2: return "很轻"
+        case 3: return "轻"
+        case 4: return "略轻"
+        case 5: return "中"
+        case 6: return "略重"
+        case 7: return "重"
+        case 8: return "很重"
+        case 9: return "极重"
+        default: return "极限"
+        }
+    }
+
+    private var feelingSection: some View {
+        HStack(spacing: 6) {
+            ForEach(Feeling.allCases, id: \.self) { f in
+                Button { feeling = f } label: {
+                    HStack(spacing: 3) {
+                        Text(f.emoji).font(.system(size: 11))
+                        Text(f.rawValue)
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(feeling == f ? fg : sub)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .background(
+                        feeling == f ? accent.opacity(0.25) : Color.white.opacity(0.06),
+                        in: Capsule()
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
     }
 
     private func summaryStat(_ label: String, _ value: String, color: Color, unit: String? = nil) -> some View {
