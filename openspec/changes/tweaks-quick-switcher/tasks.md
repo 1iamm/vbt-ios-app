@@ -1,0 +1,4 @@
+- [x] 1. 新建 `Common/TweaksQuickSwitcher.swift`：sheet + 5 goal 行 + 2 lock 行
+- [x] 2. 新建 `TweaksButton`（圆形 36pt 滑块图标）
+- [x] 3. `TodayView` overlay top-trailing 注入按钮 + sheet 弹 TweaksQuickSwitcher
+- [ ] 4. 用户在 macOS 本机编译 + 真机：从 Today 切换目标 → 整个 App 主色立即变化

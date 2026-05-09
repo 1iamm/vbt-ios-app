@@ -38,6 +38,31 @@ public struct JumpTestSnapshot: Codable, Sendable, Equatable {
     }
 }
 
+public struct TemplateSetSpecSnapshot: Codable, Sendable, Equatable {
+    public let id: UUID
+    public let index: Int
+    public let kindRaw: String      // "warmUp" | "work"
+    public let weightKg: Double
+    public let reps: Int
+    public let restSeconds: Int
+
+    public init(
+        id: UUID = UUID(),
+        index: Int,
+        kindRaw: String,
+        weightKg: Double,
+        reps: Int,
+        restSeconds: Int
+    ) {
+        self.id = id
+        self.index = index
+        self.kindRaw = kindRaw
+        self.weightKg = weightKg
+        self.reps = reps
+        self.restSeconds = restSeconds
+    }
+}
+
 public struct TemplateItemSnapshot: Codable, Sendable, Equatable {
     public let id: UUID
     public let index: Int
@@ -50,6 +75,10 @@ public struct TemplateItemSnapshot: Codable, Sendable, Equatable {
     public let vlCeiling: Double?
     public let restSeconds: Int
     public let sideRaw: String
+    /// Per-set specs. When non-empty the Watch drives each set with the
+    /// matching spec's weight/reps/rest. When empty (legacy templates),
+    /// fall back to the targetSets × targetReps @ targetWeightKg pattern.
+    public var setSpecs: [TemplateSetSpecSnapshot] = []
 
     public init(
         id: UUID = UUID(),
@@ -62,7 +91,8 @@ public struct TemplateItemSnapshot: Codable, Sendable, Equatable {
         targetVelocityMax: Double?,
         vlCeiling: Double?,
         restSeconds: Int,
-        sideRaw: String
+        sideRaw: String,
+        setSpecs: [TemplateSetSpecSnapshot] = []
     ) {
         self.id = id
         self.index = index
@@ -75,6 +105,30 @@ public struct TemplateItemSnapshot: Codable, Sendable, Equatable {
         self.vlCeiling = vlCeiling
         self.restSeconds = restSeconds
         self.sideRaw = sideRaw
+        self.setSpecs = setSpecs
+    }
+
+    /// Effective work-set count for UI summaries.
+    public var effectiveWorkSetCount: Int {
+        if setSpecs.isEmpty { return targetSets }
+        return setSpecs.filter { $0.kindRaw == "work" }.count
+    }
+
+    /// Returns the parameters the Watch should use for `setIndex` (1-based).
+    /// When per-set specs exist, picks them in order; falls back to legacy.
+    public func paramsForSet(_ setIndex: Int) -> (weightKg: Double, reps: Int, restSeconds: Int, isWarmUp: Bool) {
+        if !setSpecs.isEmpty {
+            let ordered = setSpecs.sorted { $0.index < $1.index }
+            if setIndex >= 1, setIndex <= ordered.count {
+                let s = ordered[setIndex - 1]
+                return (s.weightKg, s.reps, s.restSeconds, s.kindRaw == "warmUp")
+            }
+        }
+        return (targetWeightKg ?? 0, targetReps, restSeconds, false)
+    }
+
+    public var totalSetCount: Int {
+        setSpecs.isEmpty ? targetSets : setSpecs.count
     }
 }
 

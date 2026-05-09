@@ -93,3 +93,14 @@ public enum CitationTopic: String, Codable, CaseIterable, Sendable {
     case sleep
     case cmjNeuromuscular
 }
+
+/// Lifecycle status of a scheduled DayPlan. Drives Today banner copy / CTA,
+/// dot color in history calendar, and downstream readers (AI engine, EventKit
+/// reverse sync, stats).
+public enum DayPlanStatus: String, Codable, CaseIterable, Sendable {
+    case scheduled    // future or today, not yet started
+    case inProgress   // Watch session running for this plan
+    case completed    // workout finished + persisted
+    case skipped      // user explicitly cancelled (or calendar event deleted)
+    case missed       // past, never started — auto-marked at midnight rollover
+}

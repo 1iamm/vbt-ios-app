@@ -22,6 +22,16 @@ struct VBTrainerApp: App {
 
     init() {
         iPhoneConnectivityService.shared.bind(container: container)
+        let containerRef = container
+        Task { @MainActor in
+            // Start reverse-sync watcher (no-op until user grants Calendar access).
+            DayPlanReverseSyncer.shared.bind(container: containerRef)
+            // Roll past-due scheduled plans to .missed and migrate any legacy
+            // completed flags into the new status enum on every cold launch.
+            let context = ModelContext(containerRef)
+            DayPlanStateMachine.backfillLegacyCompleted(in: context)
+            DayPlanStateMachine.reconcileMissed(in: context)
+        }
     }
 
     var body: some Scene {
