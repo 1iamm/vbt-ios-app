@@ -1,0 +1,14 @@
+// Signing.xcconfig — Personal code-signing config for VBTrainer.
+//
+// Fill in your Apple Developer Team ID once and never touch this file again.
+// Find it at https://developer.apple.com/account → Membership → Team ID.
+// Free / personal Apple ID also has a Team ID (10-char alphanumeric).
+//
+// After editing the line below, run:
+//
+//   git update-index --skip-worktree Signing.xcconfig
+//
+// to keep your Team ID out of commits. Or run scripts/setup-signing.sh which
+// does the skip-worktree for you.
+
+DEVELOPMENT_TEAM =
