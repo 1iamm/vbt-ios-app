@@ -115,11 +115,12 @@ struct CelebrationCard: View {
 }
 
 /// Resolves which celebration to show after a completion event.
+/// Internal because its result type (`CelebrationCard.Kind`) is internal.
 @available(iOS 17.0, *)
-public enum CelebrationResolver {
+enum CelebrationResolver {
 
     @MainActor
-    public static func resolve(
+    static func resolve(
         completedWorkoutId: UUID?,
         context: ModelContext
     ) -> CelebrationCard.Kind? {
