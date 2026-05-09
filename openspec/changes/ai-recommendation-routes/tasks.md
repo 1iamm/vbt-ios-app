@@ -1,0 +1,6 @@
+- [x] 1. 新增 `RecommendationTemplateBuilder` (PR retest pyramid + deload clone)
+- [x] 2. `AIRecommendation` 加 exerciseIdHint / weightHint 字段
+- [x] 3. AIRecommendationEngine 填充 deload templateIdHint + prRetest 的 exId/weight + lastTopWeight() helper
+- [x] 4. TodayView AI 卡 wrap 在 Button + applyRecommendation 路由分类
+- [x] 5. cmjTest 弹 alert 引导 Watch
+- [ ] 6. 用户在 macOS 本机编译 + 真机：模拟低 readiness → 看到减载卡 → 点击 → 进 PlanView 看到 -15% 模板

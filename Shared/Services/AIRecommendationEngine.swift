@@ -27,7 +27,9 @@ public struct AIRecommendation: Identifiable, Hashable, Sendable {
     public let meta: String
     public let tags: [String]
     public let kind: Kind
-    public let templateIdHint: UUID?  // optional: pre-filled template
+    public let templateIdHint: UUID?
+    public let exerciseIdHint: String?
+    public let weightHint: Double?
 
     public enum Kind: String, Sendable {
         case deload
@@ -43,7 +45,9 @@ public struct AIRecommendation: Identifiable, Hashable, Sendable {
         meta: String,
         tags: [String],
         kind: Kind,
-        templateIdHint: UUID? = nil
+        templateIdHint: UUID? = nil,
+        exerciseIdHint: String? = nil,
+        weightHint: Double? = nil
     ) {
         self.id = id
         self.title = title
@@ -53,6 +57,8 @@ public struct AIRecommendation: Identifiable, Hashable, Sendable {
         self.tags = tags
         self.kind = kind
         self.templateIdHint = templateIdHint
+        self.exerciseIdHint = exerciseIdHint
+        self.weightHint = weightHint
     }
 }
 
@@ -63,16 +69,18 @@ public enum AIRecommendationEngine {
     public static func recommendations(context: ModelContext) -> [AIRecommendation] {
         var out: [AIRecommendation] = []
 
-        // Rule 1: low readiness → deload
+        // Rule 1: low readiness → deload (uses most recent template as base)
         if let snap = latestReadiness(context: context),
-           let score = Optional(snap.score), score < 65 {
+           let score = snap.score, score < 65 {
+            let baseTemplateId = latestTemplate(context: context)?.id
             out.append(.init(
                 title: "减载日",
                 subtitle: "基于今日 Readiness \(score)",
                 reason: "状态偏低 · 建议降量 −15% 维持速度",
                 meta: "降量训练 · 速度向 · ~50min",
                 tags: ["减载", "速度向"],
-                kind: .deload
+                kind: .deload,
+                templateIdHint: baseTemplateId
             ))
         }
 
@@ -80,13 +88,16 @@ public enum AIRecommendationEngine {
         if let topExId = topExerciseId(context: context),
            let exName = ExerciseLookup.exercise(byId: topExId)?.nameZH,
            daysSinceLastWorkout(exerciseId: topExId, context: context) >= 21 {
+            let topW = lastTopWeight(exerciseId: topExId, context: context) ?? 100
             out.append(.init(
                 title: "\(exName) · PR 重测",
                 subtitle: "距离上次 \(daysSinceLastWorkout(exerciseId: topExId, context: context)) 天",
                 reason: "建议冲 1RM · 6 组金字塔加重",
                 meta: "1 动作 · 6 组 · ~40min",
                 tags: ["PR 重测"],
-                kind: .prRetest
+                kind: .prRetest,
+                exerciseIdHint: topExId,
+                weightHint: topW
             ))
         }
 
@@ -136,6 +147,26 @@ public enum AIRecommendationEngine {
         fd.fetchLimit = 1
         guard let last = (try? context.fetch(fd))?.first else { return 999 }
         return max(0, Calendar.current.dateComponents([.day], from: last.startedAt, to: Date()).day ?? 0)
+    }
+
+    @MainActor
+    private static func latestTemplate(context: ModelContext) -> Template? {
+        var fd = FetchDescriptor<Template>(
+            sortBy: [SortDescriptor(\.updatedAt, order: .reverse)]
+        )
+        fd.fetchLimit = 1
+        return (try? context.fetch(fd))?.first
+    }
+
+    @MainActor
+    private static func lastTopWeight(exerciseId: String, context: ModelContext) -> Double? {
+        var fd = FetchDescriptor<Workout>(
+            predicate: #Predicate { $0.exerciseId == exerciseId },
+            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+        )
+        fd.fetchLimit = 1
+        guard let last = (try? context.fetch(fd))?.first else { return nil }
+        return last.sets.map(\.weightKg).max()
     }
 
     @MainActor

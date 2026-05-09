@@ -23,6 +23,7 @@ struct TodayView: View {
     @State private var hasRefreshed = false
     @State private var pendingPlanTemplate: Template?
     @State private var showingTweaks = false
+    @State private var cmjPromptShown = false
 
     private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
     private var accent: Color { GoalTheme.accent(for: goal) }
@@ -64,7 +65,12 @@ struct TodayView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
                                 ForEach(recs) { rec in
-                                    AIRecommendationCard(rec: rec)
+                                    Button {
+                                        applyRecommendation(rec)
+                                    } label: {
+                                        AIRecommendationCard(rec: rec)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
                             }
                             .padding(.horizontal, Tokens.Space.lg)
@@ -102,6 +108,37 @@ struct TodayView: View {
                         .presentationDetents([.medium, .large])
                 }
             }
+            .alert("在 Apple Watch 上启动 CMJ", isPresented: $cmjPromptShown) {
+                Button("好的") {}
+            } message: {
+                Text("CMJ 神经测试在 Watch 上完成（3 跳取最佳）。打开 Apple Watch 上的 VBTrainer 即可。")
+            }
+        }
+    }
+
+    /// Route an AI recommendation to its correct destination.
+    private func applyRecommendation(_ rec: AIRecommendation) {
+        Haptics.selection()
+        switch rec.kind {
+        case .deload:
+            guard let baseId = rec.templateIdHint,
+                  let base = templates.first(where: { $0.id == baseId }) else {
+                // No reference template — fall back to creating a new blank.
+                createNewTemplate()
+                return
+            }
+            let tpl = RecommendationTemplateBuilder.buildDeload(baseTemplate: base, in: context)
+            pendingPlanTemplate = tpl
+        case .prRetest:
+            guard let exId = rec.exerciseIdHint, let weight = rec.weightHint else {
+                createNewTemplate()
+                return
+            }
+            let tpl = RecommendationTemplateBuilder.buildPRRetest(
+                exerciseId: exId, lastTopWeight: weight, in: context)
+            pendingPlanTemplate = tpl
+        case .cmjTest:
+            cmjPromptShown = true
         }
     }
 
