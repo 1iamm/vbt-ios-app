@@ -57,6 +57,8 @@ public final class WatchConnectivityService: NSObject, WCSessionDelegate {
                     TodayPlanStore.shared.store(snap)
                 case .preferences(let prefs):
                     UserDefaults.standard.set(prefs.enableRepHaptic, forKey: "watch.enableRepHaptic")
+                case .startWorkout(let snap):
+                    WatchActivationCenter.shared.activate(snap)
                 default:
                     // Other inbound message kinds — Watch doesn't yet handle.
                     break

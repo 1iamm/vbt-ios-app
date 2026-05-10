@@ -12,6 +12,7 @@ public enum ConnectivityKind: String, Codable, Sendable {
     case template          // Proposal 9 fills in
     case readiness         // Proposal 7 may push readiness from iPhone to Watch
     case preferences       // iPhone Profile toggles → Watch (e.g. enableRepHaptic)
+    case startWorkout      // V2: iPhone activates a synced template on the Watch
 }
 
 public struct WatchPreferencesSnapshot: Codable, Sendable, Equatable {
@@ -19,6 +20,19 @@ public struct WatchPreferencesSnapshot: Codable, Sendable, Equatable {
 
     public init(enableRepHaptic: Bool) {
         self.enableRepHaptic = enableRepHaptic
+    }
+}
+
+/// V2 activation payload. Sent right after a `.template` push so the Watch can
+/// pop to root and jump straight to the synced plan view instead of waiting
+/// for the user to manually open the app.
+public struct StartWorkoutSnapshot: Codable, Sendable, Equatable {
+    public let templateId: UUID
+    public let startItemIndex: Int
+
+    public init(templateId: UUID, startItemIndex: Int = 0) {
+        self.templateId = templateId
+        self.startItemIndex = startItemIndex
     }
 }
 
@@ -160,6 +174,7 @@ public enum ConnectivityMessage: Codable, Sendable, Equatable {
     case jumpTest(JumpTestSnapshot)
     case template(TemplateSnapshot)
     case preferences(WatchPreferencesSnapshot)
+    case startWorkout(StartWorkoutSnapshot)
 
     public var kind: ConnectivityKind {
         switch self {
@@ -167,6 +182,7 @@ public enum ConnectivityMessage: Codable, Sendable, Equatable {
         case .jumpTest:        return .jumpTest
         case .template:        return .template
         case .preferences:     return .preferences
+        case .startWorkout:    return .startWorkout
         }
     }
 }
@@ -174,6 +190,10 @@ public enum ConnectivityMessage: Codable, Sendable, Equatable {
 public extension Notification.Name {
     static let vbtWorkoutImported = Notification.Name("vbt.workoutImported")
     static let vbtJumpTestImported = Notification.Name("vbt.jumpTestImported")
+    /// Watch-side: posted by `WatchActivationCenter` when the iPhone sends a
+    /// `.startWorkout` message. Handled by `WatchRootView` to pop to root and
+    /// jump to the synced plan view.
+    static let vbtWatchActivated = Notification.Name("vbt.watchActivated")
 }
 
 public enum ConnectivityCodec {

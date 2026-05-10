@@ -548,7 +548,7 @@ struct PlanView: View {
     // MARK: - Actions
 
     private func pushTemplateNow() {
-        TemplateSyncService.push(template: template, on: plannedDate)
+        TemplateSyncService.pushAndStart(template: template, on: plannedDate)
         Haptics.success()
         pushedTemplate = true
     }
@@ -787,7 +787,7 @@ struct SchedulePlanSheet: View {
             }
             #endif
         }
-        TemplateSyncService.push(template: template, on: plan.date)
+        TemplateSyncService.pushAndStart(template: template, on: plan.date)
         Haptics.success()
         dismiss()
     }

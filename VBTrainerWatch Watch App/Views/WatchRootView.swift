@@ -19,6 +19,15 @@ struct WatchRootView: View {
         }
         .environmentObject(nav)
         .environmentObject(liveController)
+        .task {
+            // Restore any in-flight workout cursor that survived an app kill.
+            liveController.restoreFromCursorIfPossible()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .vbtWatchActivated)) { _ in
+            // iPhone pushed `.startWorkout` — pop to root and jump to PlanSynced.
+            nav.popToRoot()
+            nav.push(.planSynced)
+        }
     }
 
     @ViewBuilder
