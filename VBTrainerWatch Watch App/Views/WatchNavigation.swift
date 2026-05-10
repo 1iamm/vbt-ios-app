@@ -7,51 +7,38 @@ import Foundation
 import SwiftUI
 
 public enum WatchRoute: Hashable, Identifiable {
-    // V1 routes — kept for backward compatibility during V2 rollout. Most are
-    // unreached after V2 ships and will be removed in the cleanup commit.
-    case readiness
-    case cmjCountdown
-    case cmjGo
-    case cmjResult(attempts: [Double])
-    case exercisePicker
-    case weightInput(exerciseId: String)
+    // V2 main flow (phone-driven).
+    case syncIdle
+    case planSynced
+    case setReady
     case liveWorkout(exerciseId: String, weightKg: Double)
+    case setResult
     case rest(secondsRemaining: Int)
+    case workoutDone
+
+    // Carryover screens still used by V2: readiness (iPhone push) + summary
+    // (RPE / Feeling subjective evaluation, distinct from per-set SetResult)
+    // + event overlays (PR celebration, VL stop warning).
+    case readiness
     case summary
-    case planProgress
-    case planNext
     case prCelebration(title: String, value: String)
     case vlStopWarning(vl: Double, threshold: Double)
     case rpeInput
 
-    // V2 routes — phone-driven main flow.
-    case syncIdle
-    case planSynced
-    case setReady
-    case setResult
-    case workoutDone
-
     public var id: String {
         switch self {
-        case .readiness:                       return "readiness"
-        case .cmjCountdown:                    return "cmjCountdown"
-        case .cmjGo:                           return "cmjGo"
-        case .cmjResult(let a):                return "cmjResult\(a)"
-        case .exercisePicker:                  return "exercisePicker"
-        case .weightInput(let id):             return "weightInput\(id)"
-        case .liveWorkout(let id, let w):      return "live\(id)\(w)"
-        case .rest(let s):                     return "rest\(s)"
-        case .summary:                         return "summary"
-        case .planProgress:                    return "planProgress"
-        case .planNext:                        return "planNext"
-        case .prCelebration(let t, let v):     return "pr\(t)\(v)"
-        case .vlStopWarning(let v, let t):     return "vl\(v)\(t)"
-        case .rpeInput:                        return "rpe"
         case .syncIdle:                        return "syncIdle"
         case .planSynced:                      return "planSynced"
         case .setReady:                        return "setReady"
+        case .liveWorkout(let id, let w):      return "live\(id)\(w)"
         case .setResult:                       return "setResult"
+        case .rest(let s):                     return "rest\(s)"
         case .workoutDone:                     return "workoutDone"
+        case .readiness:                       return "readiness"
+        case .summary:                         return "summary"
+        case .prCelebration(let t, let v):     return "pr\(t)\(v)"
+        case .vlStopWarning(let v, let t):     return "vl\(v)\(t)"
+        case .rpeInput:                        return "rpe"
         }
     }
 }

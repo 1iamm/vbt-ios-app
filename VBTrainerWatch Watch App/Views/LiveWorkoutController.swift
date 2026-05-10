@@ -298,7 +298,14 @@ public final class LiveWorkoutController: ObservableObject {
             isCompleted = true
             isRunning = false
 
-        case .stateChanged, .vlCeilingExceeded, .restTick:
+        case .vlCeilingExceeded(let vl, let ceiling):
+            NotificationCenter.default.post(
+                name: .vbtVLCeilingExceeded,
+                object: nil,
+                userInfo: ["vl": vl, "threshold": ceiling]
+            )
+
+        case .stateChanged, .restTick:
             break
         }
     }

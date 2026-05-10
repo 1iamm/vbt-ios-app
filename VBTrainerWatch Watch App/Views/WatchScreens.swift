@@ -39,70 +39,6 @@ private struct WatchScreenChrome<Content: View>: View {
     }
 }
 
-// MARK: - Home
-
-struct WatchHomeView: View {
-    @EnvironmentObject var nav: WatchNavigation
-    @StateObject private var planStore = TodayPlanStore.shared
-
-    var body: some View {
-        WatchScreenChrome {
-            VStack(spacing: 8) {
-                Spacer().frame(height: 18)
-                Text("VBTrainer")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                    .foregroundStyle(accent)
-
-                if let plan = planStore.todayPlan {
-                    Button {
-                        nav.push(.planProgress)
-                    } label: {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("今日计划：\(plan.name)")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(fg)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Text("\(plan.items.count) 个动作")
-                                .font(.system(size: 11))
-                                .foregroundStyle(sub)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .padding(8)
-                        .background(accent.opacity(0.18), in: RoundedRectangle(cornerRadius: 10))
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 4)
-                }
-
-                Spacer()
-
-                Button {
-                    nav.push(.readiness)
-                } label: {
-                    Text("开始训练")
-                        .font(.system(size: 18, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(accent, in: Capsule())
-                        .foregroundStyle(fg)
-                }
-                .buttonStyle(.plain)
-
-                VStack(spacing: 2) {
-                    Text("上次：深蹲 100kg · 5×4")
-                        .font(.system(size: 12))
-                        .foregroundStyle(sub)
-                    Text("MV 0.62 · VL 18%")
-                        .font(.system(size: 11))
-                        .foregroundStyle(sub.opacity(0.7))
-                }
-                .padding(.bottom, 4)
-            }
-            .padding(.horizontal, 12)
-        }
-    }
-}
-
 // MARK: - Readiness (圆环风格)
 
 struct WatchReadinessView: View {
@@ -151,29 +87,13 @@ struct WatchReadinessView: View {
                     }
                     .frame(width: 110, height: 110)
 
-                    Button("跳过") { nav.push(.exercisePicker) }
-                        .buttonStyle(.plain)
-                        .font(.system(size: 13))
-                        .foregroundStyle(sub)
-
                     HStack(spacing: 6) {
                         miniStat("HRV", value: "\(hrv)", unit: "ms")
                         miniStat("RHR", value: "\(rhr)", unit: "bpm")
                         miniStat("睡眠", value: String(format: "%.1f", sleepH), unit: "h")
                     }
-                    .padding(.top, 2)
-
-                    Button(action: { nav.push(.cmjCountdown) }) {
-                        Text("CMJ 测试")
-                            .font(.system(size: 15, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 9)
-                            .background(accent, in: Capsule())
-                            .foregroundStyle(fg)
-                    }
-                    .buttonStyle(.plain)
                     .padding(.top, 4)
-                    .padding(.bottom, 6)
+                    .padding(.bottom, 8)
                 }
                 .padding(.horizontal, 10)
             }
@@ -191,226 +111,6 @@ struct WatchReadinessView: View {
             }
         }
         .frame(maxWidth: .infinity)
-    }
-}
-
-// MARK: - CMJ flow
-
-struct WatchCMJCountdownView: View {
-    @EnvironmentObject var nav: WatchNavigation
-    @State private var seconds = 3
-    let attemptIndex: Int = 1
-
-    var body: some View {
-        WatchScreenChrome(title: "CMJ 测试 · \(attemptIndex)/3") {
-            VStack {
-                Spacer()
-                Text("\(seconds)")
-                    .font(.system(size: 130, weight: .heavy, design: .rounded))
-                    .foregroundStyle(fg)
-                    .monospacedDigit()
-                Text("准备")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(sub)
-                Spacer()
-            }
-            .onAppear { startCountdown() }
-        }
-    }
-
-    private func startCountdown() {
-        Task { @MainActor in
-            for s in (0..<3).reversed() {
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                seconds = s + 1
-            }
-            try? await Task.sleep(nanoseconds: 200_000_000)
-            nav.push(.cmjGo)
-        }
-    }
-}
-
-struct WatchCMJGoView: View {
-    @EnvironmentObject var nav: WatchNavigation
-
-    var body: some View {
-        WatchScreenChrome {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                Text("跳！")
-                    .font(.system(size: 92, weight: .heavy, design: .rounded))
-                    .foregroundStyle(accent)
-            }
-            .onAppear {
-                HapticFeedback.notification()
-                Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 1_500_000_000)
-                    nav.push(.cmjResult(attempts: [28.0, 31.5, 29.0]))
-                }
-            }
-        }
-    }
-}
-
-struct WatchCMJResultView: View {
-    @EnvironmentObject var nav: WatchNavigation
-    let attempts: [Double]
-
-    private var best: Double { attempts.max() ?? 0 }
-
-    var body: some View {
-        WatchScreenChrome(title: "CMJ 结果") {
-            VStack(spacing: 4) {
-                Spacer().frame(height: 24)
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(String(format: "%.1f", best))
-                        .font(.system(size: 64, weight: .bold, design: .rounded))
-                        .foregroundStyle(fg)
-                        .monospacedDigit()
-                    Text("cm")
-                        .font(.system(size: 22, weight: .medium))
-                        .foregroundStyle(sub)
-                }
-                Text("最佳尝试")
-                    .font(.system(size: 12))
-                    .foregroundStyle(sub)
-
-                HStack(spacing: 8) {
-                    ForEach(Array(attempts.enumerated()), id: \.offset) { (i, h) in
-                        VStack(spacing: 1) {
-                            Text(String(format: "%.0f", h))
-                                .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                .foregroundStyle(fg)
-                            Text("尝试\(i+1)")
-                                .font(.system(size: 9))
-                                .foregroundStyle(sub.opacity(0.6))
-                        }
-                    }
-                }
-                .padding(.top, 4)
-
-                Spacer()
-                Button("继续") { nav.push(.exercisePicker) }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 16, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(accent, in: Capsule())
-                    .foregroundStyle(fg)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 8)
-            }
-        }
-    }
-}
-
-// MARK: - Exercise picker
-
-struct WatchExercisePickerView: View {
-    @EnvironmentObject var nav: WatchNavigation
-
-    var body: some View {
-        ZStack {
-            bg.ignoresSafeArea()
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 4) {
-                    ForEach(ExerciseLookup.grouped, id: \.category) { group in
-                        Text(categoryName(group.category))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(sub)
-                            .padding(.top, 8)
-                        ForEach(group.items) { ex in
-                            Button {
-                                nav.push(.weightInput(exerciseId: ex.id))
-                            } label: {
-                                HStack {
-                                    Image(systemName: ex.sfSymbol)
-                                        .foregroundStyle(accent)
-                                        .font(.system(size: 14))
-                                    Text(ex.nameZH)
-                                        .font(.system(size: 15, weight: .medium))
-                                        .foregroundStyle(fg)
-                                    Spacer()
-                                }
-                                .padding(.vertical, 6)
-                                .padding(.horizontal, 8)
-                                .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
-                .padding(.horizontal, 6)
-                .padding(.bottom, 12)
-            }
-        }
-        .navigationTitle("选动作")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-
-    private func categoryName(_ c: ExerciseCategory) -> String {
-        switch c {
-        case .barbell:    return "杠铃"
-        case .dumbbell:   return "哑铃"
-        case .bodyweight: return "自重"
-        case .machine:    return "器械"
-        case .jump:       return "跳跃"
-        }
-    }
-}
-
-// MARK: - Weight input
-
-struct WatchWeightInputView: View {
-    @EnvironmentObject var nav: WatchNavigation
-    let exerciseId: String
-    @State private var weight: Double = 100.0
-    @State private var step: Double = 2.5
-
-    private var exercise: Exercise? { ExerciseLookup.exercise(byId: exerciseId) }
-
-    var body: some View {
-        WatchScreenChrome(title: exercise?.nameZH) {
-            VStack(spacing: 6) {
-                Spacer().frame(height: 24)
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(String(format: "%.1f", weight))
-                        .font(.system(size: 64, weight: .bold, design: .rounded))
-                        .foregroundStyle(fg)
-                        .monospacedDigit()
-                    Text("kg")
-                        .font(.system(size: 22, weight: .medium))
-                        .foregroundStyle(sub)
-                }
-                .focusable(true)
-                .digitalCrownRotation(
-                    $weight,
-                    from: 0, through: 500,
-                    by: step, sensitivity: .medium,
-                    isContinuous: false, isHapticFeedbackEnabled: true
-                )
-
-                Text("Crown 调节 · 步进 \(String(format: "%.1f", step)) kg")
-                    .font(.system(size: 11))
-                    .foregroundStyle(sub.opacity(0.7))
-
-                Spacer()
-
-                Button {
-                    nav.push(.liveWorkout(exerciseId: exerciseId, weightKg: weight))
-                } label: {
-                    Text("开始")
-                        .font(.system(size: 18, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(accent, in: Capsule())
-                        .foregroundStyle(fg)
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
-            }
-        }
     }
 }
 
@@ -941,178 +641,6 @@ struct WatchSummaryView: View {
     }
 }
 
-// MARK: - Plan progress / next
-
-struct WatchPlanProgressView: View {
-    @EnvironmentObject var nav: WatchNavigation
-    @EnvironmentObject var controller: LiveWorkoutController
-    @StateObject private var planStore = TodayPlanStore.shared
-
-    @State private var expandedItemId: UUID?
-
-    var body: some View {
-        WatchScreenChrome(title: planStore.todayPlan?.name ?? "今日计划") {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 6) {
-                    Spacer().frame(height: 18)
-                    if let plan = planStore.todayPlan {
-                        ForEach(plan.items, id: \.id) { item in
-                            itemCard(item: item, expanded: expandedItemId == item.id)
-                        }
-                    } else {
-                        Text("没有今日计划")
-                            .font(.system(size: 13))
-                            .foregroundStyle(sub)
-                            .frame(maxWidth: .infinity)
-                            .padding(.top, 30)
-                    }
-                }
-                .padding(.horizontal, 12)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func itemCard(item: TemplateItemSnapshot, expanded: Bool) -> some View {
-        let exName = ExerciseLookup.exercise(byId: item.exerciseId)?.nameZH ?? item.exerciseId
-        let work = item.setSpecs.filter { $0.kindRaw == "work" }.count
-        let warm = item.setSpecs.filter { $0.kindRaw == "warmUp" }.count
-        let summary: String = {
-            if !item.setSpecs.isEmpty {
-                return "\(work) 正式\(warm > 0 ? " · \(warm) 热身" : "")"
-            }
-            return "\(item.targetSets) × \(item.targetReps)\(item.targetWeightKg.map { " @\(Int($0))kg" } ?? "")"
-        }()
-        VStack(alignment: .leading, spacing: 4) {
-            Button {
-                if expanded { expandedItemId = nil } else { expandedItemId = item.id }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "circle")
-                        .font(.system(size: 12))
-                        .foregroundStyle(sub)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(exName)
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(fg)
-                        Text(summary)
-                            .font(.system(size: 10))
-                            .foregroundStyle(sub.opacity(0.8))
-                    }
-                    Spacer()
-                    Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(sub)
-                }
-                .padding(.vertical, 6)
-            }
-            .buttonStyle(.plain)
-
-            if expanded {
-                let ordered = item.setSpecs.sorted { $0.index < $1.index }
-                if !ordered.isEmpty {
-                    VStack(alignment: .leading, spacing: 2) {
-                        ForEach(ordered, id: \.id) { spec in
-                            HStack(spacing: 6) {
-                                Text(tagFor(spec, ordered: ordered))
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundStyle(spec.kindRaw == "warmUp" ? sub : accent)
-                                    .frame(width: 14, alignment: .leading)
-                                Text("\(Int(spec.weightKg))kg × \(spec.reps)")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(fg)
-                                Spacer()
-                                Text(formatRest(spec.restSeconds))
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(sub)
-                            }
-                        }
-                    }
-                    .padding(.leading, 22)
-                    .padding(.bottom, 4)
-                }
-
-                Button {
-                    let firstWeight = item.setSpecs.first?.weightKg ?? item.targetWeightKg ?? 60
-                    Task { @MainActor in
-                        controller.preparePlanned(item: item)
-                        nav.push(.liveWorkout(exerciseId: item.exerciseId, weightKg: firstWeight))
-                    }
-                } label: {
-                    Text("开始本动作")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                        .background(accent, in: Capsule())
-                        .foregroundStyle(fg)
-                }
-                .buttonStyle(.plain)
-                .padding(.bottom, 4)
-            }
-        }
-        .padding(.horizontal, 8)
-        .background(expanded ? accent.opacity(0.08) : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 10))
-    }
-
-    private func tagFor(_ spec: TemplateSetSpecSnapshot, ordered: [TemplateSetSpecSnapshot]) -> String {
-        if spec.kindRaw == "warmUp" { return "W" }
-        let workOnly = ordered.filter { $0.kindRaw == "work" }
-        if let i = workOnly.firstIndex(where: { $0.id == spec.id }) { return "\(i + 1)" }
-        return "\(spec.index)"
-    }
-
-    private func formatRest(_ s: Int) -> String {
-        if s == 0 { return "—" }
-        return String(format: "%d:%02d", s / 60, s % 60)
-    }
-}
-
-struct WatchPlanNextView: View {
-    @EnvironmentObject var nav: WatchNavigation
-    var step: Int = 2
-    var total: Int = 4
-    var nextExercise: String = "卧推"
-    var weight: Int = 75
-    var sets: Int = 4
-    var reps: Int = 8
-
-    var body: some View {
-        WatchScreenChrome(title: "下一项 · \(step)/\(total)") {
-            VStack(spacing: 4) {
-                Spacer().frame(height: 30)
-                Text("从计划")
-                    .font(.system(size: 12))
-                    .foregroundStyle(sub)
-                Text(nextExercise)
-                    .font(.system(size: 50, weight: .heavy, design: .rounded))
-                    .foregroundStyle(fg)
-                Text("\(weight) kg")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(fg)
-                Text("\(sets) 组 × \(reps) reps")
-                    .font(.system(size: 14))
-                    .foregroundStyle(sub)
-
-                Spacer()
-                Button {
-                    nav.push(.weightInput(exerciseId: "bench-press"))
-                } label: {
-                    Text("开始本动作")
-                        .font(.system(size: 16, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(accent, in: Capsule())
-                        .foregroundStyle(fg)
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 8)
-            }
-        }
-    }
-}
-
 // MARK: - PR / VL / RPE
 
 struct WatchPRCelebrationView: View {
@@ -1477,16 +1005,39 @@ struct SetReadyView: View {
         return "—"
     }
 
+    @ViewBuilder
+    private var sideChip: some View {
+        switch controller.currentSide {
+        case .both:
+            EmptyView()
+        case .left:
+            Text("左侧")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(Color.blue)
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(Color.blue.opacity(0.18), in: Capsule())
+        case .right:
+            Text("右侧")
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(Color.blue)
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(Color.blue.opacity(0.18), in: Capsule())
+        }
+    }
+
     var body: some View {
         WatchScreenChrome(title: setIndexLabel, titleColor: accent) {
             VStack(spacing: 6) {
                 Spacer().frame(height: 26)
-                Text(exerciseName)
-                    .font(.system(size: 28, weight: .heavy, design: .rounded))
-                    .tracking(-0.6)
-                    .foregroundStyle(fg)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                HStack(spacing: 6) {
+                    Text(exerciseName)
+                        .font(.system(size: 28, weight: .heavy, design: .rounded))
+                        .tracking(-0.6)
+                        .foregroundStyle(fg)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    sideChip
+                }
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
                     Text("\(Int(controller.currentWeightKg))")
                         .font(.system(size: 39, weight: .heavy, design: .rounded))

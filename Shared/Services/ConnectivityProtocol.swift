@@ -194,6 +194,10 @@ public extension Notification.Name {
     /// `.startWorkout` message. Handled by `WatchRootView` to pop to root and
     /// jump to the synced plan view.
     static let vbtWatchActivated = Notification.Name("vbt.watchActivated")
+    /// Watch-side: posted by `LiveWorkoutController` when the actor's session
+    /// emits `.vlCeilingExceeded`. userInfo carries `vl` and `threshold`
+    /// (both Double). Handled by `WatchRootView` to push the warning route.
+    static let vbtVLCeilingExceeded = Notification.Name("vbt.vlCeilingExceeded")
 }
 
 public enum ConnectivityCodec {
