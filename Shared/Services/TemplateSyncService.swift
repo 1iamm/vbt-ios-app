@@ -97,4 +97,24 @@ public enum TemplateSyncService {
         }
         #endif
     }
+
+    /// One-way iPhone → Watch push of user preferences that affect Watch
+    /// behaviour (currently: rep-haptic on/off). Inlined here (rather than a
+    /// separate file) so the iOS target builds without requiring
+    /// `xcodegen generate` to pick up a new file.
+    public static func pushPreferences(_ snapshot: WatchPreferencesSnapshot) {
+        #if canImport(WatchConnectivity) && os(iOS)
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        do {
+            let userInfo = try ConnectivityCodec.encode(.preferences(snapshot))
+            session.transferUserInfo(userInfo)
+        } catch {
+            #if DEBUG
+            print("TemplateSyncService.pushPreferences error: \(error)")
+            #endif
+        }
+        #endif
+    }
 }
