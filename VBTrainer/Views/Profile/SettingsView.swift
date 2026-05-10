@@ -34,7 +34,7 @@ struct SettingsView: View {
                 }
                 Toggle("Rep 完成震动", isOn: $profile.vibrationEnabled)
                     .onChange(of: profile.vibrationEnabled) { _, newValue in
-                        PreferenceSyncService.push(.init(enableRepHaptic: newValue))
+                        TemplateSyncService.pushPreferences(.init(enableRepHaptic: newValue))
                     }
                 Toggle("训练前 CMJ 测试提示", isOn: $profile.cmjOnEachWorkout)
             }
