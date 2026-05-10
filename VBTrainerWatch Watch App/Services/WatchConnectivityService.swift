@@ -55,6 +55,8 @@ public final class WatchConnectivityService: NSObject, WCSessionDelegate {
                 switch message {
                 case .template(let snap):
                     TodayPlanStore.shared.store(snap)
+                case .preferences(let prefs):
+                    UserDefaults.standard.set(prefs.enableRepHaptic, forKey: "watch.enableRepHaptic")
                 default:
                     // Other inbound message kinds — Watch doesn't yet handle.
                     break

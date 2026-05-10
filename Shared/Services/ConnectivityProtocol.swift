@@ -11,6 +11,15 @@ public enum ConnectivityKind: String, Codable, Sendable {
     case jumpTest
     case template          // Proposal 9 fills in
     case readiness         // Proposal 7 may push readiness from iPhone to Watch
+    case preferences       // iPhone Profile toggles → Watch (e.g. enableRepHaptic)
+}
+
+public struct WatchPreferencesSnapshot: Codable, Sendable, Equatable {
+    public var enableRepHaptic: Bool
+
+    public init(enableRepHaptic: Bool) {
+        self.enableRepHaptic = enableRepHaptic
+    }
 }
 
 public struct JumpTestSnapshot: Codable, Sendable, Equatable {
@@ -150,12 +159,14 @@ public enum ConnectivityMessage: Codable, Sendable, Equatable {
     case workoutSnapshot(WorkoutSnapshot)
     case jumpTest(JumpTestSnapshot)
     case template(TemplateSnapshot)
+    case preferences(WatchPreferencesSnapshot)
 
     public var kind: ConnectivityKind {
         switch self {
         case .workoutSnapshot: return .workoutSnapshot
         case .jumpTest:        return .jumpTest
         case .template:        return .template
+        case .preferences:     return .preferences
         }
     }
 }
