@@ -454,7 +454,7 @@ struct DayTemplatePickerSheet: View {
                 #endif
             }
         }
-        TemplateSyncService.push(template: template, on: plan.date)
+        TemplateSyncService.pushAndStart(template: template, on: plan.date)
         dismiss()
     }
 

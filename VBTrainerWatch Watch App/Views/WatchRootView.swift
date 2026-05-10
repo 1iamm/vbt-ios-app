@@ -12,40 +12,50 @@ struct WatchRootView: View {
 
     var body: some View {
         NavigationStack(path: $nav.path) {
-            WatchHomeView()
+            SyncIdleView()
                 .navigationDestination(for: WatchRoute.self) { route in
                     routeView(route)
                 }
         }
         .environmentObject(nav)
         .environmentObject(liveController)
+        .task {
+            // Restore any in-flight workout cursor that survived an app kill.
+            liveController.restoreFromCursorIfPossible()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .vbtWatchActivated)) { _ in
+            // iPhone pushed `.startWorkout` — pop to root and jump to PlanSynced.
+            nav.popToRoot()
+            nav.push(.planSynced)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .vbtVLCeilingExceeded)) { note in
+            let vl = note.userInfo?["vl"] as? Double ?? 0
+            let th = note.userInfo?["threshold"] as? Double ?? 0
+            nav.push(.vlStopWarning(vl: vl, threshold: th))
+        }
     }
 
     @ViewBuilder
     private func routeView(_ route: WatchRoute) -> some View {
         switch route {
-        case .readiness:
-            WatchReadinessView()
-        case .cmjCountdown:
-            WatchCMJCountdownView()
-        case .cmjGo:
-            WatchCMJGoView()
-        case .cmjResult(let attempts):
-            WatchCMJResultView(attempts: attempts)
-        case .exercisePicker:
-            WatchExercisePickerView()
-        case .weightInput(let id):
-            WatchWeightInputView(exerciseId: id)
+        case .syncIdle:
+            SyncIdleView()
+        case .planSynced:
+            PlanSyncedView()
+        case .setReady:
+            SetReadyView()
         case .liveWorkout(let id, let w):
             WatchLiveWorkoutView(exerciseId: id, weightKg: w)
+        case .setResult:
+            SetResultView()
         case .rest(let s):
             WatchRestView(secondsRemaining: s)
+        case .workoutDone:
+            WorkoutDoneView()
+        case .readiness:
+            WatchReadinessView()
         case .summary:
             WatchSummaryView()
-        case .planProgress:
-            WatchPlanProgressView()
-        case .planNext:
-            WatchPlanNextView()
         case .prCelebration(let t, let v):
             WatchPRCelebrationView(title: t, value: v)
         case .vlStopWarning(let vl, let th):

@@ -49,6 +49,11 @@ public final class LiveWorkoutController: ObservableObject {
     public private(set) var plannedSpecs: [TemplateSetSpecSnapshot] = []
     public private(set) var plannedSetCursor: Int = 0  // 0-based index into plannedSpecs
 
+    /// V2 resume support: the TemplateItem the controller is currently working
+    /// on, persisted alongside `plannedSpecs` / `plannedSetCursor` so a
+    /// killed-and-restarted Watch app can pick up where it left off.
+    public private(set) var currentTemplateItemId: UUID?
+
     // MARK: - Internal
 
     private var session = ActiveWorkoutSession()
@@ -114,6 +119,7 @@ public final class LiveWorkoutController: ObservableObject {
         guard isRunning else { return }
         await session.endSet()
         plannedSetCursor += 1
+        persistResumeCursor()
         HapticFeedback.setEnded()
     }
 
@@ -165,6 +171,24 @@ public final class LiveWorkoutController: ObservableObject {
     /// Most recent set's planned rest seconds (used by RestView countdown).
     public private(set) var lastResolvedRest: Int = 90
 
+    /// Public alias of `lastResolvedRest` for V2 view consumers.
+    public var currentRestSeconds: Int { lastResolvedRest }
+
+    /// Summary of the most recently completed set, derived from
+    /// `completedSets.last`. V2 SetResult screen reads this to render the
+    /// 3-state judgement (excellent / met / borderline / failed).
+    public var lastSetMetSummary: (status: MetStatus, mv: Double, target: ClosedRange<Double>?)? {
+        guard let last = completedSets.last, !last.reps.isEmpty else { return nil }
+        let mv = last.reps.map(\.meanVelocity).reduce(0, +) / Double(last.reps.count)
+        let status: MetStatus
+        if let range = currentTargetRange {
+            status = MetStatusEvaluator.evaluate(velocity: mv, target: range)
+        } else {
+            status = .met
+        }
+        return (status, mv, currentTargetRange)
+    }
+
     /// Prepare the controller for a planned multi-set item (called before
     /// pushing the LiveWorkout route). After this, `start(...)` will use
     /// the first spec's params.
@@ -180,6 +204,31 @@ public final class LiveWorkoutController: ObservableObject {
             }
             lastResolvedRest = first.restSeconds
         }
+        currentTemplateItemId = item.id
+        persistResumeCursor()
+    }
+
+    /// V2: prepare-but-don't-start hook. Same parameter shape as `start(...)`,
+    /// gives the SetReady screen a way to confirm sensors / HK auth before the
+    /// user taps "本组开始". Commit 3 is where this gets fully wired into the
+    /// V2 SetReady flow; commit 2 only ships the surface.
+    public func prepareSet(
+        exerciseId: String,
+        weightKg: Double,
+        velocityVariant: VelocityVariant = .mv,
+        targetRange: ClosedRange<Double>? = nil,
+        vlCeiling: Double? = nil,
+        side: Side = .both,
+        defaultRestSeconds: Int = 90
+    ) async {
+        if isRunning { return }
+        currentExerciseId = exerciseId
+        currentWeightKg = weightKg
+        currentVelocityVariant = velocityVariant
+        currentTargetRange = targetRange
+        currentVLCeiling = vlCeiling
+        currentSide = side
+        if lastResolvedRest == 0 { lastResolvedRest = defaultRestSeconds }
     }
 
     @discardableResult
@@ -201,6 +250,7 @@ public final class LiveWorkoutController: ObservableObject {
         consumerTask?.cancel()
         consumerTask = nil
         clearPlanned()
+        clearResumeCursor()
         // Fire before any inbound work (WCSession.send by caller) so the wrist
         // gets the cue even if the app is backgrounded immediately after.
         HapticFeedback.workoutEnded()
@@ -248,7 +298,14 @@ public final class LiveWorkoutController: ObservableObject {
             isCompleted = true
             isRunning = false
 
-        case .stateChanged, .vlCeilingExceeded, .restTick:
+        case .vlCeilingExceeded(let vl, let ceiling):
+            NotificationCenter.default.post(
+                name: .vbtVLCeilingExceeded,
+                object: nil,
+                userInfo: ["vl": vl, "threshold": ceiling]
+            )
+
+        case .stateChanged, .restTick:
             break
         }
     }
@@ -308,6 +365,52 @@ public final class LiveWorkoutController: ObservableObject {
     private func clearPlanned() {
         plannedSpecs = []
         plannedSetCursor = 0
+        currentTemplateItemId = nil
+    }
+
+    // MARK: - V2 resume persistence
+    //
+    // The plannedSpecs + cursor + templateItemId tuple is the minimum state
+    // needed to resume mid-template after the watch app is killed by the
+    // system. Stored in UserDefaults as JSON. The actor's in-memory rep
+    // events are intentionally NOT persisted — those are recomputed when the
+    // user restarts the set.
+
+    private struct ResumeCursor: Codable {
+        let templateItemId: UUID?
+        let plannedSpecs: [TemplateSetSpecSnapshot]
+        let plannedSetCursor: Int
+    }
+
+    private static let resumeKey = "vbt.live.resume.v1"
+
+    public func persistResumeCursor() {
+        guard !plannedSpecs.isEmpty else { return }
+        let cursor = ResumeCursor(
+            templateItemId: currentTemplateItemId,
+            plannedSpecs: plannedSpecs,
+            plannedSetCursor: plannedSetCursor
+        )
+        if let data = try? JSONEncoder().encode(cursor) {
+            UserDefaults.standard.set(data, forKey: Self.resumeKey)
+        }
+    }
+
+    public func restoreFromCursorIfPossible() {
+        guard let data = UserDefaults.standard.data(forKey: Self.resumeKey),
+              let cursor = try? JSONDecoder().decode(ResumeCursor.self, from: data)
+        else { return }
+        plannedSpecs = cursor.plannedSpecs
+        plannedSetCursor = cursor.plannedSetCursor
+        currentTemplateItemId = cursor.templateItemId
+        if plannedSetCursor < plannedSpecs.count {
+            currentWeightKg = plannedSpecs[plannedSetCursor].weightKg
+            lastResolvedRest = plannedSpecs[plannedSetCursor].restSeconds
+        }
+    }
+
+    public func clearResumeCursor() {
+        UserDefaults.standard.removeObject(forKey: Self.resumeKey)
     }
 
     deinit {
