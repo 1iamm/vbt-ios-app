@@ -129,58 +129,61 @@ struct WatchReadinessView: View {
 
     var body: some View {
         WatchScreenChrome(title: "今日准备度") {
-            VStack(spacing: 6) {
-                Spacer().frame(height: 26)
-                ZStack {
-                    Circle()
-                        .stroke(Color.white.opacity(0.1), lineWidth: 8)
-                    Circle()
-                        .trim(from: 0, to: CGFloat(score) / 100.0)
-                        .stroke(ringColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                    VStack(spacing: 0) {
-                        Text("\(score)")
-                            .font(.system(size: 48, weight: .bold, design: .rounded))
-                            .foregroundStyle(fg)
-                            .monospacedDigit()
-                        Text(tierLabel)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(sub)
+            ScrollView {
+                VStack(spacing: 8) {
+                    Spacer().frame(height: 22)   // clears chrome title (~17pt)
+                    ZStack {
+                        Circle()
+                            .stroke(Color.white.opacity(0.1), lineWidth: 7)
+                        Circle()
+                            .trim(from: 0, to: CGFloat(score) / 100.0)
+                            .stroke(ringColor, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                        VStack(spacing: 0) {
+                            Text("\(score)")
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .foregroundStyle(fg)
+                                .monospacedDigit()
+                            Text(tierLabel)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(sub)
+                        }
                     }
-                }
-                .frame(width: 130, height: 130)
+                    .frame(width: 110, height: 110)
 
-                HStack(spacing: 12) {
-                    miniStat("HRV", value: "\(hrv)", unit: "ms")
-                    miniStat("RHR", value: "\(rhr)", unit: "bpm")
-                    miniStat("睡眠", value: String(format: "%.1f", sleepH), unit: "h")
-                }
-                .padding(.top, 4)
-
-                Spacer()
-
-                HStack(spacing: 8) {
                     Button("跳过") { nav.push(.exercisePicker) }
                         .buttonStyle(.plain)
-                        .font(.system(size: 14, weight: .medium))
+                        .font(.system(size: 13))
                         .foregroundStyle(sub)
-                    Button("CMJ 测试") { nav.push(.cmjCountdown) }
-                        .buttonStyle(.plain)
-                        .font(.system(size: 14, weight: .semibold))
-                        .padding(.horizontal, 12).padding(.vertical, 8)
-                        .background(accent.opacity(0.25), in: Capsule())
-                        .foregroundStyle(accent)
+
+                    HStack(spacing: 6) {
+                        miniStat("HRV", value: "\(hrv)", unit: "ms")
+                        miniStat("RHR", value: "\(rhr)", unit: "bpm")
+                        miniStat("睡眠", value: String(format: "%.1f", sleepH), unit: "h")
+                    }
+                    .padding(.top, 2)
+
+                    Button(action: { nav.push(.cmjCountdown) }) {
+                        Text("CMJ 测试")
+                            .font(.system(size: 15, weight: .semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 9)
+                            .background(accent, in: Capsule())
+                            .foregroundStyle(fg)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
+                    .padding(.bottom, 6)
                 }
-                .padding(.bottom, 6)
+                .padding(.horizontal, 10)
             }
-            .padding(.horizontal, 10)
         }
     }
 
     private func miniStat(_ label: String, value: String, unit: String) -> some View {
         VStack(spacing: 1) {
             Text(value)
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .foregroundStyle(fg)
             HStack(spacing: 1) {
                 Text(label).font(.system(size: 9)).foregroundStyle(sub)

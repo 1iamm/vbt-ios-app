@@ -114,6 +114,7 @@ public final class LiveWorkoutController: ObservableObject {
         guard isRunning else { return }
         await session.endSet()
         plannedSetCursor += 1
+        HapticFeedback.setEnded()
     }
 
     /// Inspect the next planned set's parameters (used by Rest screen to
@@ -200,6 +201,9 @@ public final class LiveWorkoutController: ObservableObject {
         consumerTask?.cancel()
         consumerTask = nil
         clearPlanned()
+        // Fire before any inbound work (WCSession.send by caller) so the wrist
+        // gets the cue even if the app is backgrounded immediately after.
+        HapticFeedback.workoutEnded()
         return snapshot
     }
 
@@ -227,6 +231,7 @@ public final class LiveWorkoutController: ObservableObject {
             } else if let baseline = setBaselineVelocity, baseline > 0 {
                 vlPercent = max(0, (baseline - repEvent.meanVelocity) / baseline * 100)
             }
+            HapticFeedback.rep(status)
 
         case .heartRate(let bpm):
             heartRate = bpm
