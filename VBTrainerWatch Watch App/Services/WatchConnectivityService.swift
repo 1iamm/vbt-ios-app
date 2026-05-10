@@ -10,6 +10,33 @@ import Foundation
 #if canImport(WatchConnectivity)
 import WatchConnectivity
 
+/// Buffers iPhone-side `.startWorkout` activation signals between the
+/// connectivity layer (off main actor) and SwiftUI's WatchRootView. Posts
+/// `.vbtWatchActivated` so root can pop to root and jump to PlanSynced.
+///
+/// Inlined here (rather than a standalone file) so the watch target builds
+/// without requiring `xcodegen generate` to pick up a new file.
+@MainActor
+public final class WatchActivationCenter: ObservableObject {
+
+    public static let shared = WatchActivationCenter()
+
+    @Published public private(set) var pending: StartWorkoutSnapshot?
+
+    public init() {}
+
+    public func activate(_ snapshot: StartWorkoutSnapshot) {
+        pending = snapshot
+        NotificationCenter.default.post(name: .vbtWatchActivated, object: snapshot.templateId)
+    }
+
+    public func consume() -> StartWorkoutSnapshot? {
+        let snap = pending
+        pending = nil
+        return snap
+    }
+}
+
 public final class WatchConnectivityService: NSObject, WCSessionDelegate {
 
     public static let shared = WatchConnectivityService()
