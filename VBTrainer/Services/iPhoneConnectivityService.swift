@@ -90,6 +90,14 @@ extension iPhoneConnectivityService: WCSessionDelegate {
                 // iPhone is the source-of-truth for templates; inbound from
                 // Watch isn't expected in V1.
                 break
+            case .preferences:
+                // iPhone authors the preference; inbound from Watch isn't
+                // expected (Watch only consumes via UserDefaults cache).
+                break
+            case .startWorkout:
+                // iPhone sends activation signals to Watch; inbound from
+                // Watch isn't expected.
+                break
             }
         } catch {
             #if DEBUG
