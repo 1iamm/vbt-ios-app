@@ -12,7 +12,7 @@ struct WatchRootView: View {
 
     var body: some View {
         NavigationStack(path: $nav.path) {
-            WatchHomeView()
+            SyncIdleView()
                 .navigationDestination(for: WatchRoute.self) { route in
                     routeView(route)
                 }
@@ -52,6 +52,17 @@ struct WatchRootView: View {
             WatchVLStopWarningView(vl: vl, threshold: th)
         case .rpeInput:
             WatchRPEInputView()
+        // V2 routes
+        case .syncIdle:
+            SyncIdleView()
+        case .planSynced:
+            PlanSyncedView()
+        case .setReady:
+            SetReadyView()
+        case .setResult:
+            SetResultView()
+        case .workoutDone:
+            WorkoutDoneView()
         }
     }
 }

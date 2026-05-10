@@ -165,6 +165,24 @@ public final class LiveWorkoutController: ObservableObject {
     /// Most recent set's planned rest seconds (used by RestView countdown).
     public private(set) var lastResolvedRest: Int = 90
 
+    /// Public alias of `lastResolvedRest` for V2 view consumers.
+    public var currentRestSeconds: Int { lastResolvedRest }
+
+    /// Summary of the most recently completed set, derived from
+    /// `completedSets.last`. V2 SetResult screen reads this to render the
+    /// 3-state judgement (excellent / met / borderline / failed).
+    public var lastSetMetSummary: (status: MetStatus, mv: Double, target: ClosedRange<Double>?)? {
+        guard let last = completedSets.last, !last.reps.isEmpty else { return nil }
+        let mv = last.reps.map(\.meanVelocity).reduce(0, +) / Double(last.reps.count)
+        let status: MetStatus
+        if let range = currentTargetRange {
+            status = MetStatusEvaluator.evaluate(velocity: mv, target: range)
+        } else {
+            status = .met
+        }
+        return (status, mv, currentTargetRange)
+    }
+
     /// Prepare the controller for a planned multi-set item (called before
     /// pushing the LiveWorkout route). After this, `start(...)` will use
     /// the first spec's params.

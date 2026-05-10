@@ -1054,3 +1054,147 @@ struct WatchRPEInputView: View {
         }
     }
 }
+
+// MARK: - V2 stubs (commit 3 fills in design-spec visuals)
+
+/// V2 root: phone-driven idle state. Real implementation in commit 3 will show
+/// an iPhone glyph + "从手机开始" copy + last-workout summary line.
+struct SyncIdleView: View {
+    @EnvironmentObject var nav: WatchNavigation
+    @StateObject private var planStore = TodayPlanStore.shared
+
+    var body: some View {
+        WatchScreenChrome(title: "VBT") {
+            VStack(spacing: 10) {
+                Spacer()
+                Text("从手机开始")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(fg)
+                Text("在 iPhone 选择动作或计划")
+                    .font(.system(size: 11))
+                    .foregroundStyle(sub)
+                if planStore.todayPlan != nil {
+                    Button("查看已同步计划") { nav.push(.planSynced) }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 13, weight: .semibold))
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(accent.opacity(0.25), in: Capsule())
+                        .foregroundStyle(accent)
+                } else {
+                    Button("调试 · 进 PlanSynced") { nav.push(.planSynced) }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 11))
+                        .foregroundStyle(sub.opacity(0.6))
+                }
+                Spacer()
+            }
+        }
+    }
+}
+
+/// V2 plan list. Stub: shows a count + "下一步" Button.
+struct PlanSyncedView: View {
+    @EnvironmentObject var nav: WatchNavigation
+    @StateObject private var planStore = TodayPlanStore.shared
+
+    var body: some View {
+        WatchScreenChrome(title: "已同步") {
+            VStack(spacing: 8) {
+                Spacer()
+                if let plan = planStore.todayPlan {
+                    Text(plan.name).font(.system(size: 16, weight: .bold)).foregroundStyle(fg)
+                    Text("\(plan.items.count) 个动作")
+                        .font(.system(size: 11))
+                        .foregroundStyle(sub)
+                } else {
+                    Text("暂无计划").font(.system(size: 13)).foregroundStyle(sub)
+                }
+                Button("下一步 SetReady") { nav.push(.setReady) }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .background(accent, in: Capsule())
+                    .foregroundStyle(fg)
+                Spacer()
+            }
+        }
+    }
+}
+
+/// V2 single-set warm-up screen. Stub: button to enter LiveSet.
+struct SetReadyView: View {
+    @EnvironmentObject var nav: WatchNavigation
+    @EnvironmentObject var controller: LiveWorkoutController
+
+    var body: some View {
+        WatchScreenChrome(title: "本组准备") {
+            VStack(spacing: 8) {
+                Spacer()
+                Text("SetReady stub")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(fg)
+                Text("commit 3 会填充设计稿视觉")
+                    .font(.system(size: 10))
+                    .foregroundStyle(sub)
+                Button("下一步 (旧 LiveWorkout)") {
+                    nav.push(.liveWorkout(
+                        exerciseId: controller.currentExerciseId.isEmpty ? "back-squat" : controller.currentExerciseId,
+                        weightKg: controller.currentWeightKg > 0 ? controller.currentWeightKg : 60
+                    ))
+                }
+                .buttonStyle(.plain)
+                .font(.system(size: 13, weight: .semibold))
+                .padding(.horizontal, 14).padding(.vertical, 8)
+                .background(accent, in: Capsule())
+                .foregroundStyle(fg)
+                Spacer()
+            }
+        }
+    }
+}
+
+/// V2 set-result screen. Stub: button to enter Rest.
+struct SetResultView: View {
+    @EnvironmentObject var nav: WatchNavigation
+
+    var body: some View {
+        WatchScreenChrome(title: "本组结果") {
+            VStack(spacing: 8) {
+                Spacer()
+                Text("SetResult stub")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(fg)
+                Button("下一步 RestV2 (旧)") { nav.push(.rest(secondsRemaining: 90)) }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .background(accent, in: Capsule())
+                    .foregroundStyle(fg)
+                Spacer()
+            }
+        }
+    }
+}
+
+/// V2 workout-done screen. Stub: button popsToRoot.
+struct WorkoutDoneView: View {
+    @EnvironmentObject var nav: WatchNavigation
+
+    var body: some View {
+        WatchScreenChrome(title: "训练完成") {
+            VStack(spacing: 8) {
+                Spacer()
+                Text("WorkoutDone stub")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(fg)
+                Button("回到首页") { nav.popToRoot() }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .background(Tokens.Color.success.opacity(0.25), in: Capsule())
+                    .foregroundStyle(Tokens.Color.success)
+                Spacer()
+            }
+        }
+    }
+}
