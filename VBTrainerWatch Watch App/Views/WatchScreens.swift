@@ -942,7 +942,12 @@ struct PlanSyncedView: View {
                 let isDoneSet = isCurrentItem && idx < controller.plannedSetCursor
                 Button {
                     Task { @MainActor in
-                        controller.preparePlanned(item: item)
+                        // Multi-exercise: load the whole plan and position
+                        // cursor at the tapped item. endSet() will walk the
+                        // user through all subsequent exercises.
+                        let allItems = TodayPlanStore.shared.todayPlan?.items ?? [item]
+                        let startIdx = allItems.firstIndex(where: { $0.id == item.id }) ?? 0
+                        controller.preparePlan(items: allItems, startingItemIndex: startIdx)
                         nav.push(.setReady)
                     }
                 } label: {
@@ -1350,16 +1355,29 @@ struct WorkoutDoneView: View {
     @EnvironmentObject var nav: WatchNavigation
     @EnvironmentObject var controller: LiveWorkoutController
 
-    private var totalSets: Int { controller.completedSets.count }
-    private var totalReps: Int { controller.totalReps }
+    /// All sets across all exercises (buffered ones + the current session's
+    /// completedSets which haven't been flushed yet).
+    private var allSetsAcrossExercises: [SetSnapshot] {
+        let buffered = controller.pendingExerciseSnapshots.flatMap { $0.sets }
+        return buffered + controller.completedSets
+    }
+    private var totalSets: Int { allSetsAcrossExercises.count }
+    private var totalReps: Int { allSetsAcrossExercises.reduce(0) { $0 + $1.reps.count } }
     private var totalVolumeT: String {
-        let kg = controller.completedSets.reduce(0.0) { acc, set in
+        let kg = allSetsAcrossExercises.reduce(0.0) { acc, set in
             acc + (set.weightKg * Double(set.reps.count))
         }
         if kg >= 1000 { return String(format: "%.1f t", kg / 1000) }
         return "\(Int(kg)) kg"
     }
     private var durationStr: String {
+        // Use whole-workout start time when available (multi-exercise),
+        // otherwise fall back to first rep timestamp of the current session.
+        let elapsed = controller.totalWorkoutSeconds
+        if elapsed > 0 {
+            let mins = max(1, elapsed / 60)
+            return "\(mins)′"
+        }
         guard let first = controller.completedSets.first?.reps.first?.timestamp else { return "—" }
         let last = controller.completedSets.last?.reps.last?.timestamp ?? Date()
         let mins = Int(last.timeIntervalSince(first) / 60.0)
@@ -1390,8 +1408,13 @@ struct WorkoutDoneView: View {
                 Spacer()
                 Button {
                     Task { @MainActor in
-                        let snap = await controller.completeWithFeedback(rpe: nil, notes: nil)
-                        WatchConnectivityService.shared.send(message: .workoutSnapshot(snap))
+                        // Multi-exercise flush: send each exercise's snapshot
+                        // separately so iPhone can store them as distinct
+                        // Workouts.
+                        let all = await controller.completeAllWithFeedback(rpe: nil, notes: nil)
+                        for snap in all {
+                            WatchConnectivityService.shared.send(message: .workoutSnapshot(snap))
+                        }
                         nav.popToRoot()
                     }
                 } label: {

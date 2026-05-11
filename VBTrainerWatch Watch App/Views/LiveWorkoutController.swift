@@ -60,6 +60,21 @@ public final class LiveWorkoutController: ObservableObject {
     /// killed-and-restarted Watch app can pick up where it left off.
     public private(set) var currentTemplateItemId: UUID?
 
+    /// Multi-exercise plan: the full ordered list of exercises in this
+    /// workout. `plannedItems[plannedItemCursor]` is the one the user is
+    /// currently doing; `plannedSpecs` mirrors that item's set specs.
+    @Published public private(set) var plannedItems: [TemplateItemSnapshot] = []
+    @Published public private(set) var plannedItemCursor: Int = 0
+
+    /// Buffer per-exercise snapshots so the workout-end sync can deliver
+    /// one record per exercise. session.complete() is called at each
+    /// exercise transition; each snapshot is appended here.
+    public private(set) var pendingExerciseSnapshots: [WorkoutSnapshot] = []
+
+    /// Whole-workout start time (set when the user taps「本组开始」on the
+    /// first exercise's first set).
+    public private(set) var workoutStartedAt: Date?
+
     // MARK: - Internal
 
     private var session = ActiveWorkoutSession()
@@ -97,6 +112,9 @@ public final class LiveWorkoutController: ObservableObject {
         // may have already populated currentTargetRange / currentVLCeiling /
         // currentExerciseId before this call — keep those when a plan is loaded.
         resetForNewWorkout()
+        // Capture whole-workout start once. start() is called per-exercise
+        // for multi-exercise plans; only the first call sets the baseline.
+        if workoutStartedAt == nil { workoutStartedAt = Date() }
         let usingPlan = !plannedSpecs.isEmpty
         currentExerciseId = usingPlan ? currentExerciseId : exerciseId
         currentWeightKg = usingPlan ? (plannedSpecs.first?.weightKg ?? weightKg) : weightKg
@@ -135,22 +153,37 @@ public final class LiveWorkoutController: ObservableObject {
         // If session is running, properly close out via the actor. If a
         // previous start failed (e.g. HK unavailable), session is idle —
         // but we STILL advance the planned cursor so user isn't stuck
-        // looping on set 1 forever. Without this guard relax, a failed
-        // start meant「结束本组」did nothing and SetReady kept showing
-        // 第 1 / N 组.
+        // looping on set 1 forever.
         if isRunning {
             await session.endSet()
         }
         plannedSetCursor += 1
-        // Sync currentWeightKg / currentReps / lastResolvedRest to the next
-        // planned set so SetReady shows correct defaults. User can still
-        // adjust via Crown before tapping「本组开始」.
+
         if plannedSetCursor < plannedSpecs.count {
+            // Still more sets in the current exercise.
             let next = plannedSpecs[plannedSetCursor]
             currentWeightKg = next.weightKg
             currentReps = next.reps
             lastResolvedRest = next.restSeconds
+        } else if hasMoreExercises {
+            // Last set of current exercise → snapshot it into the buffer,
+            // wipe the session so the next exercise's start() comes up fresh,
+            // and advance the item cursor.
+            if isRunning {
+                let snap = await session.complete()
+                pendingExerciseSnapshots.append(snap)
+            }
+            isRunning = false
+            consumerTask?.cancel()
+            consumerTask = nil
+            plannedItemCursor += 1
+            loadCurrentItemIntoSpecs()
+            // Fresh session for the next exercise's start().
+            session = ActiveWorkoutSession()
         }
+        // else: this was the last set of the last exercise. Leave session
+        // running; WorkoutDone's completeWithFeedback handles the final flush.
+
         persistResumeCursor()
         HapticFeedback.setEnded()
     }
@@ -270,8 +303,31 @@ public final class LiveWorkoutController: ObservableObject {
 
     /// Prepare the controller for a planned multi-set item (called before
     /// pushing the LiveWorkout route). After this, `start(...)` will use
-    /// the first spec's params.
+    /// the first spec's params. **Single-item entrypoint** — use
+    /// `preparePlan(items:startingItemIndex:)` for multi-exercise flows.
     public func preparePlanned(item: TemplateItemSnapshot) {
+        plannedItems = [item]
+        plannedItemCursor = 0
+        loadCurrentItemIntoSpecs()
+    }
+
+    /// V2 multi-exercise entry: load the whole plan into the controller and
+    /// position the cursor on the user-tapped exercise. After this,
+    /// `endSet()` will automatically advance through sets within the current
+    /// exercise and then through subsequent exercises until the plan is
+    /// exhausted.
+    public func preparePlan(items: [TemplateItemSnapshot], startingItemIndex: Int = 0) {
+        let sorted = items.sorted { $0.index < $1.index }
+        plannedItems = sorted
+        plannedItemCursor = max(0, min(startingItemIndex, max(sorted.count - 1, 0)))
+        pendingExerciseSnapshots = []
+        workoutStartedAt = nil
+        loadCurrentItemIntoSpecs()
+    }
+
+    private func loadCurrentItemIntoSpecs() {
+        guard plannedItemCursor < plannedItems.count else { return }
+        let item = plannedItems[plannedItemCursor]
         plannedSpecs = item.setSpecs.sorted { $0.index < $1.index }
         plannedSetCursor = 0
         if let first = plannedSpecs.first {
@@ -286,6 +342,18 @@ public final class LiveWorkoutController: ObservableObject {
         }
         currentTemplateItemId = item.id
         persistResumeCursor()
+    }
+
+    /// True when there's still another exercise after the current one.
+    public var hasMoreExercises: Bool {
+        plannedItemCursor + 1 < plannedItems.count
+    }
+
+    /// True when all planned exercises + their sets are done.
+    public var isPlanFullyComplete: Bool {
+        !plannedItems.isEmpty
+            && plannedItemCursor >= plannedItems.count - 1
+            && plannedSetCursor >= plannedSpecs.count
     }
 
     /// V2: prepare-but-don't-start hook. Same parameter shape as `start(...)`,
@@ -335,6 +403,24 @@ public final class LiveWorkoutController: ObservableObject {
         // gets the cue even if the app is backgrounded immediately after.
         HapticFeedback.workoutEnded()
         return snapshot
+    }
+
+    /// Multi-exercise flush: combines pendingExerciseSnapshots (collected at
+    /// each exercise transition by endSet()) with the final snapshot. Caller
+    /// is expected to send each via WatchConnectivityService.
+    @discardableResult
+    public func completeAllWithFeedback(rpe: Int?, notes: String?) async -> [WorkoutSnapshot] {
+        let final = await completeWithFeedback(rpe: rpe, notes: notes)
+        var all = pendingExerciseSnapshots
+        all.append(final)
+        pendingExerciseSnapshots = []
+        return all
+    }
+
+    /// Total elapsed workout duration in seconds, since the very first start().
+    public var totalWorkoutSeconds: Int {
+        guard let started = workoutStartedAt else { return 0 }
+        return max(0, Int(Date().timeIntervalSince(started)))
     }
 
     /// Force release of sensors when the view leaves without completing.
