@@ -26,13 +26,27 @@ public struct WatchPreferencesSnapshot: Codable, Sendable, Equatable {
 /// V2 activation payload. Sent right after a `.template` push so the Watch can
 /// pop to root and jump straight to the synced plan view instead of waiting
 /// for the user to manually open the app.
+///
+/// `template` is bundled in V2.1 so that `sendMessage` delivers everything
+/// atomically — without it, the Watch may pop to PlanSynced before the
+/// separate `.template` (`transferUserInfo`) finishes queuing, leaving the
+/// list empty.
 public struct StartWorkoutSnapshot: Codable, Sendable, Equatable {
     public let templateId: UUID
     public let startItemIndex: Int
+    /// Bundled template snapshot. Optional for backward compat with old
+    /// encoders. Watch SHALL store this into `TodayPlanStore` before
+    /// triggering navigation when present.
+    public let template: TemplateSnapshot?
 
-    public init(templateId: UUID, startItemIndex: Int = 0) {
+    public init(
+        templateId: UUID,
+        startItemIndex: Int = 0,
+        template: TemplateSnapshot? = nil
+    ) {
         self.templateId = templateId
         self.startItemIndex = startItemIndex
+        self.template = template
     }
 }
 
