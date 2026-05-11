@@ -356,6 +356,10 @@ struct PlanView: View {
     private func summaryLine(_ item: TemplateItem) -> String {
         let workSpecs = item.orderedSetSpecs.filter { $0.kind == .work }
         if !workSpecs.isEmpty {
+            // 全空 sentinel（刚添加、无历史） → 提示用户填写。
+            if workSpecs.allSatisfy({ $0.weightKg == 0 && $0.reps == 0 }) {
+                return "未填写 · 点击下方组配置"
+            }
             let uniqueWeights = Set(workSpecs.map(\.weightKg))
             let uniqueReps = Set(workSpecs.map(\.reps))
             // 所有正式组完全相同 → 紧凑显示「reps×组数 @重量」
@@ -457,8 +461,10 @@ struct PlanView: View {
             }
             .frame(width: 32, alignment: .leading)
 
-            cellPill(text: "\(Int(weight))", unit: "kg")
-            cellPill(text: "\(reps)", unit: "次")
+            cellPill(text: weight == 0 ? "—" : "\(Int(weight))", unit: "kg",
+                     mute: weight == 0)
+            cellPill(text: reps == 0 ? "—" : "\(reps)", unit: "次",
+                     mute: reps == 0)
             cellPill(text: rest == 0 ? "—" : formatRest(rest), unit: nil,
                      mute: rest == 0)
 
@@ -761,22 +767,58 @@ struct PlanView: View {
 
     private func addExerciseItem(_ ex: Exercise) {
         let nextIndex = (template.items.map(\.index).max() ?? 0) + 1
+        let history = lastWorkoutSpecs(for: ex.id)
         let item = TemplateItem(
             index: nextIndex,
             exerciseId: ex.id,
-            targetSets: 3,
-            targetReps: 5,
-            targetWeightKg: nil,
+            // Mirror specs into legacy aggregate fields. 「未填写」 sentinel
+            // when no history → 1 set / 0 reps / nil weight / 0 rest.
+            targetSets: history.isEmpty ? 1 : history.count,
+            targetReps: history.first?.reps ?? 0,
+            targetWeightKg: history.first?.weightKg,
             targetVelocityRange: ex.defaultTargetVelocityRange,
             vlCeiling: ex.defaultVLCeiling,
-            restSeconds: 90,
+            restSeconds: history.first?.restSeconds ?? 0,
             side: ex.isUnilateral ? .left : .both
         )
         item.template = template
         template.items.append(item)
         context.insert(item)
+
+        // Always create explicit setSpecs so the table doesn't fall back to
+        // the legacy 「3 默认行」 path.
+        let specs: [(weight: Double, reps: Int, rest: Int)] = history.isEmpty
+            ? [(0, 0, 0)]
+            : history
+        for (i, h) in specs.enumerated() {
+            let spec = TemplateSetSpec(
+                index: i + 1,
+                kind: .work,
+                weightKg: h.weight,
+                reps: h.reps,
+                restSeconds: h.rest
+            )
+            spec.item = item
+            item.setSpecs.append(spec)
+            context.insert(spec)
+        }
         try? context.save()
         expandedItemId = item.id
+    }
+
+    /// Look up the user's most recent Workout for `exerciseId` and return
+    /// its sets as (weight, reps, rest) tuples — drives auto-prefill when
+    /// the user adds a previously-trained exercise to a new template.
+    private func lastWorkoutSpecs(for exerciseId: String) -> [(weight: Double, reps: Int, restSeconds: Int)] {
+        var descriptor = FetchDescriptor<Workout>(
+            predicate: #Predicate { $0.exerciseId == exerciseId },
+            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 1
+        guard let last = try? context.fetch(descriptor).first else { return [] }
+        return last.sets
+            .sorted { $0.index < $1.index }
+            .map { (weight: $0.weightKg, reps: $0.reps.count, restSeconds: $0.restAfterSeconds) }
     }
 }
 
