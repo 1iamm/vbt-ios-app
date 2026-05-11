@@ -24,10 +24,21 @@ import HealthKit
 @available(watchOS 10.0, *)
 public actor MotionManager {
 
-    public enum MotionError: Error {
+    public enum MotionError: LocalizedError {
         case deviceMotionUnavailable
         case alreadyRunning
         case workoutSessionFailed(Error)
+
+        public var errorDescription: String? {
+            switch self {
+            case .deviceMotionUnavailable:
+                return "设备运动数据不可用（模拟器或权限被拒）"
+            case .alreadyRunning:
+                return "传感器已在运行中"
+            case .workoutSessionFailed(let underlying):
+                return "HKWorkoutSession 启动失败：\(underlying.localizedDescription)"
+            }
+        }
     }
 
     /// Reference: Citations.balshaw2023AppleWatch — 100 Hz is sufficient and
@@ -64,7 +75,17 @@ public actor MotionManager {
     // MARK: - Public API
 
     public func start() async throws {
-        guard !isRunning else { throw MotionError.alreadyRunning }
+        // Idempotent: if a previous start already brought sensors up (e.g.
+        // an actor-reentrant call from controller start + LiveSet .task,
+        // or a stale instance still alive in simulator hot-reload), don't
+        // throw — just no-op so the UI doesn't show a misleading 「训练
+        // 开始失败」when data IS actually flowing.
+        if isRunning {
+            #if DEBUG
+            print("[MM] start() called when already running — ignoring")
+            #endif
+            return
+        }
         #if canImport(CoreMotion) && canImport(HealthKit)
         guard motionManager.isDeviceMotionAvailable else {
             throw MotionError.deviceMotionUnavailable
