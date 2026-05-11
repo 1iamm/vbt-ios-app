@@ -73,6 +73,9 @@ public enum TemplateSyncService {
     /// `.startWorkout` signal so the Watch can pop to root and land on the
     /// PlanSynced screen without manual interaction. Cross-version safe — old
     /// Watch builds without `.startWorkout` decoder fall through harmlessly.
+    ///
+    /// Fire-and-forget overload — uses `transferUserInfo` for both messages.
+    /// Used by callers that don't need delivery confirmation (Today / WeeklyPlan).
     public static func pushAndStart(
         template: Template,
         on date: Date,
@@ -95,6 +98,97 @@ public enum TemplateSyncService {
             print("TemplateSyncService.pushAndStart activation error: \(error)")
             #endif
         }
+        #endif
+    }
+
+    /// V2 activation result for the async overload.
+    public enum ActivationResult: Sendable {
+        /// Watch confirmed receipt within the timeout (`sendMessage` reply).
+        case delivered
+        /// Watch was unreachable; fell back to `transferUserInfo`. Will land
+        /// next time the user opens the watch app.
+        case queued
+        /// Couldn't even queue (WCSession unsupported / inactive / encode error).
+        case failed(String)
+    }
+
+    /// V2 activation, async + result-bearing variant. Tries `sendMessage` first
+    /// (instant + reply confirmation), falls back to `transferUserInfo` (queued
+    /// for next watch app launch). The template itself is always pushed via
+    /// `transferUserInfo` (it tolerates being queued).
+    ///
+    /// Designed for UI that wants to show a spinner until the Watch confirms.
+    /// Default 5s timeout — sendMessage in simulator is < 1s, real device < 0.5s.
+    public static func pushAndStart(
+        template: Template,
+        on date: Date,
+        startItemIndex: Int = 0,
+        timeout: TimeInterval = 5
+    ) async -> ActivationResult {
+        push(template: template, on: date)
+        #if canImport(WatchConnectivity) && os(iOS)
+        guard WCSession.isSupported() else { return .failed("WCSession unsupported") }
+        let session = WCSession.default
+        guard session.activationState == .activated else {
+            return .failed("WCSession not activated yet")
+        }
+        let activation = StartWorkoutSnapshot(
+            templateId: template.id,
+            startItemIndex: startItemIndex
+        )
+        let userInfo: [String: Any]
+        do {
+            userInfo = try ConnectivityCodec.encode(.startWorkout(activation))
+        } catch {
+            return .failed("encode error: \(error.localizedDescription)")
+        }
+
+        #if DEBUG
+        print("[WC] iPhone pushAndStart reachable=\(session.isReachable)")
+        #endif
+
+        // 1) Try sendMessage (instant + reply confirmation) when reachable
+        if session.isReachable {
+            let delivered = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+                var resumed = false
+                let lock = NSLock()
+                let resume: (Bool) -> Void = { value in
+                    lock.lock(); defer { lock.unlock() }
+                    guard !resumed else { return }
+                    resumed = true
+                    cont.resume(returning: value)
+                }
+                let timeoutTask = Task {
+                    try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                    resume(false)
+                }
+                session.sendMessage(userInfo, replyHandler: { _ in
+                    timeoutTask.cancel()
+                    resume(true)
+                }, errorHandler: { err in
+                    #if DEBUG
+                    print("[WC] iPhone sendMessage failed: \(err.localizedDescription)")
+                    #endif
+                    timeoutTask.cancel()
+                    resume(false)
+                })
+            }
+            if delivered {
+                #if DEBUG
+                print("[WC] iPhone pushAndStart .delivered")
+                #endif
+                return .delivered
+            }
+        }
+
+        // 2) Fallback: queue via transferUserInfo (delivered on next watch launch)
+        session.transferUserInfo(userInfo)
+        #if DEBUG
+        print("[WC] iPhone pushAndStart .queued (transferUserInfo fallback)")
+        #endif
+        return .queued
+        #else
+        return .failed("WatchConnectivity unavailable on this build")
         #endif
     }
 

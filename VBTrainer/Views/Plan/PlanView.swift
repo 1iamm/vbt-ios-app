@@ -25,7 +25,15 @@ struct PlanView: View {
     @State private var editingSet: TemplateSetSpec?
     @State private var showingExercisePicker = false
     @State private var showingScheduleSheet = false
-    @State private var pushedTemplate = false
+    @State private var pushState: PushState = .idle
+
+    private enum PushState: Equatable {
+        case idle
+        case pushing                  // sendMessage in flight, show spinner
+        case delivered                // Watch confirmed receipt
+        case queued                   // fell back to transferUserInfo
+        case failed(String)           // couldn't even queue
+    }
 
     private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
     private var accent: Color { GoalTheme.accent(for: goal) }
@@ -101,10 +109,40 @@ struct PlanView: View {
             }
             .presentationDetents([.height(360)])
         }
-        .alert("已推送到 Watch", isPresented: $pushedTemplate) {
-            Button("好的") {}
+        .alert(pushAlertTitle, isPresented: pushAlertBinding) {
+            Button("好的") { pushState = .idle }
         } message: {
-            Text("打开 Apple Watch 上的 VBTrainer 即可开始训练")
+            Text(pushAlertMessage)
+        }
+    }
+
+    private var pushAlertBinding: Binding<Bool> {
+        Binding(
+            get: {
+                switch pushState {
+                case .delivered, .queued, .failed: return true
+                case .idle, .pushing: return false
+                }
+            },
+            set: { if !$0 { pushState = .idle } }
+        )
+    }
+
+    private var pushAlertTitle: String {
+        switch pushState {
+        case .delivered: return "Watch 已激活"
+        case .queued:    return "已加入队列"
+        case .failed:    return "推送失败"
+        default:         return ""
+        }
+    }
+
+    private var pushAlertMessage: String {
+        switch pushState {
+        case .delivered: return "Watch 已自动跳到训练界面，可以开始了"
+        case .queued:    return "Watch 暂时不可达。打开 Apple Watch 上的 VBTrainer 后会自动激活"
+        case .failed(let msg): return "原因：\(msg)"
+        default: return ""
         }
     }
 
@@ -509,22 +547,37 @@ struct PlanView: View {
             squareButton(icon: "applewatch") {
                 pushTemplateNow()
             }
+            .disabled(pushState == .pushing)
             Button {
                 pushTemplateNow()
             } label: {
-                Text("开始训练")
-                    .font(.system(size: 15, weight: .bold))
-                    .tracking(0.2)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(accent, in: RoundedRectangle(cornerRadius: 12))
-                    .shadow(color: accent.opacity(0.5), radius: 12, x: 0, y: 6)
+                HStack(spacing: 8) {
+                    if pushState == .pushing {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(.white)
+                            .scaleEffect(0.8)
+                        Text("正在激活 Watch…")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                    } else {
+                        Text("开始训练")
+                            .font(.system(size: 15, weight: .bold))
+                            .tracking(0.2)
+                            .foregroundStyle(.white)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(accent, in: RoundedRectangle(cornerRadius: 12))
+                .shadow(color: accent.opacity(0.5), radius: 12, x: 0, y: 6)
             }
             .buttonStyle(.plain)
+            .disabled(pushState == .pushing)
             squareButton(icon: "calendar") {
                 showingScheduleSheet = true
             }
+            .disabled(pushState == .pushing)
         }
         .padding(.horizontal, Tokens.Space.lg)
         .padding(.vertical, 12)
@@ -548,9 +601,26 @@ struct PlanView: View {
     // MARK: - Actions
 
     private func pushTemplateNow() {
-        TemplateSyncService.pushAndStart(template: template, on: plannedDate)
-        Haptics.success()
-        pushedTemplate = true
+        guard pushState != .pushing else { return }
+        pushState = .pushing
+        let templateRef = template
+        let date = plannedDate
+        Task { @MainActor in
+            let result = await TemplateSyncService.pushAndStart(
+                template: templateRef,
+                on: date
+            )
+            switch result {
+            case .delivered:
+                Haptics.success()
+                pushState = .delivered
+            case .queued:
+                Haptics.success()
+                pushState = .queued
+            case .failed(let msg):
+                pushState = .failed(msg)
+            }
+        }
     }
 
     private func addSet(_ kind: TemplateSetKind, to item: TemplateItem) {
