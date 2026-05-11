@@ -25,6 +25,8 @@ struct TodayView: View {
     @State private var pendingPlanTemplate: Template?
     @State private var pendingIPhoneItem: TemplateItemSnapshot?
     @State private var pendingIPhoneTemplateId: UUID?
+    @State private var pendingModeChoiceTemplate: Template?
+    @State private var pendingModeChoicePlanDate: Date?
     @State private var pendingWorkoutDetail: WorkoutDetailRoute?
     @State private var showingTweaks = false
     @State private var cmjPromptShown = false
@@ -76,7 +78,7 @@ struct TodayView: View {
 
                     let recs = AIRecommendationEngine.recommendations(context: context)
                     if !recs.isEmpty {
-                        SectionHeader(title: "AI 推荐", action: "为何推荐 →", accent: Color(hex: "7C5CFF"))
+                        SectionHeader(title: "AI 推荐", accent: Color(hex: "7C5CFF"))
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
                                 ForEach(recs) { rec in
@@ -93,7 +95,9 @@ struct TodayView: View {
                         .padding(.bottom, 8)
                     }
 
-                    SectionHeader(title: "我的模板", action: "管理 →", accent: accent)
+                    SectionHeader(title: "我的模板", action: "管理 →", accent: accent) {
+                        NotificationCenter.default.post(name: .vbtSwitchToPlanTab, object: nil)
+                    }
                     myTemplatesList
 
                     Spacer().frame(height: 24)
@@ -164,7 +168,45 @@ struct TodayView: View {
                     IPhoneActiveWorkoutView(item: item, templateId: pendingIPhoneTemplateId)
                 }
             }
+            // 自动模式 + 有 Watch：让用户选择在哪练
+            .confirmationDialog(
+                "在哪里训练？",
+                isPresented: modeChoiceBinding,
+                titleVisibility: .visible,
+                presenting: pendingModeChoiceTemplate
+            ) { template in
+                Button("在 Apple Watch 上练") {
+                    let date = pendingModeChoicePlanDate ?? Date()
+                    Task { _ = await TemplateSyncService.pushAndStart(template: template, on: date) }
+                    pendingModeChoiceTemplate = nil
+                    pendingModeChoicePlanDate = nil
+                }
+                Button("在 iPhone 上练") {
+                    pendingIPhoneItem = firstSnapshotItem(from: template)
+                    pendingIPhoneTemplateId = template.id
+                    pendingModeChoiceTemplate = nil
+                    pendingModeChoicePlanDate = nil
+                }
+                Button("取消", role: .cancel) {
+                    pendingModeChoiceTemplate = nil
+                    pendingModeChoicePlanDate = nil
+                }
+            } message: { _ in
+                Text("可在「我的 → 训练模式」中设为默认。")
+            }
         }
+    }
+
+    private var modeChoiceBinding: Binding<Bool> {
+        Binding(
+            get: { pendingModeChoiceTemplate != nil },
+            set: { newValue in
+                if !newValue {
+                    pendingModeChoiceTemplate = nil
+                    pendingModeChoicePlanDate = nil
+                }
+            }
+        )
     }
 
     /// Simple opacity pulse modifier for the banner's "live" dot.
@@ -428,15 +470,24 @@ struct TodayView: View {
     private func handlePrimary(plan: DayPlan, template: Template) {
         switch plan.status {
         case .scheduled:
-            // V2.x: route based on user mode preference + Watch presence.
-            // .iPhone source → present IPhoneActiveWorkoutView; .watch source
-            // → push template to Watch as before.
-            let source = WorkoutModeResolver.effectiveSource
-            if source == .iPhone {
+            // V2.x：根据当前 mode preference 路由：
+            //  · 强制 iPhone / 自动且无 Watch → 直接进 iPhone 训练页
+            //  · 强制 Watch → 推到 Watch
+            //  · 自动 + 有 Watch → 弹 confirmationDialog 让用户当场选
+            switch WorkoutModeResolver.preference {
+            case .forceIPhone:
                 pendingIPhoneItem = firstSnapshotItem(from: template)
                 pendingIPhoneTemplateId = template.id
-            } else {
+            case .forceWatch:
                 Task { _ = await TemplateSyncService.pushAndStart(template: template, on: plan.date) }
+            case .auto:
+                if WorkoutModeResolver.hasWatch {
+                    pendingModeChoiceTemplate = template
+                    pendingModeChoicePlanDate = plan.date
+                } else {
+                    pendingIPhoneItem = firstSnapshotItem(from: template)
+                    pendingIPhoneTemplateId = template.id
+                }
             }
             Haptics.success()
         case .inProgress:

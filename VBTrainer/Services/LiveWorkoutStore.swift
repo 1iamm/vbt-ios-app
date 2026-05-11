@@ -68,4 +68,33 @@ public final class LiveWorkoutStore: ObservableObject {
         isLive = false
         isMinimized = false
     }
+
+    /// Optimistic local nudge for ±10s / skip presses on iPhone. WC delivery
+    /// can lag a couple seconds on simulator; without this the iPhone RestView
+    /// looks unresponsive until the Watch's next tick echoes back. The Watch's
+    /// authoritative push will overwrite shortly.
+    public func optimisticRestAdjust(deltaSeconds: Int) {
+        guard let p = payload, p.phase == .restCountdown else { return }
+        let curR = p.restRemainingSec ?? 0
+        let curT = p.restTotalSec ?? curR
+        let newR = max(0, min(600, curR + deltaSeconds))
+        let newT = max(5, min(600, curT + deltaSeconds))
+        payload = LiveProgressPayload(
+            phase: p.phase,
+            workoutId: p.workoutId,
+            setIndex: p.setIndex,
+            exerciseName: p.exerciseName,
+            targetReps: p.targetReps,
+            targetWeightKg: p.targetWeightKg,
+            currentRep: p.currentRep,
+            lastRepVelocity: p.lastRepVelocity,
+            setBestVelocity: p.setBestVelocity,
+            vlPercent: p.vlPercent,
+            repVelocities: p.repVelocities,
+            restRemainingSec: newR,
+            restTotalSec: newT,
+            heartRate: p.heartRate,
+            timestamp: Date()
+        )
+    }
 }

@@ -269,6 +269,10 @@ private struct RestView: View {
                         Spacer()
                         Button {
                             TemplateSyncService.pushRestSkip(workoutId: payload.workoutId)
+                            // Optimistic: collapse remaining to 0 immediately so
+                            // the iPhone RestView animates closed even if WC is
+                            // slow. Watch authoritative .ready will reconcile.
+                            LiveWorkoutStore.shared.optimisticRestAdjust(deltaSeconds: -(payload.restRemainingSec ?? 0))
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         } label: {
                             Text("跳过")
@@ -379,6 +383,9 @@ private struct RestView: View {
     private func restAdjustButton(symbol: String, delta: Int) -> some View {
         Button {
             TemplateSyncService.pushRestAdjust(deltaSeconds: delta, workoutId: payload.workoutId)
+            // Optimistic local update so iPhone UI responds instantly even if
+            // WC sendMessage falls back to slow transferUserInfo path.
+            LiveWorkoutStore.shared.optimisticRestAdjust(deltaSeconds: delta)
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         } label: {
             Text(symbol)

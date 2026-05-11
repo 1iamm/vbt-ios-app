@@ -57,6 +57,9 @@ struct MainTabsView: View {
                 .tag(Tab.profile)
         }
         .tint(Tokens.Color.accent)
+        .onReceive(NotificationCenter.default.publisher(for: .vbtSwitchToPlanTab)) { _ in
+            selection = .plan
+        }
         // 全局右下角悬浮窗 —— 训练中切到任何 tab 都能看到当前 phase 摘要，
         // 点击展开 cover。仅 isLive && isMinimized 时显示。
         .overlay(alignment: .bottomTrailing) {

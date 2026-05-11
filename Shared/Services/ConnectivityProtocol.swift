@@ -302,6 +302,9 @@ public extension Notification.Name {
     /// `.restAdjust`. userInfo carries `delta` (Int seconds, signed) and
     /// `skip` (Bool). Handled by `WatchRestView` to mutate its countdown.
     static let vbtRestAdjustRequested = Notification.Name("vbt.restAdjustRequested")
+    /// iPhone-only: posted by views (e.g. Today's 我的模板·管理) asking
+    /// `MainTabsView` to switch the bottom tab selection. object = tab name.
+    static let vbtSwitchToPlanTab = Notification.Name("vbt.switchToPlanTab")
 }
 
 public enum ConnectivityCodec {
