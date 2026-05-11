@@ -45,7 +45,15 @@ extension iPhoneConnectivityService: WCSessionDelegate {
         activationDidCompleteWith activationState: WCSessionActivationState,
         error: Error?
     ) {
-        // No-op
+        #if DEBUG
+        print("[WC] iPhone activationDidComplete state=\(activationState.rawValue) error=\(error?.localizedDescription ?? "nil") isPaired=\(session.isPaired) isWatchAppInstalled=\(session.isWatchAppInstalled) isReachable=\(session.isReachable)")
+        #endif
+    }
+
+    public func sessionReachabilityDidChange(_ session: WCSession) {
+        #if DEBUG
+        print("[WC] iPhone reachability=\(session.isReachable)")
+        #endif
     }
 
     public func sessionDidBecomeInactive(_ session: WCSession) {}
