@@ -130,6 +130,10 @@ extension iPhoneConnectivityService: WCSessionDelegate {
                 break
             case .liveProgress(let payload):
                 LiveWorkoutStore.shared.apply(payload)
+            case .restAdjust:
+                // iPhone authors restAdjust; inbound from Watch isn't
+                // expected (Watch only consumes).
+                break
             }
         } catch {
             #if DEBUG

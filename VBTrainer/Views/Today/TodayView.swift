@@ -49,6 +49,14 @@ struct TodayView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    // 训练中最小化时显示的紧凑横条 banner —— 点击展开 cover
+                    if liveStore.isLive && liveStore.isMinimized,
+                       let payload = liveStore.payload {
+                        liveMinimizedBanner(payload: payload)
+                            .padding(.horizontal, Tokens.Space.lg)
+                            .padding(.top, 6)
+                    }
+
                     TodayHeader(snapshot: readinessSnaps.first, goalAccent: accent)
 
                     let weekly = WeeklyAdherenceCalculator.compute(context: context)
@@ -160,11 +168,84 @@ struct TodayView: View {
         }
     }
 
+    /// Simple opacity pulse modifier for the banner's "live" dot.
+    private struct PulseAnimation: ViewModifier {
+        @State private var on = false
+        func body(content: Content) -> some View {
+            content
+                .opacity(on ? 0.4 : 1.0)
+                .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: on)
+                .onAppear { on = true }
+        }
+    }
+
+    /// Compact banner shown at the top of Today while a training session is
+    /// running but minimized. Tap to re-open the fullScreenCover.
+    private func liveMinimizedBanner(payload: LiveProgressPayload) -> some View {
+        Button {
+            liveStore.expand()
+        } label: {
+            HStack(spacing: 12) {
+                Circle()
+                    .fill(Color.orange)
+                    .frame(width: 8, height: 8)
+                    .opacity(0.9)
+                    .modifier(PulseAnimation())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("训练中 · \(payload.exerciseName)")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Tokens.Color.label)
+                    Text(bannerSubline(payload: payload))
+                        .font(.system(size: 11))
+                        .foregroundStyle(Tokens.Color.secondaryLabel)
+                        .monospacedDigit()
+                }
+                Spacer()
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Tokens.Color.secondaryLabel)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.orange.opacity(0.45), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func bannerSubline(payload: LiveProgressPayload) -> String {
+        switch payload.phase {
+        case .ready, .repDetected:
+            let v = payload.lastRepVelocity.map { String(format: "%.2f m/s", $0) } ?? "—"
+            return "第 \(payload.setIndex + 1) 组 · \(payload.currentRep)/\(payload.targetReps) · \(v)"
+        case .setEnded:
+            return "组结束 · \(payload.repVelocities.count) reps · VL \(Int(payload.vlPercent ?? 0))%"
+        case .restCountdown:
+            let s = payload.restRemainingSec ?? 0
+            return "休息 \(s / 60):\(String(format: "%02d", s % 60)) · 下组 \(Int(payload.targetWeightKg))kg × \(payload.targetReps)"
+        case .workoutEnded:
+            return "训练完成"
+        }
+    }
+
     /// Bridge LiveWorkoutStore.isLive @Published to fullScreenCover binding.
+    /// Cover shows when session is live AND user hasn't minimized.
     private var liveStoreBinding: Binding<Bool> {
         Binding(
-            get: { liveStore.isLive },
-            set: { newValue in if !newValue { liveStore.clear() } }
+            get: { liveStore.isLive && !liveStore.isMinimized },
+            set: { newValue in
+                if !newValue {
+                    // System-driven dismiss only happens on .workoutEnded
+                    // (we set isLive=false). Manual minimize sets
+                    // isMinimized=true and leaves isLive=true.
+                    if !liveStore.isMinimized {
+                        liveStore.clear()
+                    }
+                }
+            }
         )
     }
 

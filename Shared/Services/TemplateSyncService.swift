@@ -203,4 +203,26 @@ public enum TemplateSyncService {
         }
         #endif
     }
+
+    /// V2.x rest-adjust push iPhone → Watch. Used by the LiveWorkoutView
+    /// RestView ±10s buttons to extend/shrink the Watch's countdown.
+    /// Always sendMessage first (instant); falls back to transferUserInfo.
+    public static func pushRestAdjust(deltaSeconds: Int, workoutId: UUID? = nil) {
+        #if canImport(WatchConnectivity) && os(iOS)
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        let payload = RestAdjustPayload(deltaSeconds: deltaSeconds, workoutId: workoutId)
+        do {
+            let userInfo = try ConnectivityCodec.encode(.restAdjust(payload))
+            session.sendMessage(userInfo, replyHandler: nil) { _ in
+                session.transferUserInfo(userInfo)
+            }
+        } catch {
+            #if DEBUG
+            print("TemplateSyncService.pushRestAdjust error: \(error)")
+            #endif
+        }
+        #endif
+    }
 }
