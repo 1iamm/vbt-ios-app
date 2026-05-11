@@ -93,6 +93,10 @@ public enum TemplateSyncService {
         startItemIndex: Int = 0,
         timeout: TimeInterval = 5
     ) async -> ActivationResult {
+        // Snapshot once + push the queued copy as a fallback for the
+        // watch-app-not-running case. The bundled copy in startWorkout below
+        // is what makes the in-flight UI actually populate.
+        let templateSnap = snapshot(of: template, on: date)
         push(template: template, on: date)
         #if canImport(WatchConnectivity) && os(iOS)
         guard WCSession.isSupported() else { return .failed("WCSession unsupported") }
@@ -102,7 +106,8 @@ public enum TemplateSyncService {
         }
         let activation = StartWorkoutSnapshot(
             templateId: template.id,
-            startItemIndex: startItemIndex
+            startItemIndex: startItemIndex,
+            template: templateSnap
         )
         let userInfo: [String: Any]
         do {
