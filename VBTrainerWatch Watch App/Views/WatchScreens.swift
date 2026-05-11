@@ -260,7 +260,17 @@ struct WatchLiveWorkoutView: View {
         }
         .navigationBarBackButtonHidden(true)
         .task {
-            await controller.start(exerciseId: exerciseId, weightKg: weightKg)
+            // V2: SetReady is the single start point. We only fall back to
+            // start here if the controller is somehow not running yet (e.g.
+            // user reached LiveWorkout via a non-V2 path). The controller
+            // also guards `if isRunning { return }` internally — this extra
+            // check avoids racing the SetReady → push(.liveWorkout) ordering
+            // that could otherwise re-enter MotionManager.start before the
+            // first start's `isRunning = true` lands, throwing
+            // MotionError.alreadyRunning.
+            if !controller.isRunning {
+                await controller.start(exerciseId: exerciseId, weightKg: weightKg)
+            }
         }
         .onDisappear {
             if !didPushToChild {

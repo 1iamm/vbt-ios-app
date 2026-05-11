@@ -62,6 +62,14 @@ public final class LiveWorkoutController: ObservableObject {
     /// First-rep velocity within the current set, used to compute live VL%.
     private var setBaselineVelocity: Double?
 
+    /// Synchronously-set re-entrancy guard. `isRunning` only flips to true
+    /// after the (awaited) session.start completes; without `isStarting`,
+    /// two concurrent callers (SetReady + LiveSet.task) both observe
+    /// `isRunning == false` and proceed → the second start hits MotionManager
+    /// inside a second ActiveWorkoutSession instance, throwing
+    /// MotionError.alreadyRunning.
+    private var isStarting = false
+
     public init() {}
 
     // MARK: - Lifecycle
@@ -75,8 +83,10 @@ public final class LiveWorkoutController: ObservableObject {
         side: Side = .both,
         defaultRestSeconds: Int = 90
     ) async {
-        // Idempotent: if already running this workout, no-op.
-        if isRunning { return }
+        // Idempotent: if already running or in flight, no-op.
+        if isRunning || isStarting { return }
+        isStarting = true
+        defer { isStarting = false }
         // Fresh start: rebuild session and reset all mirrors. preparePlanned()
         // may have already populated currentTargetRange / currentVLCeiling /
         // currentExerciseId before this call — keep those when a plan is loaded.
