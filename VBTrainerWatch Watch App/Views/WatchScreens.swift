@@ -153,6 +153,8 @@ struct WatchLiveWorkoutView: View {
     }
 
     private var totalReps: Int {
+        // Respect user-adjusted target from SetReady; fall back to plan.
+        if controller.currentReps > 0 { return controller.currentReps }
         let i = controller.plannedSetCursor
         if i < controller.plannedSpecs.count { return controller.plannedSpecs[i].reps }
         return 0
@@ -347,28 +349,46 @@ struct WatchRestView: View {
 
     var body: some View {
         WatchScreenChrome(title: "组间休息", titleColor: fg) {
-            VStack(spacing: 6) {
-                Spacer().frame(height: 18)
-                HStack(alignment: .center, spacing: 6) {
-                    plusMinusButton(symbol: "−", offset: -10)
-                    countdownRing
-                    plusMinusButton(symbol: "+", offset: 10)
-                }
-                .padding(.horizontal, 6)
+            ZStack(alignment: .topTrailing) {
+                VStack(spacing: 6) {
+                    Spacer().frame(height: 18)
+                    HStack(alignment: .center, spacing: 6) {
+                        plusMinusButton(symbol: "−", offset: -10)
+                        countdownRing
+                        plusMinusButton(symbol: "+", offset: 10)
+                    }
+                    .padding(.horizontal, 6)
 
-                if let next = controller.nextPlannedParams, !nextExName.isEmpty {
-                    nextSetCard(next: next)
-                        .padding(.horizontal, 8)
-                        .padding(.top, 4)
-                } else {
-                    Spacer()
-                    Text("最后一组完成 — 倒计时结束自动跳到完成屏")
-                        .font(.system(size: 9))
-                        .foregroundStyle(sub)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 16)
+                    if let next = controller.nextPlannedParams, !nextExName.isEmpty {
+                        nextSetCard(next: next)
+                            .padding(.horizontal, 8)
+                            .padding(.top, 4)
+                    } else {
+                        Spacer()
+                        Text("最后一组完成 — 倒计时结束跳到完成屏")
+                            .font(.system(size: 9))
+                            .foregroundStyle(sub)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 16)
+                    }
+                    Spacer(minLength: 6)
                 }
-                Spacer(minLength: 6)
+                // Skip-rest: top-right small button. Doesn't end the workout —
+                // just advances past the countdown to the next SetReady (or
+                // WorkoutDone if last set).
+                Button {
+                    advanceNow()
+                } label: {
+                    Text("跳过")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(sub)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.white.opacity(0.10), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 2)
+                .padding(.trailing, 8)
             }
             .onAppear { startCountdown() }
         }
@@ -387,7 +407,7 @@ struct WatchRestView: View {
                     .tracking(-0.8)
                     .foregroundStyle(fg)
                     .monospacedDigit()
-                Text("剩余 · \(totalSeconds)s")
+                Text("休息 · \(totalSeconds)s")
                     .font(.system(size: 7, weight: .medium))
                     .foregroundStyle(sub)
                     .tracking(0.4)
@@ -469,10 +489,12 @@ struct WatchRestView: View {
     }
 
     private func adjustRemaining(by delta: Int) {
-        let raw = remaining + delta
-        remaining = max(5, min(600, raw))
-        // Bump totalSeconds when adding so the ring doesn't visually jump.
-        if delta > 0 { totalSeconds = max(totalSeconds, remaining) }
+        let newRemaining = max(5, min(600, remaining + delta))
+        let newTotal = max(5, min(600, totalSeconds + delta))
+        remaining = newRemaining
+        // Always sync totalSeconds with delta so the bottom label and ring
+        // progress reflect the new rest duration (not just the cap on +).
+        totalSeconds = newTotal
     }
 
     private func formatTime(_ seconds: Int) -> String {
@@ -487,15 +509,21 @@ struct WatchRestView: View {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 if remaining > 0 { remaining -= 1 }
             }
-            guard !advanced else { return }
-            advanced = true
-            HapticFeedback.restEnded()
-            if controller.nextPlannedParams != nil {
-                await controller.startNextSet()
-                nav.replaceTop(with: .setReady)
-            } else {
-                nav.replaceTop(with: .workoutDone)
-            }
+            advanceNow()
+        }
+    }
+
+    /// Skip-rest button + countdown-zero converge here. Does NOT call
+    /// startNextSet — SetReady's「本组开始」owns the actual session start
+    /// (so user-adjusted weight/reps in SetReady actually take effect).
+    private func advanceNow() {
+        guard !advanced else { return }
+        advanced = true
+        HapticFeedback.restEnded()
+        if controller.nextPlannedParams != nil {
+            nav.replaceTop(with: .setReady)
+        } else {
+            nav.replaceTop(with: .workoutDone)
         }
     }
 }
@@ -1002,18 +1030,16 @@ struct SetReadyView: View {
         return "第 \(idx) / \(total) 组"
     }
 
-    private var targetReps: Int {
-        let i = controller.plannedSetCursor
-        if i < controller.plannedSpecs.count { return controller.plannedSpecs[i].reps }
-        return 0
-    }
-
     private var targetMV: String {
         if let r = controller.currentTargetRange {
             return String(format: "%.2f–%.2f", r.lowerBound, r.upperBound)
         }
         return "—"
     }
+
+    /// Crown step in kg — defaults to 2.5kg. Could later be sourced from
+    /// UserProfile.crownStep via a connectivity-synced preference.
+    private let weightStep: Double = 2.5
 
     @ViewBuilder
     private var sideChip: some View {
@@ -1037,68 +1063,111 @@ struct SetReadyView: View {
 
     var body: some View {
         WatchScreenChrome(title: setIndexLabel, titleColor: accent) {
-            VStack(spacing: 6) {
-                Spacer().frame(height: 26)
-                HStack(spacing: 6) {
-                    Text(exerciseName)
-                        .font(.system(size: 28, weight: .heavy, design: .rounded))
-                        .tracking(-0.6)
-                        .foregroundStyle(fg)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    sideChip
-                }
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    Text("\(Int(controller.currentWeightKg))")
-                        .font(.system(size: 39, weight: .heavy, design: .rounded))
-                        .tracking(-0.8)
-                        .foregroundStyle(fg)
-                        .monospacedDigit()
-                    Text("kg")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(sub)
-                }
-                .padding(.top, 4)
-                if targetReps > 0 {
-                    Text("目标 \(targetReps) reps · MV \(targetMV) m/s")
-                        .font(.system(size: 9, weight: .semibold))
-                        .foregroundStyle(sub)
-                        .padding(.top, 4)
-                }
-                Spacer()
-                Button {
-                    Task { @MainActor in
-                        await controller.start(
-                            exerciseId: controller.currentExerciseId,
-                            weightKg: controller.currentWeightKg,
-                            velocityVariant: controller.currentVelocityVariant,
-                            targetRange: controller.currentTargetRange,
-                            vlCeiling: controller.currentVLCeiling,
-                            side: controller.currentSide,
-                            defaultRestSeconds: controller.currentRestSeconds
-                        )
-                        nav.push(.liveWorkout(
-                            exerciseId: controller.currentExerciseId,
-                            weightKg: controller.currentWeightKg
-                        ))
-                    }
-                } label: {
+            ScrollView {
+                VStack(spacing: 4) {
+                    Spacer().frame(height: 22)
                     HStack(spacing: 6) {
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 12, weight: .bold))
-                        Text("本组开始")
-                            .font(.system(size: 14, weight: .bold))
+                        Text(exerciseName)
+                            .font(.system(size: 22, weight: .heavy, design: .rounded))
+                            .tracking(-0.5)
+                            .foregroundStyle(fg)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        sideChip
                     }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 32)
-                    .background(accent, in: Capsule())
-                    .foregroundStyle(fg)
+
+                    // Weight: −/+ buttons flanking the big number; Crown bound
+                    HStack(spacing: 6) {
+                        roundAdjustButton(symbol: "−") {
+                            controller.adjustCurrentWeight(by: -weightStep)
+                        }
+                        VStack(spacing: -2) {
+                            Text("\(Int(controller.currentWeightKg))")
+                                .font(.system(size: 32, weight: .heavy, design: .rounded))
+                                .tracking(-0.8)
+                                .foregroundStyle(fg)
+                                .monospacedDigit()
+                                .focusable(true)
+                                .digitalCrownRotation(
+                                    Binding(
+                                        get: { controller.currentWeightKg },
+                                        set: { controller.currentWeightKg = max(0, min(500, $0)) }
+                                    ),
+                                    from: 0, through: 500,
+                                    by: weightStep, sensitivity: .medium,
+                                    isContinuous: false, isHapticFeedbackEnabled: true
+                                )
+                            Text("kg").font(.system(size: 9, weight: .medium)).foregroundStyle(sub)
+                        }
+                        roundAdjustButton(symbol: "+") {
+                            controller.adjustCurrentWeight(by: weightStep)
+                        }
+                    }
+                    .padding(.top, 2)
+
+                    // Reps: −/+ flanking N reps
+                    HStack(spacing: 6) {
+                        roundAdjustButton(symbol: "−", small: true) {
+                            controller.adjustCurrentReps(by: -1)
+                        }
+                        HStack(alignment: .firstTextBaseline, spacing: 2) {
+                            Text("× \(controller.currentReps)")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .foregroundStyle(fg)
+                                .monospacedDigit()
+                            Text("reps")
+                                .font(.system(size: 8, weight: .medium))
+                                .foregroundStyle(sub)
+                        }
+                        roundAdjustButton(symbol: "+", small: true) {
+                            controller.adjustCurrentReps(by: 1)
+                        }
+                    }
+
+                    Text("目标 MV \(targetMV) m/s")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(sub.opacity(0.8))
+                        .padding(.top, 2)
+
+                    Button {
+                        Task { @MainActor in
+                            await controller.beginCurrentSet()
+                            nav.push(.liveWorkout(
+                                exerciseId: controller.currentExerciseId,
+                                weightKg: controller.currentWeightKg
+                            ))
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "bolt.fill")
+                                .font(.system(size: 12, weight: .bold))
+                            Text("本组开始")
+                                .font(.system(size: 14, weight: .bold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 30)
+                        .background(accent, in: Capsule())
+                        .foregroundStyle(fg)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 8)
+                    .padding(.top, 6)
+                    .padding(.bottom, 6)
                 }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 12)
-                .padding(.bottom, 6)
             }
         }
+    }
+
+    private func roundAdjustButton(symbol: String, small: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(symbol)
+                .font(.system(size: small ? 12 : 14, weight: .heavy))
+                .foregroundStyle(fg)
+                .frame(width: small ? 22 : 28, height: small ? 22 : 28)
+                .background(Color.white.opacity(0.08), in: Circle())
+                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -1182,14 +1251,15 @@ struct SetResultView: View {
                     statBox(label: "目标", value: targetText, color: fg)
                 }
                 .padding(.horizontal, 10)
-                Text("3 秒后自动进入休息")
+                Text("点击屏幕任意位置进入休息")
                     .font(.system(size: 8, weight: .medium))
                     .foregroundStyle(sub.opacity(0.7))
                     .padding(.top, 6)
                     .padding(.bottom, 6)
             }
-            .task {
-                try? await Task.sleep(nanoseconds: 3_000_000_000)
+            // Whole-screen tap (was: 3s auto-advance — user wanted manual control)
+            .contentShape(Rectangle())
+            .onTapGesture {
                 if controller.nextPlannedParams != nil {
                     nav.replaceTop(with: .rest(secondsRemaining: controller.currentRestSeconds))
                 } else {
