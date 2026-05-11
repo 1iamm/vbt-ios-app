@@ -26,6 +26,10 @@ struct PlanView: View {
     @State private var showingExercisePicker = false
     @State private var showingScheduleSheet = false
     @State private var pushState: PushState = .idle
+    @State private var showingRename = false
+    @State private var renameText: String = ""
+    @State private var showingDeleteConfirm = false
+    @State private var pendingIPhoneItem: TemplateItemSnapshot?
 
     private enum PushState: Equatable {
         case idle
@@ -77,16 +81,47 @@ struct PlanView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button("重命名") {}
+                    Button {
+                        renameText = template.name
+                        showingRename = true
+                    } label: { Label("重命名", systemImage: "pencil") }
                     Button(role: .destructive) {
-                        context.delete(template)
-                        try? context.save()
-                        dismiss()
-                    } label: { Text("删除模板") }
+                        showingDeleteConfirm = true
+                    } label: { Label("删除模板", systemImage: "trash") }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .foregroundStyle(accent)
                 }
+            }
+        }
+        .alert("重命名模板", isPresented: $showingRename) {
+            TextField("模板名称", text: $renameText)
+                .textInputAutocapitalization(.never)
+            Button("取消", role: .cancel) {}
+            Button("保存") {
+                let name = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !name.isEmpty else { return }
+                template.name = name
+                template.updatedAt = Date()
+                try? context.save()
+            }
+            .disabled(renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        } message: {
+            Text("名称不能为空。")
+        }
+        .alert("删除模板？", isPresented: $showingDeleteConfirm) {
+            Button("取消", role: .cancel) {}
+            Button("删除", role: .destructive) {
+                context.delete(template)
+                try? context.save()
+                dismiss()
+            }
+        } message: {
+            Text("将永久删除「\(template.name)」。该操作不可恢复。")
+        }
+        .fullScreenCover(item: $pendingIPhoneItem) { item in
+            NavigationStack {
+                IPhoneActiveWorkoutView(item: item, templateId: template.id)
             }
         }
         .sheet(isPresented: $showingExercisePicker) {
@@ -558,48 +593,84 @@ struct PlanView: View {
     }
 
     private var stickyCTA: some View {
-        HStack(spacing: 8) {
-            squareButton(icon: "applewatch") {
-                pushTemplateNow()
-            }
-            .disabled(pushState == .pushing)
-            Button {
-                pushTemplateNow()
-            } label: {
-                HStack(spacing: 8) {
-                    if pushState == .pushing {
-                        ProgressView()
-                            .progressViewStyle(.circular)
-                            .tint(.white)
-                            .scaleEffect(0.8)
-                        Text("正在激活 Watch…")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
-                    } else {
-                        Text("开始训练")
-                            .font(.system(size: 15, weight: .bold))
-                            .tracking(0.2)
-                            .foregroundStyle(.white)
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Button {
+                    startOnIPhone()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "iphone")
+                            .font(.system(size: 14, weight: .bold))
+                        Text("在手机上练")
+                            .font(.system(size: 14, weight: .bold))
                     }
+                    .foregroundStyle(accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(accent.opacity(0.55), lineWidth: 1)
+                    )
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(accent, in: RoundedRectangle(cornerRadius: 12))
-                .shadow(color: accent.opacity(0.5), radius: 12, x: 0, y: 6)
+                .buttonStyle(.plain)
+                .disabled(pushState == .pushing)
+
+                Button {
+                    pushTemplateNow()
+                } label: {
+                    HStack(spacing: 6) {
+                        if pushState == .pushing {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .tint(.white)
+                                .scaleEffect(0.8)
+                            Text("激活 Watch…")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.white)
+                        } else {
+                            Image(systemName: "applewatch")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                            Text("在表上练")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(accent, in: RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: accent.opacity(0.5), radius: 10, x: 0, y: 4)
+                }
+                .buttonStyle(.plain)
+                .disabled(pushState == .pushing)
             }
-            .buttonStyle(.plain)
-            .disabled(pushState == .pushing)
-            squareButton(icon: "calendar") {
-                showingScheduleSheet = true
+            HStack(spacing: 6) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 12, weight: .semibold))
+                Text("加入日程")
+                    .font(.system(size: 12, weight: .semibold))
             }
-            .disabled(pushState == .pushing)
+            .foregroundStyle(Tokens.Color.secondaryLabel)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture { showingScheduleSheet = true }
         }
         .padding(.horizontal, Tokens.Space.lg)
-        .padding(.vertical, 12)
+        .padding(.vertical, 10)
         .background(.ultraThinMaterial)
         .overlay(alignment: .top) {
             Divider()
         }
+    }
+
+    private func startOnIPhone() {
+        guard pushState != .pushing else { return }
+        let snap = TemplateSyncService.snapshot(of: template, on: plannedDate)
+        guard let first = snap.items.first else { return }
+        pendingIPhoneItem = first
+        Haptics.success()
     }
 
     private func squareButton(icon: String, action: @escaping () -> Void) -> some View {
