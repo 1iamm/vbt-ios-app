@@ -29,7 +29,12 @@ struct PlanView: View {
     @State private var showingRename = false
     @State private var renameText: String = ""
     @State private var showingDeleteConfirm = false
-    @State private var pendingIPhoneItem: TemplateItemSnapshot?
+    @State private var pendingIPhonePlan: IPhonePlanRoute?
+
+    struct IPhonePlanRoute: Identifiable, Equatable {
+        let id = UUID()
+        let items: [TemplateItemSnapshot]
+    }
 
     private enum PushState: Equatable {
         case idle
@@ -119,9 +124,9 @@ struct PlanView: View {
         } message: {
             Text("将永久删除「\(template.name)」。该操作不可恢复。")
         }
-        .fullScreenCover(item: $pendingIPhoneItem) { item in
+        .fullScreenCover(item: $pendingIPhonePlan) { route in
             NavigationStack {
-                IPhoneActiveWorkoutView(item: item, templateId: template.id)
+                IPhoneActiveWorkoutView(items: route.items, startingIndex: 0, templateId: template.id)
             }
         }
         .sheet(isPresented: $showingExercisePicker) {
@@ -668,8 +673,8 @@ struct PlanView: View {
     private func startOnIPhone() {
         guard pushState != .pushing else { return }
         let snap = TemplateSyncService.snapshot(of: template, on: plannedDate)
-        guard let first = snap.items.first else { return }
-        pendingIPhoneItem = first
+        guard !snap.items.isEmpty else { return }
+        pendingIPhonePlan = IPhonePlanRoute(items: snap.items)
         Haptics.success()
     }
 

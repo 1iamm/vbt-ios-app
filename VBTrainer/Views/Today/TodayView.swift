@@ -23,8 +23,7 @@ struct TodayView: View {
 
     @State private var hasRefreshed = false
     @State private var pendingPlanTemplate: Template?
-    @State private var pendingIPhoneItem: TemplateItemSnapshot?
-    @State private var pendingIPhoneTemplateId: UUID?
+    @State private var pendingIPhonePlan: IPhonePlanRoute?
     @State private var pendingModeChoiceTemplate: Template?
     @State private var pendingModeChoicePlanDate: Date?
     @State private var pendingWorkoutDetail: WorkoutDetailRoute?
@@ -34,6 +33,12 @@ struct TodayView: View {
 
     struct WorkoutDetailRoute: Identifiable, Hashable {
         let id: UUID
+    }
+
+    struct IPhonePlanRoute: Identifiable, Equatable {
+        let id = UUID()
+        let items: [TemplateItemSnapshot]
+        let templateId: UUID?
     }
 
     private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
@@ -163,9 +168,9 @@ struct TodayView: View {
                 LiveWorkoutView()
             }
             // iPhone-only 训练（V2.x：无 Watch 用户）
-            .fullScreenCover(item: $pendingIPhoneItem) { item in
+            .fullScreenCover(item: $pendingIPhonePlan) { route in
                 NavigationStack {
-                    IPhoneActiveWorkoutView(item: item, templateId: pendingIPhoneTemplateId)
+                    IPhoneActiveWorkoutView(items: route.items, startingIndex: 0, templateId: route.templateId)
                 }
             }
             // 自动模式 + 有 Watch：让用户选择在哪练
@@ -182,8 +187,7 @@ struct TodayView: View {
                     pendingModeChoicePlanDate = nil
                 }
                 Button("在 iPhone 上练") {
-                    pendingIPhoneItem = firstSnapshotItem(from: template)
-                    pendingIPhoneTemplateId = template.id
+                    pendingIPhonePlan = planRoute(from: template)
                     pendingModeChoiceTemplate = nil
                     pendingModeChoicePlanDate = nil
                 }
@@ -272,11 +276,12 @@ struct TodayView: View {
         }
     }
 
-    /// Snapshot the first item of a SwiftData Template for the iPhone-only
-    /// controller (which accepts the Codable snapshot form).
-    private func firstSnapshotItem(from template: Template) -> TemplateItemSnapshot? {
+    /// Snapshot all items of a Template for the iPhone-only controller
+    /// (multi-exercise support).
+    private func planRoute(from template: Template) -> IPhonePlanRoute? {
         let snap = TemplateSyncService.snapshot(of: template, on: Date())
-        return snap.items.first
+        guard !snap.items.isEmpty else { return nil }
+        return IPhonePlanRoute(items: snap.items, templateId: template.id)
     }
 
     /// Bridge LiveWorkoutStore.isLive @Published to fullScreenCover binding.
@@ -470,14 +475,13 @@ struct TodayView: View {
     private func handlePrimary(plan: DayPlan, template: Template) {
         switch plan.status {
         case .scheduled:
-            // V2.x：根据当前 mode preference 路由：
-            //  · 强制 iPhone / 自动且无 Watch → 直接进 iPhone 训练页
-            //  · 强制 Watch → 推到 Watch
-            //  · 自动 + 有 Watch → 弹 confirmationDialog 让用户当场选
+            // V2.x: route by mode preference:
+            //  · forceIPhone / auto + no Watch → present iPhone training cover
+            //  · forceWatch → push to Watch
+            //  · auto + has Watch → confirmationDialog
             switch WorkoutModeResolver.preference {
             case .forceIPhone:
-                pendingIPhoneItem = firstSnapshotItem(from: template)
-                pendingIPhoneTemplateId = template.id
+                pendingIPhonePlan = planRoute(from: template)
             case .forceWatch:
                 Task { _ = await TemplateSyncService.pushAndStart(template: template, on: plan.date) }
             case .auto:
@@ -485,8 +489,7 @@ struct TodayView: View {
                     pendingModeChoiceTemplate = template
                     pendingModeChoicePlanDate = plan.date
                 } else {
-                    pendingIPhoneItem = firstSnapshotItem(from: template)
-                    pendingIPhoneTemplateId = template.id
+                    pendingIPhonePlan = planRoute(from: template)
                 }
             }
             Haptics.success()
