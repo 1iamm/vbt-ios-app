@@ -279,6 +279,30 @@ struct WatchLiveWorkoutView: View {
                 Task { await controller.cancel() }
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .vbtSetControlRequested)) { note in
+            guard let raw = note.userInfo?["action"] as? String,
+                  let action = SetControlPayload.Action(rawValue: raw) else { return }
+            switch action {
+            case .endSet:
+                Task {
+                    await controller.endSet()
+                    didPushToChild = true
+                    nav.push(.setResult)
+                }
+            case .startNextSet:
+                // No-op while a set is active — Watch only honors this while
+                // resting. RestView listens for itself.
+                break
+            case .finishWorkout:
+                // Treat as endSet then route to summary (mirrors Watch
+                // 「全部完成」 path). User can still RPE / 备注 on Watch.
+                Task {
+                    await controller.endSet()
+                    didPushToChild = true
+                    nav.push(.workoutDone)
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -396,6 +420,18 @@ struct WatchRestView: View {
                     advanceNow()
                 } else if let delta = note.userInfo?["delta"] as? Int {
                     adjustRemaining(by: delta)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .vbtSetControlRequested)) { note in
+                guard let raw = note.userInfo?["action"] as? String,
+                      let action = SetControlPayload.Action(rawValue: raw) else { return }
+                switch action {
+                case .startNextSet, .endSet:
+                    // Rest 阶段下，iPhone 端「下一组」 / 误触「完成本组」 都
+                    // 视为「立即进入下一组」。
+                    advanceNow()
+                case .finishWorkout:
+                    advanceNow()
                 }
             }
         }

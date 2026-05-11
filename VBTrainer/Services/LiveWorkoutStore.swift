@@ -94,6 +94,8 @@ public final class LiveWorkoutStore: ObservableObject {
             restRemainingSec: newR,
             restTotalSec: newT,
             heartRate: p.heartRate,
+            targetVelocityMin: p.targetVelocityMin,
+            targetVelocityMax: p.targetVelocityMax,
             timestamp: Date()
         )
     }

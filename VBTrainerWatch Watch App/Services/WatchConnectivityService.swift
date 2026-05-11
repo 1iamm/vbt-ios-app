@@ -163,6 +163,15 @@ public final class WatchConnectivityService: NSObject, WCSessionDelegate {
                     object: nil,
                     userInfo: ["delta": payload.deltaSeconds, "skip": payload.skip]
                 )
+            case .setControl(let payload):
+                // iPhone tapped 「完成本组」/「下一组」/「结束训练」.
+                // Forward to whoever owns the active LiveWorkoutController
+                // (WatchScreens hosts it as @StateObject).
+                NotificationCenter.default.post(
+                    name: .vbtSetControlRequested,
+                    object: nil,
+                    userInfo: ["action": payload.action.rawValue]
+                )
             default:
                 // Other inbound message kinds — Watch doesn't yet handle.
                 break

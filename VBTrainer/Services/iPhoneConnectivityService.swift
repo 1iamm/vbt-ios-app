@@ -134,6 +134,10 @@ extension iPhoneConnectivityService: WCSessionDelegate {
                 // iPhone authors restAdjust; inbound from Watch isn't
                 // expected (Watch only consumes).
                 break
+            case .setControl:
+                // iPhone authors setControl; inbound from Watch isn't
+                // expected.
+                break
             }
         } catch {
             #if DEBUG

@@ -233,4 +233,25 @@ public enum TemplateSyncService {
         }
         #endif
     }
+
+    /// V2.x iPhone → Watch set-level control. Used by LiveWorkoutView's
+    /// 「完成本组」 / 「下一组」 / 「结束训练」 buttons. Same instant + fallback
+    /// delivery shape as pushRest.
+    public static func pushSetControl(_ action: SetControlPayload.Action, workoutId: UUID? = nil) {
+        #if canImport(WatchConnectivity) && os(iOS)
+        guard WCSession.isSupported() else { return }
+        let session = WCSession.default
+        guard session.activationState == .activated else { return }
+        do {
+            let userInfo = try ConnectivityCodec.encode(.setControl(SetControlPayload(action: action, workoutId: workoutId)))
+            session.sendMessage(userInfo, replyHandler: nil) { _ in
+                session.transferUserInfo(userInfo)
+            }
+        } catch {
+            #if DEBUG
+            print("TemplateSyncService.pushSetControl error: \(error)")
+            #endif
+        }
+        #endif
+    }
 }

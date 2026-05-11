@@ -88,10 +88,21 @@ private struct ReadyOverlay: View {
 @available(iOS 17.0, *)
 private struct SetActiveView: View {
     let payload: LiveProgressPayload
+    @State private var showFinishConfirm = false
 
     private var velocityColor: Color {
-        // Color by current rep vs set best (peak). >=20% slower → red,
-        // 10-20% → yellow, <10% → green/white.
+        // Per-rep coloring: prefer target range when present, else fall
+        // back to drop-from-set-best.
+        if let v = payload.lastRepVelocity,
+           let lo = payload.targetVelocityMin,
+           let hi = payload.targetVelocityMax {
+            if v >= lo && v <= hi { return .green }
+            if v < lo {
+                let dropPct = (lo - v) / lo * 100
+                return dropPct >= 15 ? .red : .yellow
+            }
+            return .green
+        }
         guard let v = payload.lastRepVelocity, let best = payload.setBestVelocity, best > 0 else {
             return .white
         }
@@ -109,7 +120,7 @@ private struct SetActiveView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 14) {
             // Top: exercise + weight + set index
             VStack(spacing: 4) {
                 Text(payload.exerciseName)
@@ -139,6 +150,14 @@ private struct SetActiveView: View {
                         .foregroundStyle(.white.opacity(0.55))
                 }
 
+                // Target velocity band (only shown when Watch reports a range).
+                if let lo = payload.targetVelocityMin, let hi = payload.targetVelocityMax {
+                    TargetVelocityBand(currentV: payload.lastRepVelocity, lo: lo, hi: hi)
+                        .frame(height: 28)
+                        .padding(.horizontal, 32)
+                        .padding(.top, 4)
+                }
+
                 if let vl = payload.vlPercent {
                     Text("VL \(Int(vl))%")
                         .font(.system(size: 32, weight: .bold, design: .rounded))
@@ -150,27 +169,118 @@ private struct SetActiveView: View {
 
             Spacer()
 
-            // Bottom: Rep counter — target数字加粗 white，已完成数 regular灰
+            // Rep counter
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\(payload.currentRep)")
-                    .font(.system(size: 48, weight: .regular, design: .rounded))
+                    .font(.system(size: 40, weight: .regular, design: .rounded))
                     .foregroundStyle(.white.opacity(0.55))
                 Text(" / ")
-                    .font(.system(size: 32, weight: .light))
+                    .font(.system(size: 28, weight: .light))
                     .foregroundStyle(.white.opacity(0.55))
                 Text("\(payload.targetReps)")
-                    .font(.system(size: 48, weight: .black, design: .rounded))
+                    .font(.system(size: 40, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
             }
             .monospacedDigit()
-            .padding(.bottom, 80)
+
+            // 「完成本组」 — primary CTA; Watch end-set button is mirrored here.
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                TemplateSyncService.pushSetControl(.endSet, workoutId: payload.workoutId)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 17, weight: .bold))
+                    Text("完成本组")
+                        .font(.system(size: 17, weight: .heavy))
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(Color.orange, in: RoundedRectangle(cornerRadius: 14))
+                .shadow(color: Color.orange.opacity(0.45), radius: 10, x: 0, y: 4)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+
+            // Secondary: finish whole workout.
+            Button {
+                showFinishConfirm = true
+            } label: {
+                Text("结束训练")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding(.vertical, 4)
+                    .padding(.horizontal, 10)
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, 36)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .confirmationDialog("结束训练？", isPresented: $showFinishConfirm) {
+            Button("结束训练", role: .destructive) {
+                TemplateSyncService.pushSetControl(.finishWorkout, workoutId: payload.workoutId)
+            }
+            Button("继续训练", role: .cancel) {}
+        } message: {
+            Text("Watch 会立刻保存当前进度。")
+        }
     }
 
     private var velocityText: String {
         guard let v = payload.lastRepVelocity else { return "—" }
         return String(format: "%.2f", v)
+    }
+}
+
+/// V2.x target velocity band — horizontal 0–1.5 m/s scale, green segment
+/// indicates the prescribed band, a vertical tick marks the current rep's
+/// MPV.
+@available(iOS 17.0, *)
+private struct TargetVelocityBand: View {
+    let currentV: Double?
+    let lo: Double
+    let hi: Double
+
+    private let scaleMax: Double = 1.5
+
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let loX = w * CGFloat(min(lo, scaleMax) / scaleMax)
+            let hiX = w * CGFloat(min(hi, scaleMax) / scaleMax)
+            ZStack(alignment: .leading) {
+                // Base track
+                Capsule()
+                    .fill(Color.white.opacity(0.10))
+                    .frame(height: 6)
+                // Target band
+                Capsule()
+                    .fill(Color.green.opacity(0.55))
+                    .frame(width: max(2, hiX - loX), height: 6)
+                    .offset(x: loX)
+                // Current tick
+                if let v = currentV {
+                    let x = w * CGFloat(min(max(v, 0), scaleMax) / scaleMax)
+                    Rectangle()
+                        .fill(Color.white)
+                        .frame(width: 2, height: 18)
+                        .offset(x: x - 1, y: -6)
+                }
+                // Labels
+                Text(String(format: "%.2f", lo))
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .monospacedDigit()
+                    .offset(x: max(0, loX - 12), y: 12)
+                Text(String(format: "%.2f", hi))
+                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .monospacedDigit()
+                    .offset(x: min(w - 22, hiX - 8), y: 12)
+            }
+            .frame(height: geo.size.height, alignment: .center)
+        }
     }
 }
 

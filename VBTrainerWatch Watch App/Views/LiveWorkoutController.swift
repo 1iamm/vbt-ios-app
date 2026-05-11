@@ -576,7 +576,9 @@ public final class LiveWorkoutController: ObservableObject {
             repVelocities: repsForBar ?? [],
             restRemainingSec: restRemaining,
             restTotalSec: restTotal,
-            heartRate: heartRate > 0 ? heartRate : nil
+            heartRate: heartRate > 0 ? heartRate : nil,
+            targetVelocityMin: currentTargetRange?.lowerBound,
+            targetVelocityMax: currentTargetRange?.upperBound
         )
         WatchConnectivityService.shared.send(message: .liveProgress(payload))
     }
