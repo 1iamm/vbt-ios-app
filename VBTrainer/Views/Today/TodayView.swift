@@ -13,6 +13,7 @@ import SwiftData
 
 struct TodayView: View {
     @Environment(\.modelContext) private var context
+    @StateObject private var liveStore = LiveWorkoutStore.shared
 
     @Query(sort: \UserProfile.createdAt, order: .reverse) private var profiles: [UserProfile]
     @Query(sort: \Workout.startedAt, order: .reverse) private var workouts: [Workout]
@@ -151,7 +152,20 @@ struct TodayView: View {
             } message: {
                 Text("CMJ 神经测试在 Watch 上完成（3 跳取最佳）。打开 Apple Watch 上的 VBTrainer 即可。")
             }
+            // V2.x 训练中实时观看 — 由 Watch 推送的 .ready/.repDetected/...
+            // 驱动；isLive 翻 false 时自动 dismiss（.workoutEnded）。
+            .fullScreenCover(isPresented: $liveStoreBinding) {
+                LiveWorkoutView()
+            }
         }
+    }
+
+    /// Bridge LiveWorkoutStore.isLive @Published to fullScreenCover binding.
+    private var liveStoreBinding: Binding<Bool> {
+        Binding(
+            get: { liveStore.isLive },
+            set: { newValue in if !newValue { liveStore.clear() } }
+        )
     }
 
     /// Route an AI recommendation to its correct destination.
