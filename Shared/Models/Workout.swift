@@ -20,6 +20,11 @@ public final class Workout {
     public var linkedTemplateId: UUID?
     public var readinessSnapshotId: UUID?
 
+    /// Source of the workout — `.watch` for Watch-driven IMU sessions,
+    /// `.iPhone` for iPhone-only manual logging. Optional + nil-default so
+    /// pre-V2.x rows (which were always Watch-driven) decode cleanly.
+    public var sourceRaw: String?
+
     /// JSON-encoded `[HeartRateSample]`. Stored as Data because SwiftData's
     /// support for arrays of structs is fragile across schema migrations.
     public var heartRateSamplesData: Data?
@@ -35,7 +40,8 @@ public final class Workout {
         notes: String? = nil,
         rpe: Int? = nil,
         linkedTemplateId: UUID? = nil,
-        readinessSnapshotId: UUID? = nil
+        readinessSnapshotId: UUID? = nil,
+        source: WorkoutSource = .watch
     ) {
         self.id = id
         self.startedAt = startedAt
@@ -45,6 +51,12 @@ public final class Workout {
         self.rpe = rpe
         self.linkedTemplateId = linkedTemplateId
         self.readinessSnapshotId = readinessSnapshotId
+        self.sourceRaw = source.rawValue
+    }
+
+    public var source: WorkoutSource {
+        get { WorkoutSource(rawValue: sourceRaw ?? "") ?? .watch }
+        set { sourceRaw = newValue.rawValue }
     }
 
     // MARK: - Derived

@@ -182,7 +182,7 @@ public struct TemplateSetSpecSnapshot: Codable, Sendable, Equatable {
     }
 }
 
-public struct TemplateItemSnapshot: Codable, Sendable, Equatable {
+public struct TemplateItemSnapshot: Codable, Sendable, Equatable, Identifiable {
     public let id: UUID
     public let index: Int
     public let exerciseId: String

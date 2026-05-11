@@ -23,6 +23,8 @@ struct TodayView: View {
 
     @State private var hasRefreshed = false
     @State private var pendingPlanTemplate: Template?
+    @State private var pendingIPhoneItem: TemplateItemSnapshot?
+    @State private var pendingIPhoneTemplateId: UUID?
     @State private var pendingWorkoutDetail: WorkoutDetailRoute?
     @State private var showingTweaks = false
     @State private var cmjPromptShown = false
@@ -156,6 +158,12 @@ struct TodayView: View {
             .fullScreenCover(isPresented: liveStoreBinding) {
                 LiveWorkoutView()
             }
+            // iPhone-only 训练（V2.x：无 Watch 用户）
+            .fullScreenCover(item: $pendingIPhoneItem) { item in
+                NavigationStack {
+                    IPhoneActiveWorkoutView(item: item, templateId: pendingIPhoneTemplateId)
+                }
+            }
         }
     }
 
@@ -220,6 +228,13 @@ struct TodayView: View {
         case .workoutEnded:
             return "训练完成"
         }
+    }
+
+    /// Snapshot the first item of a SwiftData Template for the iPhone-only
+    /// controller (which accepts the Codable snapshot form).
+    private func firstSnapshotItem(from template: Template) -> TemplateItemSnapshot? {
+        let snap = TemplateSyncService.snapshot(of: template, on: Date())
+        return snap.items.first
     }
 
     /// Bridge LiveWorkoutStore.isLive @Published to fullScreenCover binding.
@@ -413,9 +428,16 @@ struct TodayView: View {
     private func handlePrimary(plan: DayPlan, template: Template) {
         switch plan.status {
         case .scheduled:
-            // Push to Watch + activate (V2) + give haptic. Fire-and-forget;
-            // result-bearing variant is used by PlanView's spinner CTA.
-            Task { _ = await TemplateSyncService.pushAndStart(template: template, on: plan.date) }
+            // V2.x: route based on user mode preference + Watch presence.
+            // .iPhone source → present IPhoneActiveWorkoutView; .watch source
+            // → push template to Watch as before.
+            let source = WorkoutModeResolver.effectiveSource
+            if source == .iPhone {
+                pendingIPhoneItem = firstSnapshotItem(from: template)
+                pendingIPhoneTemplateId = template.id
+            } else {
+                Task { _ = await TemplateSyncService.pushAndStart(template: template, on: plan.date) }
+            }
             Haptics.success()
         case .inProgress:
             // Best effort: nudge Watch by re-pushing the template + reactivating
