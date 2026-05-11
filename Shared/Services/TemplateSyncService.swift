@@ -97,13 +97,32 @@ public enum TemplateSyncService {
         // watch-app-not-running case. The bundled copy in startWorkout below
         // is what makes the in-flight UI actually populate.
         let templateSnap = snapshot(of: template, on: date)
-        push(template: template, on: date)
         #if canImport(WatchConnectivity) && os(iOS)
         guard WCSession.isSupported() else { return .failed("WCSession unsupported") }
         let session = WCSession.default
-        guard session.activationState == .activated else {
-            return .failed("WCSession not activated yet")
+        // Activation is async after session.activate() — if user taps right
+        // after app launch, state can still be .inactive / .notActivated.
+        // Poll up to 3s for .activated before giving up. (Simulator first-
+        // launch usually completes within 1s.)
+        if session.activationState != .activated {
+            #if DEBUG
+            print("[WC] iPhone pushAndStart waiting for activation, current state=\(session.activationState.rawValue)")
+            #endif
+            session.activate()
+            let deadline = Date().addingTimeInterval(3.0)
+            while Date() < deadline && session.activationState != .activated {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+            #if DEBUG
+            print("[WC] iPhone pushAndStart post-wait state=\(session.activationState.rawValue)")
+            #endif
         }
+        guard session.activationState == .activated else {
+            return .failed("Watch 还没连接好，等几秒再试")
+        }
+        // Push the queued template AFTER activation succeeds so the
+        // transferUserInfo doesn't get dropped on the floor.
+        push(template: template, on: date)
         let activation = StartWorkoutSnapshot(
             templateId: template.id,
             startItemIndex: startItemIndex,
