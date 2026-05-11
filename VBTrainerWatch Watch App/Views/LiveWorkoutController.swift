@@ -248,20 +248,16 @@ public final class LiveWorkoutController: ObservableObject {
 
     /// 1Hz tick pushing `.restCountdown` to iPhone with restRemainingSec.
     /// Stopped on next .ready (next set starts) or manual cancel.
+    /// 1Hz tick is now driven by `WatchRestView` itself (single source of
+    /// truth for the View's @State counter). Controller only kicks off the
+    /// first restCountdown push so iPhone immediately sees the new phase;
+    /// View's onAppear / tick / ±10s callbacks call `pushRestCountdownNow`
+    /// from then on.
     private func startRestCountdownPush(seconds: Int) {
         restCountdownTask?.cancel()
+        restCountdownTask = nil
         let total = max(1, seconds)
-        restCountdownTask = Task { @MainActor [weak self] in
-            var remaining = total
-            while remaining > 0, !Task.isCancelled {
-                self?.pushLiveProgress(phase: .restCountdown, restRemaining: remaining, restTotal: total)
-                try? await Task.sleep(nanoseconds: 1_000_000_000)
-                remaining -= 1
-            }
-            if !Task.isCancelled {
-                self?.pushLiveProgress(phase: .restCountdown, restRemaining: 0, restTotal: total)
-            }
-        }
+        pushLiveProgress(phase: .restCountdown, restRemaining: total, restTotal: total)
     }
 
     /// V2 unified entry: SetReady's「本组开始」button calls this — picks

@@ -515,9 +515,14 @@ struct WatchRestView: View {
 
     private func startCountdown() {
         Task { @MainActor in
+            // Push initial value immediately so iPhone sees the right total.
+            controller.pushRestCountdownNow(remaining: remaining, total: totalSeconds)
             while remaining > 0 {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 if remaining > 0 { remaining -= 1 }
+                // Push each tick — Watch view is the single source of truth
+                // for countdown values (avoids controller parallel-task drift).
+                controller.pushRestCountdownNow(remaining: remaining, total: totalSeconds)
             }
             advanceNow()
         }

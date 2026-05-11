@@ -172,6 +172,7 @@ struct SectionHeader: View {
     let title: String
     var action: String? = nil
     var accent: Color = Tokens.Color.accent
+    var onAction: (() -> Void)? = nil
 
     var body: some View {
         HStack {
@@ -180,9 +181,18 @@ struct SectionHeader: View {
                 .foregroundStyle(Tokens.Color.label)
             Spacer()
             if let action {
-                Text(action)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(accent)
+                if let onAction {
+                    Button(action: onAction) {
+                        Text(action)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(accent)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Text(action)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(accent)
+                }
             }
         }
         .padding(.horizontal, Tokens.Space.xl)
@@ -239,11 +249,12 @@ struct ScheduledTrainingCard: View {
                          secondaryLabel: nil,
                          footerHint: "结束后自动同步回这里")
         case .completed:
+            // 用户反馈：完成卡不需要「再练一次」（容易误点制造重复 workout）
             return Theme(bgOpacity: 0.06, strokeOpacity: 0.18,
                          badgeText: "已完成", badgeColor: Tokens.Color.success,
                          primaryLabel: "看复盘", primaryIcon: "chart.xyaxis.line",
                          primaryFilled: false,
-                         secondaryLabel: "再练一次",
+                         secondaryLabel: nil,
                          footerHint: nil)
         case .skipped:
             return Theme(bgOpacity: 0.04, strokeOpacity: 0.10,
