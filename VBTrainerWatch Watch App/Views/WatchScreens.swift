@@ -1020,6 +1020,13 @@ struct SetReadyView: View {
     @EnvironmentObject var nav: WatchNavigation
     @EnvironmentObject var controller: LiveWorkoutController
 
+    /// Which value the user is currently editing. Crown rotates the focused
+    /// field. Tapping a field toggles focus to it. Default = weight on entry.
+    enum Field: Hashable { case weight, reps, mvLow, mvHigh }
+    @State private var focus: Field = .weight
+
+    private let weightStep: Double = 2.5
+
     private var exerciseName: String {
         ExerciseLookup.exercise(byId: controller.currentExerciseId)?.nameZH ?? "训练"
     }
@@ -1030,16 +1037,8 @@ struct SetReadyView: View {
         return "第 \(idx) / \(total) 组"
     }
 
-    private var targetMV: String {
-        if let r = controller.currentTargetRange {
-            return String(format: "%.2f–%.2f", r.lowerBound, r.upperBound)
-        }
-        return "—"
-    }
-
-    /// Crown step in kg — defaults to 2.5kg. Could later be sourced from
-    /// UserProfile.crownStep via a connectivity-synced preference.
-    private let weightStep: Double = 2.5
+    private var mvLow: Double { controller.currentTargetRange?.lowerBound ?? 0.45 }
+    private var mvHigh: Double { controller.currentTargetRange?.upperBound ?? 0.65 }
 
     @ViewBuilder
     private var sideChip: some View {
@@ -1047,14 +1046,12 @@ struct SetReadyView: View {
         case .both:
             EmptyView()
         case .left:
-            Text("左侧")
-                .font(.system(size: 9, weight: .bold))
+            Text("左侧").font(.system(size: 9, weight: .bold))
                 .foregroundStyle(Color.blue)
                 .padding(.horizontal, 6).padding(.vertical, 2)
                 .background(Color.blue.opacity(0.18), in: Capsule())
         case .right:
-            Text("右侧")
-                .font(.system(size: 9, weight: .bold))
+            Text("右侧").font(.system(size: 9, weight: .bold))
                 .foregroundStyle(Color.blue)
                 .padding(.horizontal, 6).padding(.vertical, 2)
                 .background(Color.blue.opacity(0.18), in: Capsule())
@@ -1064,11 +1061,11 @@ struct SetReadyView: View {
     var body: some View {
         WatchScreenChrome(title: setIndexLabel, titleColor: accent) {
             ScrollView {
-                VStack(spacing: 4) {
+                VStack(spacing: 6) {
                     Spacer().frame(height: 22)
                     HStack(spacing: 6) {
                         Text(exerciseName)
-                            .font(.system(size: 22, weight: .heavy, design: .rounded))
+                            .font(.system(size: 20, weight: .heavy, design: .rounded))
                             .tracking(-0.5)
                             .foregroundStyle(fg)
                             .lineLimit(1)
@@ -1076,58 +1073,38 @@ struct SetReadyView: View {
                         sideChip
                     }
 
-                    // Weight: −/+ buttons flanking the big number; Crown bound
-                    HStack(spacing: 6) {
-                        roundAdjustButton(symbol: "−") {
-                            controller.adjustCurrentWeight(by: -weightStep)
-                        }
-                        VStack(spacing: -2) {
-                            Text("\(Int(controller.currentWeightKg))")
-                                .font(.system(size: 32, weight: .heavy, design: .rounded))
-                                .tracking(-0.8)
-                                .foregroundStyle(fg)
-                                .monospacedDigit()
-                                .focusable(true)
-                                .digitalCrownRotation(
-                                    Binding(
-                                        get: { controller.currentWeightKg },
-                                        set: { controller.currentWeightKg = max(0, min(500, $0)) }
-                                    ),
-                                    from: 0, through: 500,
-                                    by: weightStep, sensitivity: .medium,
-                                    isContinuous: false, isHapticFeedbackEnabled: true
-                                )
-                            Text("kg").font(.system(size: 9, weight: .medium)).foregroundStyle(sub)
-                        }
-                        roundAdjustButton(symbol: "+") {
-                            controller.adjustCurrentWeight(by: weightStep)
-                        }
+                    // Row 1: 重量 | 次数
+                    HStack(spacing: 8) {
+                        valueCell(
+                            .weight,
+                            value: "\(Int(controller.currentWeightKg))",
+                            unit: "kg"
+                        )
+                        valueCell(
+                            .reps,
+                            value: "× \(controller.currentReps)",
+                            unit: "reps"
+                        )
                     }
-                    .padding(.top, 2)
+                    .padding(.horizontal, 6)
 
-                    // Reps: −/+ flanking N reps
-                    HStack(spacing: 6) {
-                        roundAdjustButton(symbol: "−", small: true) {
-                            controller.adjustCurrentReps(by: -1)
-                        }
-                        HStack(alignment: .firstTextBaseline, spacing: 2) {
-                            Text("× \(controller.currentReps)")
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
-                                .foregroundStyle(fg)
-                                .monospacedDigit()
-                            Text("reps")
-                                .font(.system(size: 8, weight: .medium))
-                                .foregroundStyle(sub)
-                        }
-                        roundAdjustButton(symbol: "+", small: true) {
-                            controller.adjustCurrentReps(by: 1)
-                        }
+                    // Row 2: MV low - MV high
+                    HStack(spacing: 4) {
+                        valueCell(
+                            .mvLow,
+                            value: String(format: "%.2f", mvLow),
+                            unit: "MV ↓"
+                        )
+                        Text("–")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(sub)
+                        valueCell(
+                            .mvHigh,
+                            value: String(format: "%.2f", mvHigh),
+                            unit: "MV ↑"
+                        )
                     }
-
-                    Text("目标 MV \(targetMV) m/s")
-                        .font(.system(size: 8, weight: .semibold))
-                        .foregroundStyle(sub.opacity(0.8))
-                        .padding(.top, 2)
+                    .padding(.horizontal, 6)
 
                     Button {
                         Task { @MainActor in
@@ -1151,23 +1128,95 @@ struct SetReadyView: View {
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal, 8)
-                    .padding(.top, 6)
+                    .padding(.top, 4)
                     .padding(.bottom, 6)
                 }
             }
         }
     }
 
-    private func roundAdjustButton(symbol: String, small: Bool = false, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(symbol)
-                .font(.system(size: small ? 12 : 14, weight: .heavy))
-                .foregroundStyle(fg)
-                .frame(width: small ? 22 : 28, height: small ? 22 : 28)
-                .background(Color.white.opacity(0.08), in: Circle())
-                .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
+    /// One tap-to-focus cell. Focused → bigger font + accent border + Crown-bound.
+    @ViewBuilder
+    private func valueCell(_ field: Field, value: String, unit: String) -> some View {
+        let isFocused = focus == field
+        let textSize: CGFloat = isFocused ? 22 : 16
+        Button {
+            withAnimation(.easeOut(duration: 0.15)) { focus = field }
+        } label: {
+            VStack(spacing: 0) {
+                Text(value)
+                    .font(.system(size: textSize, weight: .heavy, design: .rounded))
+                    .tracking(-0.5)
+                    .foregroundStyle(isFocused ? accent : fg)
+                    .monospacedDigit()
+                Text(unit)
+                    .font(.system(size: 7, weight: .semibold))
+                    .foregroundStyle(sub)
+                    .tracking(0.4)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .background(
+                isFocused ? accent.opacity(0.12) : Color.white.opacity(0.05),
+                in: RoundedRectangle(cornerRadius: 8)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isFocused ? accent : Color.clear, lineWidth: 1.2)
+            )
         }
         .buttonStyle(.plain)
+        .focusable(isFocused)
+        .digitalCrownRotation(
+            crownBinding(for: field),
+            from: crownRange(for: field).lowerBound,
+            through: crownRange(for: field).upperBound,
+            by: crownStep(for: field),
+            sensitivity: .low,
+            isContinuous: false,
+            isHapticFeedbackEnabled: true
+        )
+    }
+
+    private func crownBinding(for field: Field) -> Binding<Double> {
+        switch field {
+        case .weight:
+            return Binding(
+                get: { controller.currentWeightKg },
+                set: { controller.currentWeightKg = max(0, min(500, $0)) }
+            )
+        case .reps:
+            return Binding(
+                get: { Double(controller.currentReps) },
+                set: { controller.currentReps = max(1, min(99, Int($0.rounded()))) }
+            )
+        case .mvLow:
+            return Binding(
+                get: { mvLow },
+                set: { controller.setTargetMVLow($0) }
+            )
+        case .mvHigh:
+            return Binding(
+                get: { mvHigh },
+                set: { controller.setTargetMVHigh($0) }
+            )
+        }
+    }
+
+    private func crownRange(for field: Field) -> ClosedRange<Double> {
+        switch field {
+        case .weight: return 0...500
+        case .reps:   return 1...99
+        case .mvLow, .mvHigh: return 0.05...2.0
+        }
+    }
+
+    private func crownStep(for field: Field) -> Double {
+        switch field {
+        case .weight: return weightStep
+        case .reps:   return 1
+        case .mvLow, .mvHigh: return 0.01
+        }
     }
 }
 
