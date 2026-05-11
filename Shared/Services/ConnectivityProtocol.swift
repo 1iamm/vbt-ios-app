@@ -14,6 +14,19 @@ public enum ConnectivityKind: String, Codable, Sendable {
     case preferences       // iPhone Profile toggles → Watch (e.g. enableRepHaptic)
     case startWorkout      // V2: iPhone activates a synced template on the Watch
     case liveProgress      // V2.x: Watch → iPhone training-in-progress updates
+    case restAdjust        // V2.x: iPhone → Watch ±10s rest adjustment
+}
+
+/// V2.x rest adjustment payload pushed iPhone → Watch. Lets the user tap
+/// ±10s on the iPhone rest screen and have Watch's countdown reflect it.
+public struct RestAdjustPayload: Codable, Sendable, Equatable {
+    public let deltaSeconds: Int   // +10 or -10 (or any signed value)
+    public let workoutId: UUID?    // optional sanity check
+
+    public init(deltaSeconds: Int, workoutId: UUID? = nil) {
+        self.deltaSeconds = deltaSeconds
+        self.workoutId = workoutId
+    }
 }
 
 /// V2.x live-training-in-progress payload pushed Watch → iPhone so the iPhone
@@ -250,6 +263,7 @@ public enum ConnectivityMessage: Codable, Sendable, Equatable {
     case preferences(WatchPreferencesSnapshot)
     case startWorkout(StartWorkoutSnapshot)
     case liveProgress(LiveProgressPayload)
+    case restAdjust(RestAdjustPayload)
 
     public var kind: ConnectivityKind {
         switch self {
@@ -259,6 +273,7 @@ public enum ConnectivityMessage: Codable, Sendable, Equatable {
         case .preferences:     return .preferences
         case .startWorkout:    return .startWorkout
         case .liveProgress:    return .liveProgress
+        case .restAdjust:      return .restAdjust
         }
     }
 }
@@ -274,6 +289,10 @@ public extension Notification.Name {
     /// emits `.vlCeilingExceeded`. userInfo carries `vl` and `threshold`
     /// (both Double). Handled by `WatchRootView` to push the warning route.
     static let vbtVLCeilingExceeded = Notification.Name("vbt.vlCeilingExceeded")
+    /// Watch-side: posted by `WatchConnectivityService` when iPhone sends
+    /// `.restAdjust`. userInfo carries `delta` (Int seconds, signed).
+    /// Handled by `WatchRestView` to mutate its countdown.
+    static let vbtRestAdjustRequested = Notification.Name("vbt.restAdjustRequested")
 }
 
 public enum ConnectivityCodec {

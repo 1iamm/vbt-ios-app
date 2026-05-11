@@ -25,7 +25,18 @@ public final class LiveWorkoutStore: ObservableObject {
     /// .workoutEnded). TodayView binds fullScreenCover.isPresented to this.
     @Published public private(set) var isLive: Bool = false
 
+    /// When true, the fullScreenCover is dismissed but the session is still
+    /// active. TodayView shows a compact banner the user can tap to expand
+    /// the cover back open. Reset on workout end.
+    @Published public var isMinimized: Bool = false
+
     public init() {}
+
+    /// User tapped the minimize chevron — keep session active, hide cover.
+    public func minimize() { isMinimized = true }
+
+    /// User tapped the Today banner — re-present the cover.
+    public func expand() { isMinimized = false }
 
     /// Apply a payload received from the Watch. Old payloads (older
     /// timestamp than current) are ignored — protects against out-of-order
@@ -55,5 +66,6 @@ public final class LiveWorkoutStore: ObservableObject {
     public func clear() {
         payload = nil
         isLive = false
+        isMinimized = false
     }
 }

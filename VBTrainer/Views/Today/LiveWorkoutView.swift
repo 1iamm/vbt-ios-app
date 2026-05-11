@@ -35,8 +35,30 @@ struct LiveWorkoutView: View {
             } else {
                 ReadyOverlay()
             }
+            // Top-right minimize chevron — collapses the cover but keeps the
+            // session alive. Today shows a banner the user can tap to re-open.
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        store.minimize()
+                    } label: {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.85))
+                            .frame(width: 36, height: 36)
+                            .background(Color.white.opacity(0.12), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 18)
+                    .padding(.trailing, 18)
+                }
+                Spacer()
+            }
         }
-        .preferredColorScheme(.dark)
+        // 不要用 preferredColorScheme(.dark)：它会在 cover dismiss 后污染
+        // 整个 app 的主题。本 view 已显式 Color.black 背景 + 白文字，无需
+        // 覆盖系统配色。
         .onAppear {
             // Trainer痛点：训练中绝对不能锁屏。
             UIApplication.shared.isIdleTimerDisabled = true
@@ -218,30 +240,38 @@ private struct SetEndedView: View {
 
 /// Inter-set rest view per trainer R2: not pure black — minimal info layer.
 /// Top: previous-set summary. Middle: big countdown. Bottom: next-set
-/// preview + +15s button (thumb-reachable bottom-right).
+/// preview + ±10s buttons + 详情 sheet.
 @available(iOS 17.0, *)
 private struct RestView: View {
     let payload: LiveProgressPayload
-    @State private var expanded: Bool = false
+    @State private var showingDetails = false
 
     private var isFinal10s: Bool { (payload.restRemainingSec ?? 999) <= 10 }
+    private var avg: Double {
+        payload.repVelocities.isEmpty ? 0 : payload.repVelocities.reduce(0, +) / Double(payload.repVelocities.count)
+    }
 
     var body: some View {
         ZStack {
-            // Background goes orange in final 10s
             (isFinal10s ? Color.orange.opacity(0.18) : Color.black).ignoresSafeArea()
                 .animation(.easeOut(duration: 0.3), value: isFinal10s)
 
-            VStack {
-                // Top: previous-set summary
-                VStack(spacing: 4) {
-                    Text("上组 \(payload.repVelocities.count) reps · VL \(Int(payload.vlPercent ?? 0))%")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.7))
-                    Text("平均 \(String(format: "%.2f", payload.repVelocities.isEmpty ? 0 : payload.repVelocities.reduce(0, +) / Double(payload.repVelocities.count)))")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.white.opacity(0.45))
+            VStack(spacing: 0) {
+                // Top: previous-set summary — tap to open details
+                Button { showingDetails = true } label: {
+                    VStack(spacing: 4) {
+                        Text("上组 \(payload.repVelocities.count) reps · VL \(Int(payload.vlPercent ?? 0))%")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.85))
+                        Text("平均 \(String(format: "%.2f", avg)) m/s · 查看详情 →")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white.opacity(0.55))
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 14)
+                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
                 }
+                .buttonStyle(.plain)
                 .padding(.top, 60)
 
                 Spacer()
@@ -252,54 +282,163 @@ private struct RestView: View {
                     .foregroundStyle(isFinal10s ? .orange : .white)
                     .monospacedDigit()
 
-                Spacer()
-
-                // Bottom: next-set preview
-                VStack(spacing: 6) {
-                    Text("下组")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(.white.opacity(0.5))
-                        .tracking(1.5)
-                    Text("\(Int(payload.targetWeightKg))kg × \(payload.targetReps)")
-                        .font(.system(size: 22, weight: .heavy, design: .rounded))
-                        .foregroundStyle(.white)
-                        .monospacedDigit()
+                // ±10s buttons flanking the next-set card
+                HStack(spacing: 18) {
+                    restAdjustButton(symbol: "−10s", delta: -10)
+                    nextSetCard
+                    restAdjustButton(symbol: "+10s", delta: +10)
                 }
-                .padding(.bottom, 70)
-            }
+                .padding(.top, 24)
+                .padding(.horizontal, 16)
 
-            // +15s button — bottom-right, thumb-reachable, blind-tap size
-            VStack {
                 Spacer()
-                HStack {
-                    Spacer()
-                    Button {
-                        // V1: button on iPhone is intentionally local-only —
-                        // Watch is the source of truth for rest timing.
-                        // V2 will push the +15s back to Watch to extend rest
-                        // there too. For now this is a visual confirmation
-                        // affordance; the Watch's ±10s buttons remain authoritative.
-                    } label: {
-                        Text("+15s")
-                            .font(.system(size: 18, weight: .heavy, design: .rounded))
-                            .foregroundStyle(.white)
-                            .frame(width: 88, height: 88)
-                            .background(Color.white.opacity(0.15), in: Circle())
-                            .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1.5))
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.trailing, 24)
-                    .padding(.bottom, 24)
-                    .disabled(true)
-                    .opacity(0.6)
-                }
             }
         }
+        .sheet(isPresented: $showingDetails) {
+            DetailsSheet(payload: payload)
+        }
+    }
+
+    private var nextSetCard: some View {
+        VStack(spacing: 4) {
+            Text("下组")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.55))
+                .tracking(1.2)
+            Text("\(Int(payload.targetWeightKg))kg × \(payload.targetReps)")
+                .font(.system(size: 20, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+                .monospacedDigit()
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.orange.opacity(0.5), lineWidth: 1.5)
+        )
+    }
+
+    private func restAdjustButton(symbol: String, delta: Int) -> some View {
+        Button {
+            TemplateSyncService.pushRestAdjust(deltaSeconds: delta, workoutId: payload.workoutId)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        } label: {
+            Text(symbol)
+                .font(.system(size: 14, weight: .heavy, design: .rounded))
+                .foregroundStyle(.white)
+                .frame(width: 64, height: 64)
+                .background(Color.white.opacity(0.12), in: Circle())
+                .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
     }
 
     private func formatTime(_ s: Int) -> String {
         let m = s / 60
         let r = s % 60
         return String(format: "%d:%02d", m, r)
+    }
+}
+
+/// Drill-down 详情 sheet shown from RestView's top summary card.
+/// V1: bar chart + VL%. V2 will add HR trace + per-rep MPV breakdown.
+@available(iOS 17.0, *)
+private struct DetailsSheet: View {
+    let payload: LiveProgressPayload
+    @Environment(\.dismiss) private var dismiss
+
+    private var avg: Double {
+        payload.repVelocities.isEmpty ? 0 : payload.repVelocities.reduce(0, +) / Double(payload.repVelocities.count)
+    }
+    private var best: Double { payload.repVelocities.max() ?? 0 }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    // Header stats
+                    HStack(spacing: 18) {
+                        statBox(label: "Reps", value: "\(payload.repVelocities.count)")
+                        statBox(label: "平均", value: String(format: "%.2f", avg), unit: "m/s")
+                        statBox(label: "最快", value: String(format: "%.2f", best), unit: "m/s")
+                        statBox(label: "VL", value: "\(Int(payload.vlPercent ?? 0))", unit: "%")
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+
+                    Divider().padding(.vertical, 4)
+
+                    Text("本组速度曲线")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 16)
+
+                    barChart
+                        .frame(height: 220)
+                        .padding(.horizontal, 16)
+
+                    Text("心率数据：训练完成后 Apple 健康同步可见")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 4)
+                }
+            }
+            .navigationTitle("本组详情")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("完成") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func statBox(label: String, value: String, unit: String? = nil) -> some View {
+        VStack(spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                if let unit {
+                    Text(unit).font(.system(size: 11)).foregroundStyle(.secondary)
+                }
+            }
+            Text(label).font(.system(size: 11)).foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var barChart: some View {
+        HStack(alignment: .bottom, spacing: 8) {
+            ForEach(Array(payload.repVelocities.enumerated()), id: \.offset) { idx, v in
+                VStack(spacing: 4) {
+                    Text(String(format: "%.2f", v))
+                        .font(.system(size: 10, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                    GeometryReader { geo in
+                        let frac = best > 0 ? CGFloat(v / best) : 0.05
+                        VStack { Spacer() }
+                            .frame(height: geo.size.height * frac)
+                            .frame(maxWidth: .infinity)
+                            .background(barColor(for: v), in: RoundedRectangle(cornerRadius: 4))
+                            .frame(maxHeight: .infinity, alignment: .bottom)
+                    }
+                    Text("\(idx + 1)")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                }
+            }
+        }
+    }
+
+    private func barColor(for v: Double) -> Color {
+        guard best > 0 else { return .gray }
+        let dropPct = (best - v) / best * 100
+        if dropPct >= 20 { return .red }
+        if dropPct >= 10 { return .yellow }
+        return .green
     }
 }

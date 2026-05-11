@@ -391,6 +391,11 @@ struct WatchRestView: View {
                 .padding(.trailing, 8)
             }
             .onAppear { startCountdown() }
+            .onReceive(NotificationCenter.default.publisher(for: .vbtRestAdjustRequested)) { note in
+                if let delta = note.userInfo?["delta"] as? Int {
+                    adjustRemaining(by: delta)
+                }
+            }
         }
     }
 
