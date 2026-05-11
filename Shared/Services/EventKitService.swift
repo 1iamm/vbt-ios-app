@@ -116,7 +116,10 @@ public final class EventKitService {
     ) throws -> String {
         #if canImport(EventKit) && os(iOS)
         guard isAuthorized else { throw SyncError.accessDenied }
-        let calendar = try ensureCalendar()
+        // Prefer the user's default calendar (write-only access works there).
+        // Falls back to creating a dedicated「训练」calendar only when full
+        // access is granted (writeOnly cannot create calendars).
+        let calendar = try preferredCalendar()
         let event: EKEvent
         if let id = existingIdentifier, let existing = store.event(withIdentifier: id) {
             event = existing
@@ -221,6 +224,26 @@ public final class EventKitService {
         cal.source = source
         try store.saveCalendar(cal, commit: true)
         return cal
+    }
+
+    /// Pick the best calendar to write to:
+    /// 1. Existing「训练」calendar from a previous full-access run
+    /// 2. User's default calendar (write-only access can write here)
+    /// 3. Any writable iCloud / CalDAV calendar
+    /// 4. As a last resort, try ensureCalendar() (requires full access)
+    private func preferredCalendar() throws -> EKCalendar {
+        if let existing = store.calendars(for: .event)
+            .first(where: { $0.title == Self.calendarName && $0.allowsContentModifications }) {
+            return existing
+        }
+        if let def = store.defaultCalendarForNewEvents, def.allowsContentModifications {
+            return def
+        }
+        if let writable = store.calendars(for: .event)
+            .first(where: { $0.allowsContentModifications }) {
+            return writable
+        }
+        return try ensureCalendar()
     }
     #endif
 }

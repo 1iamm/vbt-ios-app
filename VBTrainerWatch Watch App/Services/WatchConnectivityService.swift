@@ -59,7 +59,25 @@ public final class WatchConnectivityService: NSObject, WCSessionDelegate {
         guard session.activationState == .activated else { return }
         do {
             let userInfo = try ConnectivityCodec.encode(message)
-            session.transferUserInfo(userInfo)
+            // Prefer sendMessage when iPhone is reachable so workout-end
+            // sync lands immediately (transferUserInfo can sit in queue for
+            // 5-30s in simulator, leading to「点击同步没反应」UX).
+            if session.isReachable {
+                #if DEBUG
+                print("[WC] watch send via sendMessage (reachable)")
+                #endif
+                session.sendMessage(userInfo, replyHandler: nil) { error in
+                    #if DEBUG
+                    print("[WC] watch sendMessage failed, falling back to transferUserInfo: \(error)")
+                    #endif
+                    session.transferUserInfo(userInfo)
+                }
+            } else {
+                #if DEBUG
+                print("[WC] watch send via transferUserInfo (unreachable)")
+                #endif
+                session.transferUserInfo(userInfo)
+            }
         } catch {
             #if DEBUG
             print("WatchConnectivityService.send encode error: \(error)")

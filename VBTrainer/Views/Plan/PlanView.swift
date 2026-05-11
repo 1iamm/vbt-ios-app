@@ -314,8 +314,23 @@ struct PlanView: View {
     }
 
     private func summaryLine(_ item: TemplateItem) -> String {
-        if let firstWork = item.orderedSetSpecs.first(where: { $0.kind == .work }) {
-            return "\(firstWork.reps)×\(item.orderedSetSpecs.filter { $0.kind == .work }.count) @\(Int(firstWork.weightKg))kg"
+        let workSpecs = item.orderedSetSpecs.filter { $0.kind == .work }
+        if !workSpecs.isEmpty {
+            let uniqueWeights = Set(workSpecs.map(\.weightKg))
+            let uniqueReps = Set(workSpecs.map(\.reps))
+            // 所有正式组完全相同 → 紧凑显示「reps×组数 @重量」
+            if uniqueWeights.count == 1 && uniqueReps.count == 1,
+               let first = workSpecs.first {
+                return "\(first.reps)×\(workSpecs.count) @\(Int(first.weightKg))kg"
+            }
+            // 各组不同 → 显示重量和次数范围，避免误导性的 5×3@60kg
+            let wMin = Int(workSpecs.map(\.weightKg).min() ?? 0)
+            let wMax = Int(workSpecs.map(\.weightKg).max() ?? 0)
+            let rMin = workSpecs.map(\.reps).min() ?? 0
+            let rMax = workSpecs.map(\.reps).max() ?? 0
+            let weightStr = wMin == wMax ? "\(wMin)kg" : "\(wMin)-\(wMax)kg"
+            let repStr = rMin == rMax ? "\(rMin) reps" : "\(rMin)-\(rMax) reps"
+            return "\(weightStr) · \(repStr)"
         }
         let kg = item.targetWeightKg.map { "\(Int($0))kg" } ?? "—"
         return "\(item.targetReps)×\(item.targetSets) @\(kg)"
