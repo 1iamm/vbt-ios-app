@@ -7,8 +7,32 @@ struct SettingsView: View {
     @Bindable var profile: UserProfile
     @Environment(\.modelContext) private var context
 
+    /// Mode preference is stored in UserDefaults (not on UserProfile because
+    /// it can be device-local and shouldn't bloat the profile schema).
+    @State private var trainingMode: TrainingModePreference = WorkoutModeResolver.preference
+
     var body: some View {
         Form {
+            Section {
+                Picker("训练模式", selection: $trainingMode) {
+                    Text("自动").tag(TrainingModePreference.auto)
+                    Text("仅 iPhone").tag(TrainingModePreference.forceIPhone)
+                    Text("仅 Apple Watch").tag(TrainingModePreference.forceWatch)
+                }
+                .pickerStyle(.segmented)
+                .onChange(of: trainingMode) { _, newValue in
+                    WorkoutModeResolver.preference = newValue
+                }
+                Text(autoModeHint)
+                    .font(Tokens.Font.footnote)
+                    .foregroundStyle(Tokens.Color.secondaryLabel)
+            } header: {
+                Text("训练模式")
+            } footer: {
+                Text("自动模式根据是否检测到 Apple Watch 决定走 Watch 实测还是 iPhone 手动记录。")
+                    .font(Tokens.Font.footnote)
+            }
+
             Section("单位") {
                 Picker("重量", selection: Binding(
                     get: { profile.weightUnit },
@@ -52,6 +76,14 @@ struct SettingsView: View {
         .onDisappear {
             profile.updatedAt = Date()
             try? context.save()
+        }
+    }
+
+    private var autoModeHint: String {
+        switch trainingMode {
+        case .auto:        return WorkoutModeResolver.autoResolutionLabel + " · 将\(WorkoutModeResolver.hasWatch ? "走 Watch 实测" : "走 iPhone 手动")"
+        case .forceWatch:  return "强制走 Watch：需要佩戴 Apple Watch 才能开始训练"
+        case .forceIPhone: return "强制走 iPhone：手动输入每组重量和次数，不测速度"
         }
     }
 }

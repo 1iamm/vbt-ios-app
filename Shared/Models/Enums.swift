@@ -12,6 +12,31 @@ public enum Sex: String, Codable, CaseIterable, Sendable {
     case male, female, other
 }
 
+/// V2.x: how a workout was recorded.
+/// - `watch`: Watch IMU drove rep detection + velocity (the original mode)
+/// - `iPhone`: iPhone-only manual logging (no IMU; user inputs reps/weight)
+/// - `hybrid`: mixed (reserved for V2 fallback)
+public enum WorkoutSource: String, Codable, CaseIterable, Sendable {
+    case watch
+    case iPhone = "iphone"
+    case hybrid
+}
+
+/// V2.x: per-set capture mode. Empty `reps` array signals manual mode where
+/// only total rep count + weight are known (no per-rep velocity).
+public enum SetInputMode: String, Codable, CaseIterable, Sendable {
+    case watchIMU = "watch_imu"
+    case iPhoneManual = "iphone_manual"
+}
+
+/// V2.x: user-controlled training mode override stored in UserDefaults.
+/// `auto` follows `WCSession.isPaired`; the other two force the path.
+public enum TrainingModePreference: String, Codable, CaseIterable, Sendable {
+    case auto
+    case forceWatch = "force_watch"
+    case forceIPhone = "force_iphone"
+}
+
 public enum BodyType: String, Codable, CaseIterable, Sendable {
     case lean         // 瘦
     case standard     // 标准
