@@ -572,8 +572,8 @@ public final class LiveWorkoutController: ObservableObject {
         inactivityTask?.cancel()
         inactivityTask = Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 5_000_000_000)
-            guard !Task.isCancelled else { return }
-            await self?.inactivityAutoEnd()
+            guard !Task.isCancelled, let self else { return }
+            await self.inactivityAutoEnd()
         }
     }
 
