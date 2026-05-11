@@ -677,7 +677,7 @@ struct PlanView: View {
             targetReps: 5,
             targetWeightKg: nil,
             targetVelocityRange: ex.defaultTargetVelocityRange,
-            vlCeiling: ex.defaultVLCeiling ?? GoalTheme.defaultVLCeiling(for: goal),
+            vlCeiling: ex.defaultVLCeiling,
             restSeconds: 90,
             side: ex.isUnilateral ? .left : .both
         )
@@ -857,7 +857,9 @@ struct SchedulePlanSheet: View {
             }
             #endif
         }
-        TemplateSyncService.pushAndStart(template: template, on: plan.date)
+        let templateRef = template
+        let date = plan.date
+        Task { _ = await TemplateSyncService.pushAndStart(template: templateRef, on: date) }
         Haptics.success()
         dismiss()
     }

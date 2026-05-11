@@ -329,7 +329,7 @@ struct WatchRestView: View {
     }
 
     private var nextExName: String {
-        guard let next = controller.nextPlannedParams else { return "" }
+        guard controller.nextPlannedParams != nil else { return "" }
         // currentTemplateItemId points at current item; preparePlanned was
         // already called so the next set is in the same exercise.
         return ExerciseLookup.exercise(byId: controller.currentExerciseId)?.nameZH ?? ""

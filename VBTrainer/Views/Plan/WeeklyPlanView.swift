@@ -454,7 +454,9 @@ struct DayTemplatePickerSheet: View {
                 #endif
             }
         }
-        TemplateSyncService.pushAndStart(template: template, on: plan.date)
+        let templateRef = template
+        let date = plan.date
+        Task { _ = await TemplateSyncService.pushAndStart(template: templateRef, on: date) }
         dismiss()
     }
 
