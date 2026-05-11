@@ -888,11 +888,6 @@ struct PlanSyncedView: View {
                             .foregroundStyle(fg)
                             .frame(maxWidth: .infinity)
                             .multilineTextAlignment(.center)
-                        Text("来自 iPhone · 转 Crown 滚动")
-                            .font(.system(size: 8))
-                            .foregroundStyle(sub.opacity(0.7))
-                            .frame(maxWidth: .infinity)
-                            .multilineTextAlignment(.center)
                             .padding(.bottom, 4)
                         ForEach(plan.items, id: \.id) { item in
                             itemSection(item: item)
@@ -930,7 +925,7 @@ struct PlanSyncedView: View {
                     .foregroundStyle(fg)
                     .tracking(-0.2)
                 Spacer()
-                Text("休\(item.restSeconds)s · \(totalSetCount)组")
+                Text("\(totalSetCount) 组")
                     .font(.system(size: 7, weight: .semibold))
                     .foregroundStyle(sub)
                     .tracking(0.5)
@@ -1003,6 +998,13 @@ struct PlanSyncedView: View {
                     .strikethrough(isDone, color: sub)
             }
             .monospacedDigit()
+            // 每组休息时间放每行 — 不同组可能不同
+            Text("休\(spec.restSeconds)s")
+                .font(.system(size: 7, weight: .semibold))
+                .foregroundStyle(sub)
+                .tracking(0.3)
+                .monospacedDigit()
+                .padding(.leading, 4)
         }
         .padding(.leading, 10)
         .padding(.vertical, 4)
