@@ -49,14 +49,8 @@ struct TodayView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    // 训练中最小化时显示的紧凑横条 banner —— 点击展开 cover
-                    if liveStore.isLive && liveStore.isMinimized,
-                       let payload = liveStore.payload {
-                        liveMinimizedBanner(payload: payload)
-                            .padding(.horizontal, Tokens.Space.lg)
-                            .padding(.top, 6)
-                    }
-
+                    // 注：训练最小化时浮窗 by MainTabsView 全局 overlay 提供，
+                    // 不再在 Today 顶部重复 banner。
                     TodayHeader(snapshot: readinessSnaps.first, goalAccent: accent)
 
                     let weekly = WeeklyAdherenceCalculator.compute(context: context)

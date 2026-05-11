@@ -502,6 +502,9 @@ struct WatchRestView: View {
         // Always sync totalSeconds with delta so the bottom label and ring
         // progress reflect the new rest duration (not just the cap on +).
         totalSeconds = newTotal
+        // Immediately push to iPhone so its RestView mirrors the change
+        // (without this, iPhone waits up to 1s for next countdown tick).
+        controller.pushRestCountdownNow(remaining: newRemaining, total: newTotal)
     }
 
     private func formatTime(_ seconds: Int) -> String {
