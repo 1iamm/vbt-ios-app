@@ -37,7 +37,12 @@ public final class LiveWorkoutController: ObservableObject {
     /// Captured from the last `start(...)` call so the Rest screen's "下一组"
     /// button can invoke `startNextSet()` without needing to re-route weight.
     public private(set) var currentExerciseId: String = ""
-    public private(set) var currentWeightKg: Double = 0
+    /// Mutable so SetReady can let the user adjust weight per set via Crown / +/- buttons
+    /// before tapping「本组开始」. Persisted into the session at start time.
+    @Published public var currentWeightKg: Double = 0
+    /// Mutable target reps for the current set (display-only — algorithm doesn't
+    /// auto-end at target; user taps「结束本组」). Adjustable in SetReady.
+    @Published public var currentReps: Int = 0
     public private(set) var currentVelocityVariant: VelocityVariant = .mv
     public private(set) var currentTargetRange: ClosedRange<Double>?
     public private(set) var currentVLCeiling: Double?
@@ -129,8 +134,46 @@ public final class LiveWorkoutController: ObservableObject {
         guard isRunning else { return }
         await session.endSet()
         plannedSetCursor += 1
+        // Sync currentWeightKg / currentReps / lastResolvedRest to the next
+        // planned set so SetReady shows correct defaults. User can still
+        // adjust via +/- buttons before tapping「本组开始」.
+        if plannedSetCursor < plannedSpecs.count {
+            let next = plannedSpecs[plannedSetCursor]
+            currentWeightKg = next.weightKg
+            currentReps = next.reps
+            lastResolvedRest = next.restSeconds
+        }
         persistResumeCursor()
         HapticFeedback.setEnded()
+    }
+
+    /// V2 unified entry: SetReady's「本组开始」button calls this — picks
+    /// start (first set) vs startNextSet (subsequent) based on session state.
+    /// Always uses the (possibly user-adjusted) `currentWeightKg`.
+    public func beginCurrentSet() async {
+        if !isRunning {
+            await start(
+                exerciseId: currentExerciseId,
+                weightKg: currentWeightKg,
+                velocityVariant: currentVelocityVariant,
+                targetRange: currentTargetRange,
+                vlCeiling: currentVLCeiling,
+                side: currentSide,
+                defaultRestSeconds: currentRestSeconds
+            )
+        } else {
+            await startNextSet(weightKg: currentWeightKg)
+        }
+    }
+
+    /// Bump current weight by `delta` kg, clamped to [0, 500].
+    public func adjustCurrentWeight(by delta: Double) {
+        currentWeightKg = max(0, min(500, currentWeightKg + delta))
+    }
+
+    /// Bump current reps target by `delta`, clamped to [1, 99].
+    public func adjustCurrentReps(by delta: Int) {
+        currentReps = max(1, min(99, currentReps + delta))
     }
 
     /// Inspect the next planned set's parameters (used by Rest screen to
@@ -141,8 +184,9 @@ public final class LiveWorkoutController: ObservableObject {
         return (s.weightKg, s.reps, s.restSeconds, s.kindRaw == "warmUp")
     }
 
-    /// Start the next set. When a plan is loaded, params come from
-    /// `plannedSpecs[plannedSetCursor]`; otherwise the caller's args are used.
+    /// Start the next set. Caller-supplied `weightKg` (e.g. from SetReady's
+    /// adjusted `currentWeightKg`) wins over `plannedSpecs[cursor]`; rest
+    /// duration still comes from the plan when available.
     public func startNextSet(
         weightKg: Double? = nil,
         velocityVariant: VelocityVariant? = nil,
@@ -152,11 +196,14 @@ public final class LiveWorkoutController: ObservableObject {
     ) async {
         let resolvedWeight: Double
         let resolvedRest: Int?
-        if let next = nextPlannedParams {
+        if let explicit = weightKg {
+            resolvedWeight = explicit
+            resolvedRest = nextPlannedParams?.rest
+        } else if let next = nextPlannedParams {
             resolvedWeight = next.weightKg
             resolvedRest = next.rest
         } else {
-            resolvedWeight = weightKg ?? currentWeightKg
+            resolvedWeight = currentWeightKg
             resolvedRest = nil
         }
         do {
@@ -208,6 +255,7 @@ public final class LiveWorkoutController: ObservableObject {
         if let first = plannedSpecs.first {
             currentExerciseId = item.exerciseId
             currentWeightKg = first.weightKg
+            currentReps = first.reps
             currentVLCeiling = item.vlCeiling
             if let lo = item.targetVelocityMin, let hi = item.targetVelocityMax {
                 currentTargetRange = lo...hi
