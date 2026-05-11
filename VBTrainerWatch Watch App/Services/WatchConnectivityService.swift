@@ -54,21 +54,42 @@ public final class WatchConnectivityService: NSObject, WCSessionDelegate {
     }
 
     public func send(message: ConnectivityMessage) {
-        guard WCSession.isSupported() else { return }
+        #if DEBUG
+        print("[WC] watch send ENTER kind=\(message.kind.rawValue)")
+        #endif
+        guard WCSession.isSupported() else {
+            #if DEBUG
+            print("[WC] watch send ABORT WCSession.isSupported=false")
+            #endif
+            return
+        }
         let session = WCSession.default
-        guard session.activationState == .activated else { return }
+        #if DEBUG
+        print("[WC] watch send state activationState=\(session.activationState.rawValue) isReachable=\(session.isReachable) isCompanionAppInstalled=\(session.isCompanionAppInstalled)")
+        #endif
+        guard session.activationState == .activated else {
+            #if DEBUG
+            print("[WC] watch send ABORT activationState != .activated (\(session.activationState.rawValue))")
+            #endif
+            // Re-activate so subsequent sends work after a transient
+            // deactivation (e.g. iPhone app cold-launch race).
+            session.delegate = self
+            session.activate()
+            return
+        }
         do {
             let userInfo = try ConnectivityCodec.encode(message)
-            // Prefer sendMessage when iPhone is reachable so workout-end
-            // sync lands immediately (transferUserInfo can sit in queue for
-            // 5-30s in simulator, leading to「点击同步没反应」UX).
             if session.isReachable {
                 #if DEBUG
                 print("[WC] watch send via sendMessage (reachable)")
                 #endif
-                session.sendMessage(userInfo, replyHandler: nil) { error in
+                session.sendMessage(userInfo, replyHandler: { _ in
                     #if DEBUG
-                    print("[WC] watch sendMessage failed, falling back to transferUserInfo: \(error)")
+                    print("[WC] watch sendMessage reply received")
+                    #endif
+                }) { error in
+                    #if DEBUG
+                    print("[WC] watch sendMessage failed, falling back to transferUserInfo: \(error.localizedDescription)")
                     #endif
                     session.transferUserInfo(userInfo)
                 }
@@ -80,7 +101,7 @@ public final class WatchConnectivityService: NSObject, WCSessionDelegate {
             }
         } catch {
             #if DEBUG
-            print("WatchConnectivityService.send encode error: \(error)")
+            print("[WC] watch send encode error: \(error)")
             #endif
         }
     }
@@ -90,7 +111,9 @@ public final class WatchConnectivityService: NSObject, WCSessionDelegate {
         activationDidCompleteWith activationState: WCSessionActivationState,
         error: Error?
     ) {
-        // No-op
+        #if DEBUG
+        print("[WC] watch activationDidComplete state=\(activationState.rawValue) error=\(error?.localizedDescription ?? "nil") isReachable=\(session.isReachable)")
+        #endif
     }
 
     public func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any] = [:]) {
