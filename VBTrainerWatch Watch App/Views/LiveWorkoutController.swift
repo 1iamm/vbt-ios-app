@@ -83,6 +83,27 @@ public final class LiveWorkoutController: ObservableObject {
     /// First-rep velocity within the current set, used to compute live VL%.
     private var setBaselineVelocity: Double?
 
+    /// Best velocity seen in the current set — used for VL% basis (per
+    /// trainer R2: bar chart + speed colors compute drop% against best rep,
+    /// not first rep, since rep 1 may be slow warming up).
+    private var setBestVelocity: Double = 0
+
+    /// Velocities of every rep in the current set, accumulated for the
+    /// `.setEnded` LiveProgressPayload bar chart.
+    private var setRepVelocities: [Double] = []
+
+    /// Unique id for this whole training session (multi-exercise). Used by
+    /// the iPhone-side LiveWorkoutStore to detect new sessions vs same.
+    private var liveWorkoutId: UUID = UUID()
+
+    /// Rest countdown task — runs while in .setEnded → restCountdown phase,
+    /// posts ticks to iPhone at 1Hz. Cancelled on next start / cancel.
+    private var restCountdownTask: Task<Void, Never>?
+
+    /// 5-second inactivity timer per trainer痛点：做完想做的最后一 rep 停
+    /// 5s 不动 → 自动结组。Reset on every rep, cancelled on manual endSet.
+    private var inactivityTask: Task<Void, Never>?
+
     /// Synchronously-set re-entrancy guard. `isRunning` only flips to true
     /// after the (awaited) session.start completes; without `isStarting`,
     /// two concurrent callers (SetReady + LiveSet.task) both observe
@@ -142,6 +163,13 @@ public final class LiveWorkoutController: ObservableObject {
                 defaultRestSeconds: defaultRestSeconds
             )
             isRunning = true
+            // V2.x live progress: push .ready so iPhone presents the
+            // fullScreenCover (per PM Round-3: button triggers cover,
+            // not first-rep detection — trainer wants certainty).
+            setBestVelocity = 0
+            setRepVelocities = []
+            pushLiveProgress(phase: .ready)
+            resetInactivityTimer()
         } catch {
             errorMessage = "训练开始失败：\(error.localizedDescription)"
             consumerTask?.cancel()
@@ -186,6 +214,36 @@ public final class LiveWorkoutController: ObservableObject {
 
         persistResumeCursor()
         HapticFeedback.setEnded()
+
+        // V2.x live progress: push .setEnded with bar-chart data, then run
+        // 1Hz rest countdown ticks until they reach 0. iPhone uses these
+        // to drive the RestView screen.
+        cancelInactivityTimer()
+        let setVels = setRepVelocities
+        pushLiveProgress(phase: .setEnded, repsForBar: setVels)
+        startRestCountdownPush(seconds: lastResolvedRest)
+        // Reset accumulators for next set.
+        setRepVelocities = []
+        setBestVelocity = 0
+    }
+
+    /// 1Hz tick pushing `.restCountdown` to iPhone with restRemainingSec.
+    /// Stopped on next .ready (next set starts) or manual cancel.
+    private func startRestCountdownPush(seconds: Int) {
+        restCountdownTask?.cancel()
+        let total = max(1, seconds)
+        restCountdownTask = Task { @MainActor [weak self] in
+            var remaining = total
+            while remaining > 0, !Task.isCancelled {
+                self?.pushLiveProgress(phase: .restCountdown, restRemaining: remaining)
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                remaining -= 1
+            }
+            // Final tick at 0 so iPhone can transition.
+            if !Task.isCancelled {
+                self?.pushLiveProgress(phase: .restCountdown, restRemaining: 0)
+            }
+        }
     }
 
     /// V2 unified entry: SetReady's「本组开始」button calls this — picks
@@ -397,11 +455,17 @@ public final class LiveWorkoutController: ObservableObject {
         isRunning = false
         consumerTask?.cancel()
         consumerTask = nil
+        cancelInactivityTimer()
+        restCountdownTask?.cancel()
+        restCountdownTask = nil
         clearPlanned()
         clearResumeCursor()
         // Fire before any inbound work (WCSession.send by caller) so the wrist
         // gets the cue even if the app is backgrounded immediately after.
         HapticFeedback.workoutEnded()
+        // V2.x live progress: tell iPhone the workout is over so it can
+        // dismiss the fullScreenCover.
+        pushLiveProgress(phase: .workoutEnded)
         return snapshot
     }
 
@@ -447,7 +511,11 @@ public final class LiveWorkoutController: ObservableObject {
             } else if let baseline = setBaselineVelocity, baseline > 0 {
                 vlPercent = max(0, (baseline - repEvent.meanVelocity) / baseline * 100)
             }
+            setBestVelocity = max(setBestVelocity, repEvent.meanVelocity)
+            setRepVelocities.append(repEvent.meanVelocity)
             HapticFeedback.rep(status)
+            pushLiveProgress(phase: .repDetected)
+            resetInactivityTimer()
 
         case .heartRate(let bpm):
             heartRate = bpm
@@ -474,6 +542,54 @@ public final class LiveWorkoutController: ObservableObject {
         case .stateChanged, .restTick:
             break
         }
+    }
+
+    // MARK: - Live progress push to iPhone
+
+    private func pushLiveProgress(phase: LiveProgressPayload.Phase, repsForBar: [Double]? = nil, restRemaining: Int? = nil) {
+        let exName = currentExerciseId.isEmpty ? "训练" : currentExerciseId
+        let payload = LiveProgressPayload(
+            phase: phase,
+            workoutId: liveWorkoutId,
+            setIndex: plannedSetCursor,
+            exerciseName: exName,
+            targetReps: currentReps,
+            targetWeightKg: currentWeightKg,
+            currentRep: rep,
+            lastRepVelocity: phase == .repDetected ? velocity : nil,
+            setBestVelocity: setBestVelocity > 0 ? setBestVelocity : nil,
+            vlPercent: vlPercent,
+            repVelocities: repsForBar ?? [],
+            restRemainingSec: restRemaining
+        )
+        WatchConnectivityService.shared.send(message: .liveProgress(payload))
+    }
+
+    /// Reset the 5s inactivity timer. Called after every rep. If 5s elapses
+    /// without a new rep, treat as user-decided-end-of-set (AMRAP / VBT
+    /// auto-regulation) and trigger endSet via `inactivityAutoEnd()`.
+    private func resetInactivityTimer() {
+        inactivityTask?.cancel()
+        inactivityTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            guard !Task.isCancelled else { return }
+            await self?.inactivityAutoEnd()
+        }
+    }
+
+    /// Called by the inactivity timer after 5s of no new reps. If the
+    /// session is still running and a plan is loaded, auto-end this set.
+    public func inactivityAutoEnd() async {
+        guard isRunning else { return }
+        #if DEBUG
+        print("[LiveCtrl] inactivity 5s → auto endSet()")
+        #endif
+        await endSet()
+    }
+
+    public func cancelInactivityTimer() {
+        inactivityTask?.cancel()
+        inactivityTask = nil
     }
 
     // MARK: - Aggregates for Summary

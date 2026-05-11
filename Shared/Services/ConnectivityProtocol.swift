@@ -13,6 +13,66 @@ public enum ConnectivityKind: String, Codable, Sendable {
     case readiness         // Proposal 7 may push readiness from iPhone to Watch
     case preferences       // iPhone Profile toggles → Watch (e.g. enableRepHaptic)
     case startWorkout      // V2: iPhone activates a synced template on the Watch
+    case liveProgress      // V2.x: Watch → iPhone training-in-progress updates
+}
+
+/// V2.x live-training-in-progress payload pushed Watch → iPhone so the iPhone
+/// can render a fullScreenCover with current rep/velocity/VL% etc. Per
+/// 3-round PM discussion: no HR (HealthKit covers it post-workout), no
+/// e1RM / Readiness during training.
+public struct LiveProgressPayload: Codable, Sendable, Equatable {
+
+    public enum Phase: String, Codable, Sendable {
+        case ready          // User tapped「本组开始」, training-ready
+        case repDetected    // A rep was detected during the set
+        case setEnded       // Set ended (manual / planned / inactivity 5s)
+        case restCountdown  // Inter-set rest countdown ticking
+        case workoutEnded   // Whole workout complete
+    }
+
+    public let phase: Phase
+    public let workoutId: UUID
+    public let setIndex: Int
+    public let exerciseName: String
+    public let targetReps: Int
+    public let targetWeightKg: Double
+    public let currentRep: Int
+    public let lastRepVelocity: Double?     // m/s
+    public let setBestVelocity: Double?     // 本组 PV，用于 VL% 染色基准
+    public let vlPercent: Double?           // Watch-computed 0..100
+    public let repVelocities: [Double]      // .setEnded 时填，画柱状图
+    public let restRemainingSec: Int?       // .restCountdown 时填
+    public let timestamp: Date
+
+    public init(
+        phase: Phase,
+        workoutId: UUID,
+        setIndex: Int,
+        exerciseName: String,
+        targetReps: Int,
+        targetWeightKg: Double,
+        currentRep: Int = 0,
+        lastRepVelocity: Double? = nil,
+        setBestVelocity: Double? = nil,
+        vlPercent: Double? = nil,
+        repVelocities: [Double] = [],
+        restRemainingSec: Int? = nil,
+        timestamp: Date = Date()
+    ) {
+        self.phase = phase
+        self.workoutId = workoutId
+        self.setIndex = setIndex
+        self.exerciseName = exerciseName
+        self.targetReps = targetReps
+        self.targetWeightKg = targetWeightKg
+        self.currentRep = currentRep
+        self.lastRepVelocity = lastRepVelocity
+        self.setBestVelocity = setBestVelocity
+        self.vlPercent = vlPercent
+        self.repVelocities = repVelocities
+        self.restRemainingSec = restRemainingSec
+        self.timestamp = timestamp
+    }
 }
 
 public struct WatchPreferencesSnapshot: Codable, Sendable, Equatable {
@@ -189,6 +249,7 @@ public enum ConnectivityMessage: Codable, Sendable, Equatable {
     case template(TemplateSnapshot)
     case preferences(WatchPreferencesSnapshot)
     case startWorkout(StartWorkoutSnapshot)
+    case liveProgress(LiveProgressPayload)
 
     public var kind: ConnectivityKind {
         switch self {
@@ -197,6 +258,7 @@ public enum ConnectivityMessage: Codable, Sendable, Equatable {
         case .template:        return .template
         case .preferences:     return .preferences
         case .startWorkout:    return .startWorkout
+        case .liveProgress:    return .liveProgress
         }
     }
 }

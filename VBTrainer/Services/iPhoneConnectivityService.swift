@@ -128,6 +128,8 @@ extension iPhoneConnectivityService: WCSessionDelegate {
                 // iPhone sends activation signals to Watch; inbound from
                 // Watch isn't expected.
                 break
+            case .liveProgress(let payload):
+                LiveWorkoutStore.shared.apply(payload)
             }
         } catch {
             #if DEBUG
