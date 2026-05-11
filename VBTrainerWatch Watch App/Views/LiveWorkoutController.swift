@@ -44,7 +44,8 @@ public final class LiveWorkoutController: ObservableObject {
     /// auto-end at target; user taps「结束本组」). Adjustable in SetReady.
     @Published public var currentReps: Int = 0
     public private(set) var currentVelocityVariant: VelocityVariant = .mv
-    public private(set) var currentTargetRange: ClosedRange<Double>?
+    /// Mutable so SetReady can adjust MV bounds via Crown.
+    @Published public var currentTargetRange: ClosedRange<Double>?
     public private(set) var currentVLCeiling: Double?
     public private(set) var currentSide: Side = .both
 
@@ -131,12 +132,19 @@ public final class LiveWorkoutController: ObservableObject {
     }
 
     public func endSet() async {
-        guard isRunning else { return }
-        await session.endSet()
+        // If session is running, properly close out via the actor. If a
+        // previous start failed (e.g. HK unavailable), session is idle —
+        // but we STILL advance the planned cursor so user isn't stuck
+        // looping on set 1 forever. Without this guard relax, a failed
+        // start meant「结束本组」did nothing and SetReady kept showing
+        // 第 1 / N 组.
+        if isRunning {
+            await session.endSet()
+        }
         plannedSetCursor += 1
         // Sync currentWeightKg / currentReps / lastResolvedRest to the next
         // planned set so SetReady shows correct defaults. User can still
-        // adjust via +/- buttons before tapping「本组开始」.
+        // adjust via Crown before tapping「本组开始」.
         if plannedSetCursor < plannedSpecs.count {
             let next = plannedSpecs[plannedSetCursor]
             currentWeightKg = next.weightKg
@@ -174,6 +182,20 @@ public final class LiveWorkoutController: ObservableObject {
     /// Bump current reps target by `delta`, clamped to [1, 99].
     public func adjustCurrentReps(by delta: Int) {
         currentReps = max(1, min(99, currentReps + delta))
+    }
+
+    /// Set MV target lower bound, clamped to [0.05, upper - 0.05].
+    public func setTargetMVLow(_ value: Double) {
+        let upper = currentTargetRange?.upperBound ?? 0.70
+        let low = max(0.05, min(upper - 0.05, value))
+        currentTargetRange = low...upper
+    }
+
+    /// Set MV target upper bound, clamped to [lower + 0.05, 2.0].
+    public func setTargetMVHigh(_ value: Double) {
+        let lower = currentTargetRange?.lowerBound ?? 0.45
+        let high = max(lower + 0.05, min(2.0, value))
+        currentTargetRange = lower...high
     }
 
     /// Inspect the next planned set's parameters (used by Rest screen to
