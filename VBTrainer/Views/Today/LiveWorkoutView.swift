@@ -247,6 +247,12 @@ private struct RestView: View {
     private var avg: Double {
         payload.repVelocities.isEmpty ? 0 : payload.repVelocities.reduce(0, +) / Double(payload.repVelocities.count)
     }
+    /// 0..1 — fraction of rest elapsed.
+    private var ringProgress: CGFloat {
+        guard let total = payload.restTotalSec, total > 0,
+              let remaining = payload.restRemainingSec else { return 0 }
+        return CGFloat(total - remaining) / CGFloat(total)
+    }
 
     var body: some View {
         ZStack {
@@ -254,32 +260,49 @@ private struct RestView: View {
                 .animation(.easeOut(duration: 0.3), value: isFinal10s)
 
             VStack(spacing: 0) {
-                // Top bar: previous-set summary (tap details) + 跳过
-                HStack(spacing: 10) {
-                    Button { showingDetails = true } label: {
-                        VStack(spacing: 2) {
-                            Text("上组 \(payload.repVelocities.count) reps · VL \(Int(payload.vlPercent ?? 0))%")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.85))
-                            Text("平均 \(String(format: "%.2f", avg)) · 查看详情 →")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.white.opacity(0.55))
+                // Top bar: previous-set summary + prominent 详情 + 跳过
+                VStack(spacing: 10) {
+                    HStack(spacing: 6) {
+                        Text("上组 \(payload.repVelocities.count) reps · VL \(Int(payload.vlPercent ?? 0))%")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white.opacity(0.85))
+                        Spacer()
+                        Button {
+                            TemplateSyncService.pushRestSkip(workoutId: payload.workoutId)
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        } label: {
+                            Text("跳过")
+                                .font(.system(size: 13, weight: .heavy))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(Color.white.opacity(0.12), in: Capsule())
                         }
-                        .padding(.vertical, 7)
-                        .padding(.horizontal, 12)
-                        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                    Button {
-                        TemplateSyncService.pushRestSkip(workoutId: payload.workoutId)
-                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    } label: {
-                        Text("跳过")
-                            .font(.system(size: 13, weight: .heavy))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.12), in: Capsule())
+
+                    // Prominent 「查看本组详情」 button — full width, accent color
+                    Button { showingDetails = true } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "chart.bar.xaxis")
+                                .font(.system(size: 14, weight: .bold))
+                            Text("查看本组详情（速度 · VL · 心率）")
+                                .font(.system(size: 13, weight: .bold))
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .bold))
+                                .opacity(0.7)
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .background(
+                            LinearGradient(
+                                colors: [Color.orange.opacity(0.85), Color.orange.opacity(0.65)],
+                                startPoint: .leading, endPoint: .trailing
+                            ),
+                            in: RoundedRectangle(cornerRadius: 12)
+                        )
                     }
                     .buttonStyle(.plain)
                 }
@@ -288,11 +311,33 @@ private struct RestView: View {
 
                 Spacer()
 
-                // Middle: huge countdown
-                Text(formatTime(payload.restRemainingSec ?? 0))
-                    .font(.system(size: 120, weight: .black, design: .rounded))
-                    .foregroundStyle(isFinal10s ? .orange : .white)
-                    .monospacedDigit()
+                // Middle: progress ring + countdown + total seconds (Watch-parity)
+                ZStack {
+                    Circle()
+                        .stroke(Color.white.opacity(0.1), lineWidth: 10)
+                        .frame(width: 260, height: 260)
+                    Circle()
+                        .trim(from: 0, to: ringProgress)
+                        .stroke(
+                            isFinal10s ? Color.orange : Color.orange.opacity(0.85),
+                            style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                        )
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 260, height: 260)
+                        .animation(.linear(duration: 0.3), value: ringProgress)
+                    VStack(spacing: 4) {
+                        Text(formatTime(payload.restRemainingSec ?? 0))
+                            .font(.system(size: 88, weight: .black, design: .rounded))
+                            .foregroundStyle(isFinal10s ? .orange : .white)
+                            .monospacedDigit()
+                            .minimumScaleFactor(0.7)
+                            .lineLimit(1)
+                        Text("休息 · \(payload.restTotalSec ?? 0)s")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.55))
+                            .tracking(0.4)
+                    }
+                }
 
                 // ±10s buttons flanking the next-set card
                 HStack(spacing: 18) {

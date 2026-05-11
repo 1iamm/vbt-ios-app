@@ -58,6 +58,8 @@ public struct LiveProgressPayload: Codable, Sendable, Equatable {
     public let vlPercent: Double?           // Watch-computed 0..100
     public let repVelocities: [Double]      // .setEnded 时填，画柱状图
     public let restRemainingSec: Int?       // .restCountdown 时填
+    public let restTotalSec: Int?           // .restCountdown 时填，进度环用
+    public let heartRate: Int?              // 实时心率（最近一次 HR 样本），所有 phase 都可带
     public let timestamp: Date
 
     public init(
@@ -73,6 +75,8 @@ public struct LiveProgressPayload: Codable, Sendable, Equatable {
         vlPercent: Double? = nil,
         repVelocities: [Double] = [],
         restRemainingSec: Int? = nil,
+        restTotalSec: Int? = nil,
+        heartRate: Int? = nil,
         timestamp: Date = Date()
     ) {
         self.phase = phase
@@ -87,6 +91,8 @@ public struct LiveProgressPayload: Codable, Sendable, Equatable {
         self.vlPercent = vlPercent
         self.repVelocities = repVelocities
         self.restRemainingSec = restRemainingSec
+        self.restTotalSec = restTotalSec
+        self.heartRate = heartRate
         self.timestamp = timestamp
     }
 }

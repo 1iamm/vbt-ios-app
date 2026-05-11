@@ -254,13 +254,12 @@ public final class LiveWorkoutController: ObservableObject {
         restCountdownTask = Task { @MainActor [weak self] in
             var remaining = total
             while remaining > 0, !Task.isCancelled {
-                self?.pushLiveProgress(phase: .restCountdown, restRemaining: remaining)
+                self?.pushLiveProgress(phase: .restCountdown, restRemaining: remaining, restTotal: total)
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 remaining -= 1
             }
-            // Final tick at 0 so iPhone can transition.
             if !Task.isCancelled {
-                self?.pushLiveProgress(phase: .restCountdown, restRemaining: 0)
+                self?.pushLiveProgress(phase: .restCountdown, restRemaining: 0, restTotal: total)
             }
         }
     }
@@ -565,7 +564,7 @@ public final class LiveWorkoutController: ObservableObject {
 
     // MARK: - Live progress push to iPhone
 
-    private func pushLiveProgress(phase: LiveProgressPayload.Phase, repsForBar: [Double]? = nil, restRemaining: Int? = nil) {
+    private func pushLiveProgress(phase: LiveProgressPayload.Phase, repsForBar: [Double]? = nil, restRemaining: Int? = nil, restTotal: Int? = nil) {
         let exName = currentExerciseId.isEmpty ? "训练" : currentExerciseId
         let payload = LiveProgressPayload(
             phase: phase,
@@ -579,9 +578,19 @@ public final class LiveWorkoutController: ObservableObject {
             setBestVelocity: setBestVelocity > 0 ? setBestVelocity : nil,
             vlPercent: vlPercent,
             repVelocities: repsForBar ?? [],
-            restRemainingSec: restRemaining
+            restRemainingSec: restRemaining,
+            restTotalSec: restTotal,
+            heartRate: heartRate > 0 ? heartRate : nil
         )
         WatchConnectivityService.shared.send(message: .liveProgress(payload))
+    }
+
+    /// Called when user adjusts rest seconds on Watch via ±10s buttons.
+    /// Immediately pushes a new `.restCountdown` with the updated values so
+    /// iPhone doesn't have to wait for next 1Hz tick. Also updates the
+    /// total since user may extend total rest time.
+    public func pushRestCountdownNow(remaining: Int, total: Int) {
+        pushLiveProgress(phase: .restCountdown, restRemaining: remaining, restTotal: total)
     }
 
     /// Reset the 5s inactivity timer. Called after every rep. If 5s elapses
