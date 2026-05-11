@@ -19,12 +19,15 @@ public enum ConnectivityKind: String, Codable, Sendable {
 
 /// V2.x rest adjustment payload pushed iPhone → Watch. Lets the user tap
 /// ±10s on the iPhone rest screen and have Watch's countdown reflect it.
+/// `skip == true` means "stop countdown immediately and advance to next set".
 public struct RestAdjustPayload: Codable, Sendable, Equatable {
-    public let deltaSeconds: Int   // +10 or -10 (or any signed value)
+    public let deltaSeconds: Int   // +10 or -10 (or any signed value); ignored if skip
+    public let skip: Bool
     public let workoutId: UUID?    // optional sanity check
 
-    public init(deltaSeconds: Int, workoutId: UUID? = nil) {
+    public init(deltaSeconds: Int = 0, skip: Bool = false, workoutId: UUID? = nil) {
         self.deltaSeconds = deltaSeconds
+        self.skip = skip
         self.workoutId = workoutId
     }
 }
@@ -290,8 +293,8 @@ public extension Notification.Name {
     /// (both Double). Handled by `WatchRootView` to push the warning route.
     static let vbtVLCeilingExceeded = Notification.Name("vbt.vlCeilingExceeded")
     /// Watch-side: posted by `WatchConnectivityService` when iPhone sends
-    /// `.restAdjust`. userInfo carries `delta` (Int seconds, signed).
-    /// Handled by `WatchRestView` to mutate its countdown.
+    /// `.restAdjust`. userInfo carries `delta` (Int seconds, signed) and
+    /// `skip` (Bool). Handled by `WatchRestView` to mutate its countdown.
     static let vbtRestAdjustRequested = Notification.Name("vbt.restAdjustRequested")
 }
 

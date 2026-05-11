@@ -208,11 +208,19 @@ public enum TemplateSyncService {
     /// RestView ±10s buttons to extend/shrink the Watch's countdown.
     /// Always sendMessage first (instant); falls back to transferUserInfo.
     public static func pushRestAdjust(deltaSeconds: Int, workoutId: UUID? = nil) {
+        pushRest(payload: RestAdjustPayload(deltaSeconds: deltaSeconds, workoutId: workoutId))
+    }
+
+    /// iPhone "跳过" 按钮：让 Watch 立即结束休息进下一组。
+    public static func pushRestSkip(workoutId: UUID? = nil) {
+        pushRest(payload: RestAdjustPayload(skip: true, workoutId: workoutId))
+    }
+
+    private static func pushRest(payload: RestAdjustPayload) {
         #if canImport(WatchConnectivity) && os(iOS)
         guard WCSession.isSupported() else { return }
         let session = WCSession.default
         guard session.activationState == .activated else { return }
-        let payload = RestAdjustPayload(deltaSeconds: deltaSeconds, workoutId: workoutId)
         do {
             let userInfo = try ConnectivityCodec.encode(.restAdjust(payload))
             session.sendMessage(userInfo, replyHandler: nil) { _ in
@@ -220,7 +228,7 @@ public enum TemplateSyncService {
             }
         } catch {
             #if DEBUG
-            print("TemplateSyncService.pushRestAdjust error: \(error)")
+            print("TemplateSyncService.pushRest error: \(error)")
             #endif
         }
         #endif
