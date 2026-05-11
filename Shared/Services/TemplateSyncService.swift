@@ -136,41 +136,41 @@ public enum TemplateSyncService {
         }
 
         #if DEBUG
-        print("[WC] iPhone pushAndStart reachable=\(session.isReachable)")
+        print("[WC] iPhone pushAndStart reachable=\(session.isReachable) (will sendMessage regardless)")
         #endif
 
-        // 1) Try sendMessage (instant + reply confirmation) when reachable
-        if session.isReachable {
-            let delivered = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-                var resumed = false
-                let lock = NSLock()
-                let resume: (Bool) -> Void = { value in
-                    lock.lock(); defer { lock.unlock() }
-                    guard !resumed else { return }
-                    resumed = true
-                    cont.resume(returning: value)
-                }
-                let timeoutTask = Task {
-                    try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-                    resume(false)
-                }
-                session.sendMessage(userInfo, replyHandler: { _ in
-                    timeoutTask.cancel()
-                    resume(true)
-                }, errorHandler: { err in
-                    #if DEBUG
-                    print("[WC] iPhone sendMessage failed: \(err.localizedDescription)")
-                    #endif
-                    timeoutTask.cancel()
-                    resume(false)
-                })
+        // 1) Always try sendMessage first — 模拟器里 isReachable 经常误报
+        // false，但 sendMessage 实际可能成功。失败时 errorHandler 立即回落
+        // transferUserInfo。
+        let delivered = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+            var resumed = false
+            let lock = NSLock()
+            let resume: (Bool) -> Void = { value in
+                lock.lock(); defer { lock.unlock() }
+                guard !resumed else { return }
+                resumed = true
+                cont.resume(returning: value)
             }
-            if delivered {
+            let timeoutTask = Task {
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                resume(false)
+            }
+            session.sendMessage(userInfo, replyHandler: { _ in
+                timeoutTask.cancel()
+                resume(true)
+            }, errorHandler: { err in
                 #if DEBUG
-                print("[WC] iPhone pushAndStart .delivered")
+                print("[WC] iPhone sendMessage failed: \(err.localizedDescription)")
                 #endif
-                return .delivered
-            }
+                timeoutTask.cancel()
+                resume(false)
+            })
+        }
+        if delivered {
+            #if DEBUG
+            print("[WC] iPhone pushAndStart .delivered")
+            #endif
+            return .delivered
         }
 
         // 2) Fallback: queue via transferUserInfo (delivered on next watch launch)

@@ -79,23 +79,18 @@ public final class WatchConnectivityService: NSObject, WCSessionDelegate {
         }
         do {
             let userInfo = try ConnectivityCodec.encode(message)
-            if session.isReachable {
+            // 模拟器里 isReachable 经常误报 false，所以无视它直接试
+            // sendMessage。errorHandler 回落到 transferUserInfo 兜底。
+            #if DEBUG
+            print("[WC] watch send via sendMessage (isReachable=\(session.isReachable))")
+            #endif
+            session.sendMessage(userInfo, replyHandler: { _ in
                 #if DEBUG
-                print("[WC] watch send via sendMessage (reachable)")
+                print("[WC] watch sendMessage reply received")
                 #endif
-                session.sendMessage(userInfo, replyHandler: { _ in
-                    #if DEBUG
-                    print("[WC] watch sendMessage reply received")
-                    #endif
-                }) { error in
-                    #if DEBUG
-                    print("[WC] watch sendMessage failed, falling back to transferUserInfo: \(error.localizedDescription)")
-                    #endif
-                    session.transferUserInfo(userInfo)
-                }
-            } else {
+            }) { error in
                 #if DEBUG
-                print("[WC] watch send via transferUserInfo (unreachable)")
+                print("[WC] watch sendMessage failed, falling back to transferUserInfo: \(error.localizedDescription)")
                 #endif
                 session.transferUserInfo(userInfo)
             }
