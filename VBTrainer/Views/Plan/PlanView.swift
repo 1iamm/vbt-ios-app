@@ -845,12 +845,16 @@ struct SchedulePlanSheet: View {
 
         if syncToCalendar {
             #if os(iOS)
-            // `||`'s right side is an autoclosure that can't host async; split.
+            // Use full access — write-only (iOS 17+) can't enumerate
+            // calendars, which means upsert() can't pick a target calendar
+            // and silently sends events to nowhere. Full access lets us
+            // both create + read, and the resulting event shows in the iOS
+            // Calendar app reliably.
             let granted: Bool
             if EventKitService.shared.isAuthorized {
                 granted = true
             } else {
-                granted = await EventKitService.shared.requestWriteAccess()
+                granted = await EventKitService.shared.requestFullAccess()
             }
             if granted {
                 do {
