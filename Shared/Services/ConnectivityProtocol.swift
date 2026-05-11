@@ -15,6 +15,26 @@ public enum ConnectivityKind: String, Codable, Sendable {
     case startWorkout      // V2: iPhone activates a synced template on the Watch
     case liveProgress      // V2.x: Watch → iPhone training-in-progress updates
     case restAdjust        // V2.x: iPhone → Watch ±10s rest adjustment
+    case setControl        // V2.x: iPhone → Watch endSet / startNextSet / finishWorkout
+}
+
+/// V2.x dual-side workflow: iPhone sends a set-level command to the Watch
+/// (which owns the IMU / HR state). Lets the user tap 「完成本组」/「结束训练」
+/// on iPhone without raising the wrist. Mirrors training-app convention
+/// (Hevy / Strong / 训记) where iPhone is the always-on control plane.
+public struct SetControlPayload: Codable, Sendable, Equatable {
+    public enum Action: String, Codable, Sendable {
+        case endSet            // Equivalent of Watch's 「结束本组」
+        case startNextSet      // Skip rest and immediately start the next planned set
+        case finishWorkout     // Early-exit the whole workout
+    }
+    public let action: Action
+    public let workoutId: UUID?
+
+    public init(action: Action, workoutId: UUID? = nil) {
+        self.action = action
+        self.workoutId = workoutId
+    }
 }
 
 /// V2.x rest adjustment payload pushed iPhone → Watch. Lets the user tap
@@ -60,6 +80,11 @@ public struct LiveProgressPayload: Codable, Sendable, Equatable {
     public let restRemainingSec: Int?       // .restCountdown 时填
     public let restTotalSec: Int?           // .restCountdown 时填，进度环用
     public let heartRate: Int?              // 实时心率（最近一次 HR 样本），所有 phase 都可带
+    /// V2.x: target velocity band (m/s) the user is training within. iPhone
+    /// renders it as a tick + band under the velocity readout so user knows
+    /// where they should be hitting. Optional for back-compat.
+    public let targetVelocityMin: Double?
+    public let targetVelocityMax: Double?
     public let timestamp: Date
 
     public init(
@@ -77,6 +102,8 @@ public struct LiveProgressPayload: Codable, Sendable, Equatable {
         restRemainingSec: Int? = nil,
         restTotalSec: Int? = nil,
         heartRate: Int? = nil,
+        targetVelocityMin: Double? = nil,
+        targetVelocityMax: Double? = nil,
         timestamp: Date = Date()
     ) {
         self.phase = phase
@@ -93,6 +120,8 @@ public struct LiveProgressPayload: Codable, Sendable, Equatable {
         self.restRemainingSec = restRemainingSec
         self.restTotalSec = restTotalSec
         self.heartRate = heartRate
+        self.targetVelocityMin = targetVelocityMin
+        self.targetVelocityMax = targetVelocityMax
         self.timestamp = timestamp
     }
 }
@@ -273,6 +302,7 @@ public enum ConnectivityMessage: Codable, Sendable, Equatable {
     case startWorkout(StartWorkoutSnapshot)
     case liveProgress(LiveProgressPayload)
     case restAdjust(RestAdjustPayload)
+    case setControl(SetControlPayload)
 
     public var kind: ConnectivityKind {
         switch self {
@@ -283,6 +313,7 @@ public enum ConnectivityMessage: Codable, Sendable, Equatable {
         case .startWorkout:    return .startWorkout
         case .liveProgress:    return .liveProgress
         case .restAdjust:      return .restAdjust
+        case .setControl:      return .setControl
         }
     }
 }
@@ -302,6 +333,10 @@ public extension Notification.Name {
     /// `.restAdjust`. userInfo carries `delta` (Int seconds, signed) and
     /// `skip` (Bool). Handled by `WatchRestView` to mutate its countdown.
     static let vbtRestAdjustRequested = Notification.Name("vbt.restAdjustRequested")
+    /// Watch-side: posted by `WatchConnectivityService` when iPhone sends
+    /// `.setControl`. userInfo carries `action` (raw string of
+    /// `SetControlPayload.Action`). Handled by `WatchScreens` host views.
+    static let vbtSetControlRequested = Notification.Name("vbt.setControlRequested")
     /// iPhone-only: posted by views (e.g. Today's 我的模板·管理) asking
     /// `MainTabsView` to switch the bottom tab selection. object = tab name.
     static let vbtSwitchToPlanTab = Notification.Name("vbt.switchToPlanTab")
