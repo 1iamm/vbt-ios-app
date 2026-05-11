@@ -1,14 +1,14 @@
 // IPhoneWorkoutController.swift
 // VBTrainer · iOS · 2026-05
 //
-// Drives iPhone-only training (no Watch). Mirrors the LiveWorkoutController
-// state shape from Watch so the same LiveWorkoutStore + PiP overlay work
-// without changes:
-//   .ready → .setActive → .setEnded → .restCountdown → .ready (next set) → … → .workoutEnded
+// Drives iPhone-only training (no Watch). V1.x: multi-exercise support
+// — the controller now holds the entire plan, tracks a cursor across
+// exercises, and saves one Workout row per exercise on finish (mirrors
+// the Watch flow). Single-exercise legacy path is still supported.
 //
-// Per 3-round PM consensus + trainer's hardest requirement: prefill last
-// set's weight × reps and let the「同上完成」main button log a set in one
-// tap. Stepper chips only used when user actually wants to change values.
+// Phases mirror LiveProgressPayload semantics:
+//   .ready → .setActive → .setEnded → .restCountdown → .ready (next set)
+//     → ... → switch exercise → .ready → ... → .workoutEnded
 
 import Foundation
 import SwiftData
@@ -18,23 +18,44 @@ import SwiftUI
 @MainActor
 public final class IPhoneWorkoutController: ObservableObject {
 
-    // MARK: - Phase mirror (matches LiveProgressPayload.Phase semantics)
-
     public enum Phase: String { case ready, setActive, setEnded, resting, finished }
 
     @Published public private(set) var phase: Phase = .ready
     @Published public var currentWeightKg: Double = 0
     @Published public var currentReps: Int = 0
-    /// Total restRemainingSec — drives PiP + screen countdown.
     @Published public private(set) var restRemainingSec: Int = 0
     @Published public private(set) var restTotalSec: Int = 0
 
-    /// Sets logged this session (per-exercise + per-set).
-    @Published public private(set) var loggedSets: [LoggedSet] = []
+    /// Per-exercise logged sets, keyed by exercise index in plannedItems.
+    @Published public private(set) var loggedSetsByExercise: [Int: [LoggedSet]] = [:]
     @Published public private(set) var currentSetIndex: Int = 0
-    @Published public private(set) var plannedSpecs: [TemplateSetSpecSnapshot] = []
-    @Published public private(set) var exerciseId: String = ""
-    @Published public private(set) var exerciseDisplayName: String = ""
+    @Published public private(set) var plannedItems: [TemplateItemSnapshot] = []
+    @Published public private(set) var currentItemIndex: Int = 0
+    @Published public var sessionNotes: String = ""
+
+    public var currentItem: TemplateItemSnapshot? {
+        plannedItems.indices.contains(currentItemIndex) ? plannedItems[currentItemIndex] : nil
+    }
+    public var currentPlannedSpecs: [TemplateSetSpecSnapshot] {
+        (currentItem?.setSpecs ?? []).sorted { $0.index < $1.index }
+    }
+    public var loggedSetsForCurrent: [LoggedSet] {
+        loggedSetsByExercise[currentItemIndex] ?? []
+    }
+    public var exerciseId: String { currentItem?.exerciseId ?? "" }
+    public var exerciseDisplayName: String {
+        guard let id = currentItem?.exerciseId else { return "" }
+        return ExerciseLookup.exercise(byId: id)?.nameZH ?? id
+    }
+    /// Total sets across the whole session (work only — preserves what
+    /// the bottom progress bar should show).
+    public var totalPlannedSets: Int {
+        plannedItems.reduce(0) { $0 + max(1, $1.effectiveWorkSetCount) }
+    }
+    public var totalLoggedSets: Int {
+        loggedSetsByExercise.values.reduce(0) { $0 + $1.count }
+    }
+    public var workoutStartedAt: Date { startedAt }
 
     public struct LoggedSet: Identifiable, Equatable {
         public let id: UUID
@@ -45,8 +66,6 @@ public final class IPhoneWorkoutController: ObservableObject {
         public let completedAt: Date
     }
 
-    // MARK: - Internal
-
     private var liveWorkoutId: UUID = UUID()
     private var startedAt: Date = Date()
     private var restTask: Task<Void, Never>?
@@ -56,47 +75,64 @@ public final class IPhoneWorkoutController: ObservableObject {
 
     // MARK: - Setup
 
-    /// Load a single-item template into the controller. For V1 we support
-    /// one exercise at a time; multi-exercise wiring follows in V1.x.
-    public func preparePlanned(item: TemplateItemSnapshot, templateId: UUID? = nil) {
-        plannedSpecs = item.setSpecs.sorted { $0.index < $1.index }
-        exerciseId = item.exerciseId
-        exerciseDisplayName = ExerciseLookup.exercise(byId: item.exerciseId)?.nameZH ?? item.exerciseId
+    /// Multi-exercise entry. `startingItemIndex` lets the caller jump straight
+    /// to a specific exercise (default 0). Replaces all session state.
+    public func preparePlan(items: [TemplateItemSnapshot], startingItemIndex: Int = 0, templateId: UUID? = nil) {
+        let sorted = items.sorted { $0.index < $1.index }
+        plannedItems = sorted
+        currentItemIndex = max(0, min(startingItemIndex, max(sorted.count - 1, 0)))
         self.templateId = templateId
-        if let first = plannedSpecs.first {
+        loggedSetsByExercise = [:]
+        startedAt = Date()
+        liveWorkoutId = UUID()
+        loadCurrentItem()
+    }
+
+    /// Single-exercise convenience (back-compat for ad-hoc / TodayView quick path).
+    public func preparePlanned(item: TemplateItemSnapshot, templateId: UUID? = nil) {
+        preparePlan(items: [item], templateId: templateId)
+    }
+
+    /// Ad-hoc empty workout — synthesizes a single TemplateItemSnapshot so
+    /// the rest of the view code can stay uniform.
+    public func prepareAdHoc(exerciseId: String, weightKg: Double = 60, reps: Int = 5) {
+        let synthesizedItem = TemplateItemSnapshot(
+            id: UUID(),
+            index: 0,
+            exerciseId: exerciseId,
+            targetSets: 3,
+            targetReps: reps,
+            targetWeightKg: weightKg,
+            targetVelocityMin: nil,
+            targetVelocityMax: nil,
+            vlCeiling: nil,
+            restSeconds: 90,
+            sideRaw: "both",
+            setSpecs: []
+        )
+        preparePlan(items: [synthesizedItem])
+    }
+
+    private func loadCurrentItem() {
+        currentSetIndex = 0
+        let specs = currentPlannedSpecs
+        if let first = specs.first {
             currentWeightKg = first.weightKg
             currentReps = first.reps
             restTotalSec = first.restSeconds
             restRemainingSec = first.restSeconds
+        } else if let item = currentItem {
+            currentWeightKg = item.targetWeightKg ?? 60
+            currentReps = item.targetReps
+            restTotalSec = item.restSeconds
+            restRemainingSec = item.restSeconds
         }
-        currentSetIndex = 0
-        loggedSets = []
-        startedAt = Date()
-        phase = .ready
-        pushLive(.ready)
-    }
-
-    /// Ad-hoc empty workout — no plan, user fills as they go.
-    public func prepareAdHoc(exerciseId: String, weightKg: Double = 60, reps: Int = 5) {
-        self.plannedSpecs = []
-        self.exerciseId = exerciseId
-        self.exerciseDisplayName = ExerciseLookup.exercise(byId: exerciseId)?.nameZH ?? exerciseId
-        self.templateId = nil
-        currentWeightKg = weightKg
-        currentReps = reps
-        restTotalSec = 90
-        restRemainingSec = 90
-        currentSetIndex = 0
-        loggedSets = []
-        startedAt = Date()
         phase = .ready
         pushLive(.ready)
     }
 
     // MARK: - User actions
 
-    /// 「完成本组」/「同上完成」main button. Logs current weight × reps
-    /// as a completed set and transitions to rest.
     public func completeCurrentSet(rpe: Int? = nil) {
         guard phase == .ready || phase == .setActive else { return }
         let logged = LoggedSet(
@@ -107,21 +143,26 @@ public final class IPhoneWorkoutController: ObservableObject {
             rpe: rpe,
             completedAt: Date()
         )
-        loggedSets.append(logged)
+        var list = loggedSetsByExercise[currentItemIndex] ?? []
+        list.append(logged)
+        loggedSetsByExercise[currentItemIndex] = list
         phase = .setEnded
         pushLive(.setEnded)
 
-        // After 0.4s of seeing the「完成」feedback, slide into rest.
         Task { @MainActor [weak self] in
             try? await Task.sleep(nanoseconds: 400_000_000)
             self?.beginRest()
         }
     }
 
-    private func beginRest() {
-        phase = .resting
-        restRemainingSec = restTotalSec
-        startRestCountdown()
+    /// User jumped to a different exercise via the carousel/picker. Rest
+    /// is interrupted; sets logged on the previous exercise remain.
+    public func switchToExercise(at index: Int) {
+        guard plannedItems.indices.contains(index), index != currentItemIndex else { return }
+        restTask?.cancel()
+        restTask = nil
+        currentItemIndex = index
+        loadCurrentItem()
     }
 
     public func skipRest() {
@@ -138,6 +179,12 @@ public final class IPhoneWorkoutController: ObservableObject {
         pushLive(.restCountdown)
     }
 
+    private func beginRest() {
+        phase = .resting
+        restRemainingSec = restTotalSec
+        startRestCountdown()
+    }
+
     private func startRestCountdown() {
         restTask?.cancel()
         restTask = Task { @MainActor [weak self] in
@@ -149,7 +196,6 @@ public final class IPhoneWorkoutController: ObservableObject {
             }
             if !Task.isCancelled {
                 self.pushLive(.restCountdown)
-                // Subtle final-cue haptic — UIKit-side warning.
                 #if canImport(UIKit) && os(iOS)
                 UINotificationFeedbackGenerator().notificationOccurred(.success)
                 #endif
@@ -160,90 +206,127 @@ public final class IPhoneWorkoutController: ObservableObject {
 
     private func advanceToNextSet() {
         currentSetIndex += 1
-        if currentSetIndex < plannedSpecs.count {
-            // Next planned set — load its defaults but let user adjust before completing.
-            let next = plannedSpecs[currentSetIndex]
+        let specs = currentPlannedSpecs
+        if currentSetIndex < specs.count {
+            let next = specs[currentSetIndex]
             currentWeightKg = next.weightKg
             currentReps = next.reps
             restTotalSec = next.restSeconds
             restRemainingSec = next.restSeconds
             phase = .ready
             pushLive(.ready)
-        } else if plannedSpecs.isEmpty {
-            // Ad-hoc mode: keep going indefinitely with last values prefilled.
+        } else if currentItemIndex + 1 < plannedItems.count {
+            // Next exercise.
+            currentItemIndex += 1
+            loadCurrentItem()
+        } else if plannedItems.count == 1 && specs.isEmpty {
+            // Ad-hoc single-exercise mode → keep going indefinitely.
             phase = .ready
             pushLive(.ready)
         } else {
-            // All planned sets done → workout finished.
-            finishWorkout()
+            phase = .finished
+            pushLive(.workoutEnded)
         }
     }
 
-    /// Manual finish (from a「结束训练」button) or end of last set.
     public func finishWorkout(context: ModelContext? = nil, rpe: Int? = nil, notes: String? = nil) {
         restTask?.cancel()
         restTask = nil
         phase = .finished
         let endedAt = Date()
+        let finalNotes = notes ?? (sessionNotes.isEmpty ? nil : sessionNotes)
         if let context {
-            saveToSwiftData(context: context, endedAt: endedAt, rpe: rpe, notes: notes)
+            saveToSwiftData(context: context, endedAt: endedAt, rpe: rpe, notes: finalNotes)
         }
         pushLive(.workoutEnded)
+    }
+
+    // MARK: - Last-workout lookup
+
+    /// Fetch the most recent completed Workout for a given exerciseId so the
+    /// training table can show a "上次" comparison column. Returns nil if
+    /// the user has never done this exercise.
+    public static func lastWorkoutSummary(exerciseId: String, in context: ModelContext, excluding workoutId: UUID? = nil) -> LastWorkoutSummary? {
+        var descriptor = FetchDescriptor<Workout>(
+            predicate: #Predicate { $0.exerciseId == exerciseId },
+            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 5
+        guard let results = try? context.fetch(descriptor) else { return nil }
+        let candidate = results.first { $0.id != workoutId }
+        guard let w = candidate else { return nil }
+        let sets = w.sets.sorted { $0.index < $1.index }
+        let topSet = sets.max { $0.weightKg < $1.weightKg }
+        return LastWorkoutSummary(
+            startedAt: w.startedAt,
+            setCount: sets.count,
+            topWeightKg: topSet?.weightKg ?? 0,
+            topReps: topSet?.reps.count ?? 0
+        )
+    }
+
+    public struct LastWorkoutSummary: Equatable {
+        public let startedAt: Date
+        public let setCount: Int
+        public let topWeightKg: Double
+        public let topReps: Int
     }
 
     // MARK: - Persistence
 
     private func saveToSwiftData(context: ModelContext, endedAt: Date, rpe: Int?, notes: String?) {
-        let workout = Workout(
-            id: UUID(),
-            startedAt: startedAt,
-            endedAt: endedAt,
-            exerciseId: exerciseId,
-            notes: notes,
-            rpe: rpe,
-            linkedTemplateId: templateId,
-            readinessSnapshotId: nil,
-            source: .iPhone
-        )
-        context.insert(workout)
-        for (idx, ls) in loggedSets.enumerated() {
-            let set = WorkoutSet(
-                index: idx,
-                weightKg: ls.weightKg,
-                restAfterSeconds: restTotalSec
+        // One Workout per exercise that actually got any logged sets.
+        for (idx, item) in plannedItems.enumerated() {
+            let sets = loggedSetsByExercise[idx] ?? []
+            guard !sets.isEmpty else { continue }
+            let workout = Workout(
+                id: UUID(),
+                startedAt: startedAt,
+                endedAt: endedAt,
+                exerciseId: item.exerciseId,
+                notes: notes,
+                rpe: rpe,
+                linkedTemplateId: templateId,
+                readinessSnapshotId: nil,
+                source: .iPhone
             )
-            set.workout = workout
-            context.insert(set)
-            // Synthesize one Rep row per logged rep so totalReps / totalVolumeKg
-            // aggregate work the same way as Watch-recorded workouts. velocity
-            // values are 0 (manual mode); algorithms that need velocity should
-            // filter by `Workout.source == .iPhone` and skip.
-            for r in 0..<ls.reps {
-                let rep = Rep(
-                    index: r + 1,
-                    meanVelocity: 0,
-                    peakVelocity: 0,
-                    meanPropulsiveVelocity: nil,
-                    timestamp: ls.completedAt,
-                    metStatus: .met
+            context.insert(workout)
+            for (setIdx, ls) in sets.enumerated() {
+                let set = WorkoutSet(
+                    index: setIdx,
+                    weightKg: ls.weightKg,
+                    restAfterSeconds: restTotalSec
                 )
-                rep.set = set
-                context.insert(rep)
+                set.workout = workout
+                context.insert(set)
+                for r in 0..<ls.reps {
+                    let rep = Rep(
+                        index: r + 1,
+                        meanVelocity: 0,
+                        peakVelocity: 0,
+                        meanPropulsiveVelocity: nil,
+                        timestamp: ls.completedAt,
+                        metStatus: .met
+                    )
+                    rep.set = set
+                    context.insert(rep)
+                }
             }
-        }
-        do {
-            try context.save()
-            NotificationCenter.default.post(name: .vbtWorkoutImported, object: workout.id)
-        } catch {
-            #if DEBUG
-            print("[IPhoneWorkoutController] save error: \(error)")
-            #endif
+            do {
+                try context.save()
+                NotificationCenter.default.post(name: .vbtWorkoutImported, object: workout.id)
+            } catch {
+                #if DEBUG
+                print("[IPhoneWorkoutController] save error: \(error)")
+                #endif
+            }
         }
     }
 
-    // MARK: - Live progress push (drives PiP + LiveWorkoutView phase)
+    // MARK: - Live progress push
 
     private func pushLive(_ p: LiveProgressPayload.Phase) {
+        let last = loggedSetsForCurrent.last
         let payload = LiveProgressPayload(
             phase: p,
             workoutId: liveWorkoutId,
@@ -255,7 +338,7 @@ public final class IPhoneWorkoutController: ObservableObject {
             lastRepVelocity: nil,
             setBestVelocity: nil,
             vlPercent: nil,
-            repVelocities: loggedSets.last.map { Array(repeating: 0.0, count: $0.reps) } ?? [],
+            repVelocities: last.map { Array(repeating: 0.0, count: $0.reps) } ?? [],
             restRemainingSec: p == .restCountdown ? restRemainingSec : nil,
             restTotalSec: p == .restCountdown ? restTotalSec : nil,
             heartRate: nil
