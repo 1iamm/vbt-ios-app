@@ -5,6 +5,7 @@ Date Calendar DateFormatter DateInterval DateComponents UUID URL URLRequest URLS
 TimeInterval Locale Bundle Data NotificationCenter Notification NSError NSObject
 NSPredicate NSSortDescriptor NSNumber NSString NSDictionary NSArray NSCoder
 NSKeyedArchiver NSKeyedUnarchiver
+NSLock NSRecursiveLock NSCondition NSConditionLock
 JSONEncoder JSONDecoder PropertyListEncoder PropertyListDecoder
 UserDefaults FileManager DispatchQueue DispatchWorkItem DispatchTime
 OperationQueue Operation Process Pipe Timer ProcessInfo Thread

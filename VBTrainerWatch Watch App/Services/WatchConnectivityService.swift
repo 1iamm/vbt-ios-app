@@ -76,25 +76,52 @@ public final class WatchConnectivityService: NSObject, WCSessionDelegate {
     }
 
     public func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any] = [:]) {
+        #if DEBUG
+        print("[WC] watch didReceiveUserInfo keys=\(userInfo.keys)")
+        #endif
         Task { @MainActor in
-            do {
-                guard let message = try ConnectivityCodec.decode(userInfo) else { return }
-                switch message {
-                case .template(let snap):
-                    TodayPlanStore.shared.store(snap)
-                case .preferences(let prefs):
-                    UserDefaults.standard.set(prefs.enableRepHaptic, forKey: "watch.enableRepHaptic")
-                case .startWorkout(let snap):
-                    WatchActivationCenter.shared.activate(snap)
-                default:
-                    // Other inbound message kinds — Watch doesn't yet handle.
-                    break
-                }
-            } catch {
-                #if DEBUG
-                print("Watch didReceiveUserInfo decode error: \(error)")
-                #endif
+            await Self.handleInbound(userInfo)
+        }
+    }
+
+    /// `sendMessage` path — used by the iPhone side's V2 activation flow so the
+    /// caller can show a spinner until we reply. The reply payload is empty;
+    /// what matters is that the call completes, signalling delivery.
+    public func session(
+        _ session: WCSession,
+        didReceiveMessage message: [String : Any],
+        replyHandler: @escaping ([String : Any]) -> Void
+    ) {
+        #if DEBUG
+        print("[WC] watch didReceiveMessage keys=\(message.keys)")
+        #endif
+        Task { @MainActor in
+            await Self.handleInbound(message)
+        }
+        replyHandler([:])
+    }
+
+    /// Shared decode + dispatch for both `transferUserInfo` and `sendMessage`
+    /// inbound paths. `@MainActor` because all downstream stores / centers are.
+    @MainActor
+    private static func handleInbound(_ userInfo: [String: Any]) async {
+        do {
+            guard let message = try ConnectivityCodec.decode(userInfo) else { return }
+            switch message {
+            case .template(let snap):
+                TodayPlanStore.shared.store(snap)
+            case .preferences(let prefs):
+                UserDefaults.standard.set(prefs.enableRepHaptic, forKey: "watch.enableRepHaptic")
+            case .startWorkout(let snap):
+                WatchActivationCenter.shared.activate(snap)
+            default:
+                // Other inbound message kinds — Watch doesn't yet handle.
+                break
             }
+        } catch {
+            #if DEBUG
+            print("[WC] watch decode error: \(error)")
+            #endif
         }
     }
 }
