@@ -325,12 +325,13 @@ struct TodayView: View {
     private func handlePrimary(plan: DayPlan, template: Template) {
         switch plan.status {
         case .scheduled:
-            // Push to Watch + activate (V2) + give haptic
-            TemplateSyncService.pushAndStart(template: template, on: plan.date)
+            // Push to Watch + activate (V2) + give haptic. Fire-and-forget;
+            // result-bearing variant is used by PlanView's spinner CTA.
+            Task { _ = await TemplateSyncService.pushAndStart(template: template, on: plan.date) }
             Haptics.success()
         case .inProgress:
             // Best effort: nudge Watch by re-pushing the template + reactivating
-            TemplateSyncService.pushAndStart(template: template, on: plan.date)
+            Task { _ = await TemplateSyncService.pushAndStart(template: template, on: plan.date) }
         case .completed:
             // 看复盘 → push WorkoutDetailView
             if let id = plan.completedWorkoutId {
@@ -395,7 +396,7 @@ struct TodayView: View {
             pendingPlanTemplate = template
         case .completed:
             // 再练一次 → push template + activate (creates new workout outside the plan)
-            TemplateSyncService.pushAndStart(template: template, on: Date())
+            Task { _ = await TemplateSyncService.pushAndStart(template: template, on: Date()) }
             Haptics.success()
         case .inProgress, .skipped, .missed:
             break

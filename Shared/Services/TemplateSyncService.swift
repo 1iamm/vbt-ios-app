@@ -69,39 +69,7 @@ public enum TemplateSyncService {
         #endif
     }
 
-    /// V2 activation: push the template, then immediately push a
-    /// `.startWorkout` signal so the Watch can pop to root and land on the
-    /// PlanSynced screen without manual interaction. Cross-version safe — old
-    /// Watch builds without `.startWorkout` decoder fall through harmlessly.
-    ///
-    /// Fire-and-forget overload — uses `transferUserInfo` for both messages.
-    /// Used by callers that don't need delivery confirmation (Today / WeeklyPlan).
-    public static func pushAndStart(
-        template: Template,
-        on date: Date,
-        startItemIndex: Int = 0
-    ) {
-        push(template: template, on: date)
-        #if canImport(WatchConnectivity) && os(iOS)
-        guard WCSession.isSupported() else { return }
-        let session = WCSession.default
-        guard session.activationState == .activated else { return }
-        let activation = StartWorkoutSnapshot(
-            templateId: template.id,
-            startItemIndex: startItemIndex
-        )
-        do {
-            let userInfo = try ConnectivityCodec.encode(.startWorkout(activation))
-            session.transferUserInfo(userInfo)
-        } catch {
-            #if DEBUG
-            print("TemplateSyncService.pushAndStart activation error: \(error)")
-            #endif
-        }
-        #endif
-    }
-
-    /// V2 activation result for the async overload.
+    /// V2 activation result.
     public enum ActivationResult: Sendable {
         /// Watch confirmed receipt within the timeout (`sendMessage` reply).
         case delivered
