@@ -154,7 +154,7 @@ struct TodayView: View {
             }
             // V2.x 训练中实时观看 — 由 Watch 推送的 .ready/.repDetected/...
             // 驱动；isLive 翻 false 时自动 dismiss（.workoutEnded）。
-            .fullScreenCover(isPresented: $liveStoreBinding) {
+            .fullScreenCover(isPresented: liveStoreBinding) {
                 LiveWorkoutView()
             }
         }
@@ -297,7 +297,9 @@ struct TodayView: View {
     }
 
     private func scheduledSource(plan: DayPlan) -> String? {
-        if let last = workouts.first, plan.templateId != nil,
+        // templateId is non-Optional; check whether last week's workout
+        // referenced the same template instead of nil-checking it.
+        if let last = workouts.first,
            Calendar.current.isDate(last.startedAt, equalTo: Date(), toGranularity: .weekOfYear) == false {
             return "重做 \(formatShort(last.startedAt))"
         }
