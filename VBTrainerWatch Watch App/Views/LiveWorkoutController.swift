@@ -227,6 +227,25 @@ public final class LiveWorkoutController: ObservableObject {
         setBestVelocity = 0
     }
 
+    /// Called when Watch RestView's countdown finishes / user taps「跳过」 /
+    /// iPhone pushes restSkip. Cancels the 1Hz countdown push task and tells
+    /// iPhone the rest is over so its fullScreenCover transitions away from
+    /// RestView (either to ReadyOverlay for next set or dismiss for end).
+    public func endRestNowAndAdvanceLiveProgress() {
+        restCountdownTask?.cancel()
+        restCountdownTask = nil
+        if !plannedItems.isEmpty
+            && plannedItemCursor >= plannedItems.count - 1
+            && plannedSetCursor >= plannedSpecs.count {
+            // No more sets anywhere → workout is done.
+            pushLiveProgress(phase: .workoutEnded)
+        } else {
+            // Either more sets in current exercise or another exercise pending.
+            // Push .ready so iPhone shows ReadyOverlay waiting for first rep.
+            pushLiveProgress(phase: .ready)
+        }
+    }
+
     /// 1Hz tick pushing `.restCountdown` to iPhone with restRemainingSec.
     /// Stopped on next .ready (next set starts) or manual cancel.
     private func startRestCountdownPush(seconds: Int) {

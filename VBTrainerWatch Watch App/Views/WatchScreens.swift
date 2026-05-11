@@ -392,7 +392,9 @@ struct WatchRestView: View {
             }
             .onAppear { startCountdown() }
             .onReceive(NotificationCenter.default.publisher(for: .vbtRestAdjustRequested)) { note in
-                if let delta = note.userInfo?["delta"] as? Int {
+                if let skip = note.userInfo?["skip"] as? Bool, skip {
+                    advanceNow()
+                } else if let delta = note.userInfo?["delta"] as? Int {
                     adjustRemaining(by: delta)
                 }
             }
@@ -525,6 +527,10 @@ struct WatchRestView: View {
         guard !advanced else { return }
         advanced = true
         HapticFeedback.restEnded()
+        // Tell controller to push a new phase to iPhone so iPhone's
+        // fullScreenCover leaves the RestView (otherwise it stays on
+        // countdown forever when user skips on Watch).
+        controller.endRestNowAndAdvanceLiveProgress()
         if controller.nextPlannedParams != nil {
             nav.replaceTop(with: .setReady)
         } else {

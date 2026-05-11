@@ -156,13 +156,12 @@ public final class WatchConnectivityService: NSObject, WCSessionDelegate {
                 }
                 WatchActivationCenter.shared.activate(snap)
             case .restAdjust(let payload):
-                // iPhone tapped ±10s on RestView. Update Watch's rest
-                // countdown via a NotificationCenter signal that RestV2View
-                // listens to.
+                // iPhone tapped ±10s / skip on RestView. Forward to
+                // WatchRestView via NotificationCenter.
                 NotificationCenter.default.post(
                     name: .vbtRestAdjustRequested,
                     object: nil,
-                    userInfo: ["delta": payload.deltaSeconds]
+                    userInfo: ["delta": payload.deltaSeconds, "skip": payload.skip]
                 )
             default:
                 // Other inbound message kinds — Watch doesn't yet handle.

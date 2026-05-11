@@ -100,9 +100,6 @@ struct TodayView: View {
                     SectionHeader(title: "我的模板", action: "管理 →", accent: accent)
                     myTemplatesList
 
-                    SectionHeader(title: "快速起点")
-                    quickStartGrid
-
                     Spacer().frame(height: 24)
                 }
             }

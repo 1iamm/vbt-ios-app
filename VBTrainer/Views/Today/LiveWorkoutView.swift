@@ -35,26 +35,23 @@ struct LiveWorkoutView: View {
             } else {
                 ReadyOverlay()
             }
-            // Top-right minimize chevron — collapses the cover but keeps the
-            // session alive. Today shows a banner the user can tap to re-open.
-            VStack {
-                HStack {
-                    Spacer()
-                    Button {
-                        store.minimize()
-                    } label: {
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.white.opacity(0.85))
-                            .frame(width: 36, height: 36)
-                            .background(Color.white.opacity(0.12), in: Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.top, 18)
-                    .padding(.trailing, 18)
-                }
-                Spacer()
+        }
+        // .overlay(alignment:) 只占角落 hit-test 区域，不像之前 ZStack 内
+        // 的 VStack { HStack { Spacer; Button } Spacer } 那样把 Spacer 撑
+        // 满全屏 → 拦了底部 ±10s 按钮的点击。
+        .overlay(alignment: .topTrailing) {
+            Button {
+                store.minimize()
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .frame(width: 36, height: 36)
+                    .background(Color.white.opacity(0.12), in: Circle())
             }
+            .buttonStyle(.plain)
+            .padding(.top, 18)
+            .padding(.trailing, 18)
         }
         // 不要用 preferredColorScheme(.dark)：它会在 cover dismiss 后污染
         // 整个 app 的主题。本 view 已显式 Color.black 背景 + 白文字，无需
@@ -257,22 +254,37 @@ private struct RestView: View {
                 .animation(.easeOut(duration: 0.3), value: isFinal10s)
 
             VStack(spacing: 0) {
-                // Top: previous-set summary — tap to open details
-                Button { showingDetails = true } label: {
-                    VStack(spacing: 4) {
-                        Text("上组 \(payload.repVelocities.count) reps · VL \(Int(payload.vlPercent ?? 0))%")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.85))
-                        Text("平均 \(String(format: "%.2f", avg)) m/s · 查看详情 →")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.white.opacity(0.55))
+                // Top bar: previous-set summary (tap details) + 跳过
+                HStack(spacing: 10) {
+                    Button { showingDetails = true } label: {
+                        VStack(spacing: 2) {
+                            Text("上组 \(payload.repVelocities.count) reps · VL \(Int(payload.vlPercent ?? 0))%")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.85))
+                            Text("平均 \(String(format: "%.2f", avg)) · 查看详情 →")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.white.opacity(0.55))
+                        }
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 12)
+                        .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
                     }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 14)
-                    .background(Color.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
+                    .buttonStyle(.plain)
+                    Button {
+                        TemplateSyncService.pushRestSkip(workoutId: payload.workoutId)
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    } label: {
+                        Text("跳过")
+                            .font(.system(size: 13, weight: .heavy))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background(Color.white.opacity(0.12), in: Capsule())
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
                 .padding(.top, 60)
+                .padding(.horizontal, 16)
 
                 Spacer()
 

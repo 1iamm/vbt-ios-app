@@ -153,7 +153,10 @@ struct WeeklyPlanView: View {
                 .onChange(of: calendarSyncEnabled) { _, newValue in
                     if newValue {
                         Task {
-                            let granted = await EventKitService.shared.requestWriteAccess()
+                            // requestFullAccess（不是 writeOnly）— 后者
+                            // 在 iOS 17+ 不能 enumerate calendars，导致
+                            // upsert 找不到目标 calendar 静默失败。
+                            let granted = await EventKitService.shared.requestFullAccess()
                             calendarSyncEnabled = granted
                             if granted { syncAllToCalendar() }
                         }
