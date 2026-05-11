@@ -54,9 +54,31 @@ extension iPhoneConnectivityService: WCSessionDelegate {
     }
 
     public func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any] = [:]) {
+        #if DEBUG
+        print("[WC] iPhone didReceiveUserInfo keys=\(userInfo.keys)")
+        #endif
         Task { @MainActor in
             await handle(userInfo: userInfo)
         }
+    }
+
+    /// `sendMessage` path — Watch's V2 workout-end sync uses sendMessage for
+    /// immediate delivery (transferUserInfo lags 5-30s in simulator). Without
+    /// implementing this delegate method, those messages would be silently
+    /// dropped, leaving iPhone Today / History unaware that a workout just
+    /// completed.
+    public func session(
+        _ session: WCSession,
+        didReceiveMessage message: [String : Any],
+        replyHandler: @escaping ([String : Any]) -> Void
+    ) {
+        #if DEBUG
+        print("[WC] iPhone didReceiveMessage keys=\(message.keys)")
+        #endif
+        Task { @MainActor in
+            await handle(userInfo: message)
+        }
+        replyHandler([:])
     }
 
     @MainActor
