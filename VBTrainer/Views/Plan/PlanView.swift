@@ -775,7 +775,7 @@ struct PlanView: View {
             // when no history → 1 set / 0 reps / nil weight / 0 rest.
             targetSets: history.isEmpty ? 1 : history.count,
             targetReps: history.first?.reps ?? 0,
-            targetWeightKg: history.first?.weightKg,
+            targetWeightKg: history.first?.weight,
             targetVelocityRange: ex.defaultTargetVelocityRange,
             vlCeiling: ex.defaultVLCeiling,
             restSeconds: history.first?.restSeconds ?? 0,
@@ -787,8 +787,8 @@ struct PlanView: View {
 
         // Always create explicit setSpecs so the table doesn't fall back to
         // the legacy 「3 默认行」 path.
-        let specs: [(weight: Double, reps: Int, rest: Int)] = history.isEmpty
-            ? [(0, 0, 0)]
+        let specs: [(weight: Double, reps: Int, restSeconds: Int)] = history.isEmpty
+            ? [(weight: 0, reps: 0, restSeconds: 0)]
             : history
         for (i, h) in specs.enumerated() {
             let spec = TemplateSetSpec(
@@ -796,7 +796,7 @@ struct PlanView: View {
                 kind: .work,
                 weightKg: h.weight,
                 reps: h.reps,
-                restSeconds: h.rest
+                restSeconds: h.restSeconds
             )
             spec.item = item
             item.setSpecs.append(spec)
