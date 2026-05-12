@@ -150,40 +150,8 @@ struct IPhoneActiveWorkoutView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(Array(controller.plannedItems.enumerated()), id: \.offset) { idx, item in
-                        let isCurrent = idx == controller.currentItemIndex
-                        let done = (controller.loggedSetsByExercise[idx]?.count ?? 0)
-                        let total = max(1, item.effectiveWorkSetCount)
-                        let allDone = done >= total
-                        Button {
-                            controller.switchToExercise(at: idx)
-                            withAnimation { proxy.scrollTo(idx, anchor: .center) }
-                        } label: {
-                            VStack(spacing: 2) {
-                                Text("\(idx + 1). \(exerciseName(item.exerciseId))")
-                                    .font(.system(size: 12, weight: isCurrent ? .heavy : .semibold))
-                                    .foregroundStyle(isCurrent ? .white : (allDone ? Tokens.Color.success : Tokens.Color.label))
-                                Text("\(done)/\(total)")
-                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
-                                    .monospacedDigit()
-                                    .foregroundStyle(isCurrent ? .white.opacity(0.85) : Tokens.Color.secondaryLabel)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(
-                                Group {
-                                    if isCurrent { Tokens.Color.accent }
-                                    else if allDone { Tokens.Color.success.opacity(0.12) }
-                                    else { Tokens.Color.card }
-                                },
-                                in: RoundedRectangle(cornerRadius: 10)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(isCurrent ? Color.clear : Tokens.Color.secondaryLabel.opacity(0.15), lineWidth: 1)
-                            )
-                        }
-                        .id(idx)
-                        .buttonStyle(.plain)
+                        exerciseChip(idx: idx, item: item, proxy: proxy)
+                            .id(idx)
                     }
                 }
                 .padding(.horizontal, 14)
@@ -197,6 +165,45 @@ struct IPhoneActiveWorkoutView: View {
             }
         }
         .background(.thinMaterial)
+    }
+
+    @ViewBuilder
+    private func exerciseChip(idx: Int, item: TemplateItemSnapshot, proxy: ScrollViewProxy) -> some View {
+        let isCurrent = idx == controller.currentItemIndex
+        let done = controller.loggedSetsByExercise[idx]?.count ?? 0
+        let total = max(1, item.effectiveWorkSetCount)
+        let allDone = done >= total
+        let bg: Color = isCurrent
+            ? Tokens.Color.accent
+            : (allDone ? Tokens.Color.success.opacity(0.12) : Tokens.Color.card)
+        let titleColor: Color = isCurrent
+            ? .white
+            : (allDone ? Tokens.Color.success : Tokens.Color.label)
+        let subColor: Color = isCurrent ? .white.opacity(0.85) : Tokens.Color.secondaryLabel
+        let strokeColor: Color = isCurrent ? .clear : Tokens.Color.secondaryLabel.opacity(0.15)
+
+        Button {
+            controller.switchToExercise(at: idx)
+            withAnimation { proxy.scrollTo(idx, anchor: .center) }
+        } label: {
+            VStack(spacing: 2) {
+                Text("\(idx + 1). \(exerciseName(item.exerciseId))")
+                    .font(.system(size: 12, weight: isCurrent ? .heavy : .semibold))
+                    .foregroundStyle(titleColor)
+                Text("\(done)/\(total)")
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(subColor)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(bg, in: RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(strokeColor, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Rest banner
