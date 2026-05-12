@@ -322,9 +322,15 @@ public final class IPhoneWorkoutController: ObservableObject {
         list.remove(at: index)
         loggedSetsByExercise[currentItemIndex] = list
 
+        // 用户把当前动作的最后一条也删掉了 → 把该动作从 plan 中整体移除，
+        // 切回上一个动作 tab（若该动作是第一个，则切到原来的第二个）。
+        if list.isEmpty {
+            removeCurrentExerciseAndGoBack()
+            return
+        }
+
         restTask?.cancel()
         restTask = nil
-        // 把游标拉回到「下一个待完成」组并刷新当前 weight/reps。
         let completedCount = list.filter { $0.completed }.count
         currentSetIndex = completedCount
         let specs = currentPlannedSpecs
@@ -337,6 +343,37 @@ public final class IPhoneWorkoutController: ObservableObject {
         }
         phase = .ready
         pushLive(.ready)
+    }
+
+    /// 删除当前动作并切到「上一个」 tab。若整个 plan 删空则结束训练。
+    private func removeCurrentExerciseAndGoBack() {
+        restTask?.cancel()
+        restTask = nil
+        let removingIdx = currentItemIndex
+        loggedSetsByExercise[removingIdx] = nil
+        if plannedItems.indices.contains(removingIdx) {
+            plannedItems.remove(at: removingIdx)
+        }
+        // loggedSetsByExercise 的 key 是按 plannedItems 的 index 编排的，
+        // 移除 removingIdx 后，其后所有 key 需要 -1。
+        var rekeyed: [Int: [LoggedSet]] = [:]
+        for (k, v) in loggedSetsByExercise {
+            if k > removingIdx { rekeyed[k - 1] = v }
+            else if k < removingIdx { rekeyed[k] = v }
+        }
+        loggedSetsByExercise = rekeyed
+
+        if plannedItems.isEmpty {
+            // 整场训练被删空 → 结束。
+            phase = .finished
+            isActive = false
+            isMinimized = false
+            return
+        }
+
+        // 切到上一个 tab；若被删的是第 0 个，切到原来的第 1 个（现在的第 0 个）。
+        currentItemIndex = removingIdx > 0 ? removingIdx - 1 : 0
+        loadCurrentItem()
     }
 
     /// User jumped to a different exercise via the carousel/picker. Rest
