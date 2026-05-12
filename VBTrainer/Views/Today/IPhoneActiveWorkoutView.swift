@@ -173,7 +173,11 @@ struct IPhoneActiveWorkoutView: View {
     private func exerciseChip(idx: Int, item: TemplateItemSnapshot, proxy: ScrollViewProxy) -> some View {
         let isCurrent = idx == controller.currentItemIndex
         let done = controller.completedSetCount(forExerciseIndex: idx)
-        let total = max(1, item.effectiveWorkSetCount)
+        // 总组数显示实时值：用户「加一组」 进来的额外行也应计入。
+        // 优先用 entries.count（已经按 specs 预填 + 用户增删的真实长度），
+        // 仅当还没进过该 tab（entries 为空）时回退到模板 effectiveWorkSetCount。
+        let entryCount = controller.loggedSetsByExercise[idx]?.count ?? 0
+        let total = max(1, entryCount > 0 ? entryCount : item.effectiveWorkSetCount)
         let allDone = done >= total
         let bg: Color = isCurrent
             ? Tokens.Color.accent
@@ -539,23 +543,36 @@ struct IPhoneActiveWorkoutView: View {
             HStack(spacing: 10) {
                 switch controller.phase {
                 case .ready, .setActive:
+                    let allDone = isCurrentExerciseAllDone
                     Button {
+                        guard !allDone else { return }
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                         controller.completeCurrentSet()
                     } label: {
                         HStack(spacing: 8) {
-                            Image(systemName: "checkmark.circle.fill")
+                            Image(systemName: allDone ? "checkmark.circle" : "checkmark.circle.fill")
                                 .font(.system(size: 17, weight: .bold))
-                            Text(completeButtonText)
+                            Text(allDone ? "本动作已全部完成" : completeButtonText)
                                 .font(.system(size: 17, weight: .heavy))
                         }
-                        .foregroundStyle(.white)
+                        .foregroundStyle(allDone ? Tokens.Color.tertiaryLabel : .white)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
-                        .background(Tokens.Color.accent, in: RoundedRectangle(cornerRadius: 14))
-                        .shadow(color: Tokens.Color.accent.opacity(0.35), radius: 8, x: 0, y: 3)
+                        .background(
+                            (allDone ? Tokens.Color.card : Tokens.Color.accent),
+                            in: RoundedRectangle(cornerRadius: 14)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(allDone ? Tokens.Color.secondaryLabel.opacity(0.25) : Color.clear, lineWidth: 1)
+                        )
+                        .shadow(
+                            color: allDone ? .clear : Tokens.Color.accent.opacity(0.35),
+                            radius: 8, x: 0, y: 3
+                        )
                     }
                     .buttonStyle(.plain)
+                    .disabled(allDone)
 
                 case .setEnded:
                     Color.clear.frame(height: 52)
@@ -597,6 +614,14 @@ struct IPhoneActiveWorkoutView: View {
             .padding(.vertical, 10)
             .background(.thinMaterial)
         }
+    }
+
+    /// 当前动作下所有条目（含「加一组」 加的额外行）都已勾选完成。
+    /// 用户切回已完成的动作时 CTA 应该置灰。
+    private var isCurrentExerciseAllDone: Bool {
+        let logged = controller.loggedSetsForCurrent
+        guard !logged.isEmpty else { return false }
+        return logged.allSatisfy { $0.completed }
     }
 
     private var completeButtonText: String {
