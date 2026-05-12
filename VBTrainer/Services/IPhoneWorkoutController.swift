@@ -27,6 +27,8 @@ public final class IPhoneWorkoutController: ObservableObject {
     @Published public private(set) var restTotalSec: Int = 0
 
     /// Per-exercise logged sets, keyed by exercise index in plannedItems.
+    /// 注意：本数组包含**所有**用户加入的组（含未勾选的「加一组」占位），
+    /// 判定「已完成」时需用 `.filter { $0.completed }`。
     @Published public private(set) var loggedSetsByExercise: [Int: [LoggedSet]] = [:]
     @Published public private(set) var currentSetIndex: Int = 0
     @Published public private(set) var plannedItems: [TemplateItemSnapshot] = []
@@ -53,17 +55,25 @@ public final class IPhoneWorkoutController: ObservableObject {
         plannedItems.reduce(0) { $0 + max(1, $1.effectiveWorkSetCount) }
     }
     public var totalLoggedSets: Int {
-        loggedSetsByExercise.values.reduce(0) { $0 + $1.count }
+        loggedSetsByExercise.values.reduce(0) { $0 + $1.filter { $0.completed }.count }
+    }
+    /// 已勾选完成的组数（按动作索引），供 UI 显示 chip 进度等。
+    public func completedSetCount(forExerciseIndex idx: Int) -> Int {
+        (loggedSetsByExercise[idx] ?? []).filter { $0.completed }.count
     }
     public var workoutStartedAt: Date { startedAt }
 
     public struct LoggedSet: Identifiable, Equatable {
         public let id: UUID
         public let setIndex: Int
-        public let weightKg: Double
-        public let reps: Int
+        public var weightKg: Double
+        public var reps: Int
         public let rpe: Int?
         public let completedAt: Date
+        /// false = 该行已存在但未勾选完成（用户「加一组」或主动取消勾选）。
+        /// 仅 completed=true 的行才计入「已完成」、参与自动跳下一动作判定、
+        /// 以及最终持久化进 SwiftData。
+        public var completed: Bool
     }
 
     private var liveWorkoutId: UUID = UUID()
@@ -134,25 +144,40 @@ public final class IPhoneWorkoutController: ObservableObject {
     // MARK: - User actions
 
     public func completeCurrentSet(rpe: Int? = nil) {
-        // V1.x: 「加一组」 during rest means「再做一组」— cancel the
-        // running countdown, log the new set, then restart rest. Without
-        // this the rest-phase guard silently dropped the tap and the
-        // 「加一组」 button looked broken to the user.
+        // 「完成本组」语义：把「当前正在进行的组」标记为完成 → 进入休息。
+        // 当前组 = 第一个未勾选的条目；若所有条目都已勾选，则新建一条。
         if phase == .resting {
             restTask?.cancel()
             restTask = nil
         }
         guard phase == .ready || phase == .setActive || phase == .resting else { return }
-        let logged = LoggedSet(
-            id: UUID(),
-            setIndex: currentSetIndex,
-            weightKg: currentWeightKg,
-            reps: currentReps,
-            rpe: rpe,
-            completedAt: Date()
-        )
+
         var list = loggedSetsByExercise[currentItemIndex] ?? []
-        list.append(logged)
+        if let pendingIdx = list.firstIndex(where: { !$0.completed }) {
+            // 已存在未勾选条目（用户先点了「加一组」或取消过勾选）→ 把这条标完成。
+            // weight/reps 用条目自身已有值（用户可能改过）；不强制覆盖为 currentXxx。
+            list[pendingIdx].completed = true
+            list[pendingIdx] = LoggedSet(
+                id: list[pendingIdx].id,
+                setIndex: list[pendingIdx].setIndex,
+                weightKg: list[pendingIdx].weightKg,
+                reps: list[pendingIdx].reps,
+                rpe: rpe ?? list[pendingIdx].rpe,
+                completedAt: Date(),
+                completed: true
+            )
+        } else {
+            let logged = LoggedSet(
+                id: UUID(),
+                setIndex: currentSetIndex,
+                weightKg: currentWeightKg,
+                reps: currentReps,
+                rpe: rpe,
+                completedAt: Date(),
+                completed: true
+            )
+            list.append(logged)
+        }
         loggedSetsByExercise[currentItemIndex] = list
         phase = .setEnded
         pushLive(.setEnded)
@@ -163,10 +188,49 @@ public final class IPhoneWorkoutController: ObservableObject {
         }
     }
 
-    /// V1.x: log a set with explicit weight/reps without going through the
-    /// rest countdown. Used by the table-row 「未勾选 → 勾选」 toggle so the
-    /// user can re-check a slot they un-toggled, or check ahead a row.
-    /// Doesn't touch phase or rest — just inserts a LoggedSet.
+    /// 「加一组」按钮：追加一条空白未勾选条目，不触发休息倒计时。
+    /// 默认 weight/reps 取 currentWeightKg/Reps；用户后续可点击 cell 编辑。
+    /// 若 phase 已是 .finished，会回退到 .ready 让用户继续训练。
+    public func appendPendingSet() {
+        var list = loggedSetsByExercise[currentItemIndex] ?? []
+        let logged = LoggedSet(
+            id: UUID(),
+            setIndex: list.count,
+            weightKg: currentWeightKg,
+            reps: currentReps,
+            rpe: nil,
+            completedAt: Date(),
+            completed: false
+        )
+        list.append(logged)
+        loggedSetsByExercise[currentItemIndex] = list
+        if phase == .finished { phase = .ready }
+        pushLive(phase == .ready ? .ready : .setEnded)
+    }
+
+    /// 通过 cell 编辑修改「当前组」的 weight/reps。
+    /// - 若当前组对应一个已存在的未勾选条目（用户先点了「加一组」），同步更新该条目。
+    /// - 否则只更新 currentWeightKg/Reps 缓存（下一次 completeCurrentSet 会用到）。
+    public func updateCurrentWeight(_ w: Double) {
+        let clamped = max(0, min(500, w))
+        currentWeightKg = clamped
+        if var list = loggedSetsByExercise[currentItemIndex],
+           let pendingIdx = list.firstIndex(where: { !$0.completed }) {
+            list[pendingIdx].weightKg = clamped
+            loggedSetsByExercise[currentItemIndex] = list
+        }
+    }
+    public func updateCurrentReps(_ r: Int) {
+        let clamped = max(1, min(99, r))
+        currentReps = clamped
+        if var list = loggedSetsByExercise[currentItemIndex],
+           let pendingIdx = list.firstIndex(where: { !$0.completed }) {
+            list[pendingIdx].reps = clamped
+            loggedSetsByExercise[currentItemIndex] = list
+        }
+    }
+
+    /// 直接 log 一组完成态条目（不触发休息），用于点击 planned 行末圆圈视为补勾选。
     public func addLoggedSet(weightKg: Double, reps: Int, atSetIndex slot: Int) {
         let logged = LoggedSet(
             id: UUID(),
@@ -174,12 +238,34 @@ public final class IPhoneWorkoutController: ObservableObject {
             weightKg: weightKg,
             reps: reps,
             rpe: nil,
-            completedAt: Date()
+            completedAt: Date(),
+            completed: true
         )
         var list = loggedSetsByExercise[currentItemIndex] ?? []
         list.append(logged)
         loggedSetsByExercise[currentItemIndex] = list
         pushLive(phase == .ready ? .ready : .setEnded)
+    }
+
+    /// 点击行末的勾选框：翻转 completed 标志，**保留**该行 weight/reps 数据。
+    /// 若由 done → undone，取消正在进行的休息倒计时并把 phase 拉回 .ready，
+    /// 这样用户可以重新做这一组。
+    public func toggleSetCompleted(at index: Int) {
+        guard var list = loggedSetsByExercise[currentItemIndex],
+              list.indices.contains(index) else { return }
+        let wasCompleted = list[index].completed
+        list[index].completed.toggle()
+        loggedSetsByExercise[currentItemIndex] = list
+
+        if wasCompleted {
+            // 取消勾选 → 中断 rest，回到 .ready 等用户重新完成。
+            restTask?.cancel()
+            restTask = nil
+            phase = .ready
+            pushLive(.ready)
+        } else {
+            pushLive(phase == .ready ? .ready : .setEnded)
+        }
     }
 
     /// Delete a previously-logged set for the current exercise. Cancels any
@@ -195,7 +281,8 @@ public final class IPhoneWorkoutController: ObservableObject {
         restTask?.cancel()
         restTask = nil
         // 把游标拉回到「下一个待完成」组并刷新当前 weight/reps。
-        currentSetIndex = list.count
+        let completedCount = list.filter { $0.completed }.count
+        currentSetIndex = completedCount
         let specs = currentPlannedSpecs
         if currentSetIndex < specs.count {
             let next = specs[currentSetIndex]
@@ -264,7 +351,7 @@ public final class IPhoneWorkoutController: ObservableObject {
         // 回退到 effectiveWorkSetCount（= targetSets）。这样避免 specs
         // 为空时第 1 组刚完就被判定「全部完成」直接跳到下一动作。
         let totalForExercise = max(specs.count, currentItem?.effectiveWorkSetCount ?? 0)
-        let doneCount = loggedSetsForCurrent.count
+        let doneCount = loggedSetsForCurrent.filter { $0.completed }.count
 
         // 还有未完成的组 → 留在当前动作。
         if doneCount < totalForExercise {
@@ -348,7 +435,8 @@ public final class IPhoneWorkoutController: ObservableObject {
     private func saveToSwiftData(context: ModelContext, endedAt: Date, rpe: Int?, notes: String?) {
         // One Workout per exercise that actually got any logged sets.
         for (idx, item) in plannedItems.enumerated() {
-            let sets = loggedSetsByExercise[idx] ?? []
+            // 只持久化勾选完成的组；用户加了但未勾选的占位行不写入历史。
+            let sets = (loggedSetsByExercise[idx] ?? []).filter { $0.completed }
             guard !sets.isEmpty else { continue }
             let workout = Workout(
                 id: UUID(),
