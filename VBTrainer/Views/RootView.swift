@@ -33,6 +33,20 @@ struct MainTabsView: View {
 
     @State private var selection: Tab = .today
     @StateObject private var liveStore = LiveWorkoutStore.shared
+    @ObservedObject private var iPhoneSession = IPhoneWorkoutController.shared
+
+    /// fullScreenCover 是否展示：训练激活 && 用户没收起到悬浮窗。
+    /// Setter 收到 false 时把训练标记为「最小化」 而不是结束。
+    private var iPhoneSessionBinding: Binding<Bool> {
+        Binding(
+            get: { iPhoneSession.isActive && !iPhoneSession.isMinimized },
+            set: { newValue in
+                if !newValue && iPhoneSession.isActive {
+                    iPhoneSession.minimize()
+                }
+            }
+        )
+    }
 
     var body: some View {
         TabView(selection: $selection) {
@@ -69,8 +83,24 @@ struct MainTabsView: View {
                     .padding(.bottom, 70)  // 在 TabBar 上方
                     .transition(.scale.combined(with: .opacity))
             }
+            if iPhoneSession.isActive && iPhoneSession.isMinimized {
+                IPhoneWorkoutPiPBubble(
+                    controller: iPhoneSession,
+                    onTap: { iPhoneSession.expand() }
+                )
+                .padding(.trailing, 14)
+                .padding(.bottom, 70)
+                .transition(.scale.combined(with: .opacity))
+            }
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.78), value: liveStore.isMinimized)
+        .animation(.spring(response: 0.35, dampingFraction: 0.78), value: iPhoneSession.isMinimized)
+        // iPhone-only 训练 cover（全局承接，避免分散在 TodayView / PlanView）
+        .fullScreenCover(isPresented: iPhoneSessionBinding) {
+            NavigationStack {
+                IPhoneActiveWorkoutView()
+            }
+        }
     }
 }
 
@@ -156,6 +186,60 @@ private struct LiveWorkoutPiPBubble: View {
     private func formatTime(_ s: Int) -> String {
         let m = s / 60
         let r = s % 60
+        return String(format: "%d:%02d", m, r)
+    }
+}
+
+/// iPhone-only 训练的悬浮窗（区别于 LiveWorkoutPiPBubble，那个是 Watch 镜像用的）。
+/// 同样定位在右下角，显示动作名 + 已完成/总组数 + 训练时长。
+@available(iOS 17.0, *)
+private struct IPhoneWorkoutPiPBubble: View {
+    @ObservedObject var controller: IPhoneWorkoutController
+    let onTap: () -> Void
+
+    @State private var tick: Date = Date()
+    private let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    Circle().fill(Color.orange).frame(width: 6, height: 6)
+                    Text("训练中").font(.system(size: 9, weight: .heavy)).tracking(0.6)
+                        .foregroundStyle(.secondary)
+                }
+                Text(controller.exerciseDisplayName)
+                    .font(.system(size: 13, weight: .bold))
+                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text("\(controller.totalLoggedSets)/\(controller.totalPlannedSets) 组")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                    Text(formatElapsed(tick.timeIntervalSince(controller.workoutStartedAt)))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.orange.opacity(0.6), lineWidth: 1.2)
+            )
+            .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+            .frame(width: 160)
+        }
+        .buttonStyle(.plain)
+        .onReceive(timer) { tick = $0 }
+    }
+
+    private func formatElapsed(_ secs: TimeInterval) -> String {
+        let s = max(0, Int(secs))
+        let h = s / 3600, m = (s % 3600) / 60, r = s % 60
+        if h > 0 { return String(format: "%d:%02d:%02d", h, m, r) }
         return String(format: "%d:%02d", m, r)
     }
 }

@@ -23,7 +23,6 @@ struct TodayView: View {
 
     @State private var hasRefreshed = false
     @State private var pendingPlanTemplate: Template?
-    @State private var pendingIPhonePlan: IPhonePlanRoute?
     @State private var pendingModeChoiceTemplate: Template?
     @State private var pendingModeChoicePlanDate: Date?
     @State private var pendingWorkoutDetail: WorkoutDetailRoute?
@@ -167,12 +166,8 @@ struct TodayView: View {
             .fullScreenCover(isPresented: liveStoreBinding) {
                 LiveWorkoutView()
             }
-            // iPhone-only 训练（V2.x：无 Watch 用户）
-            .fullScreenCover(item: $pendingIPhonePlan) { route in
-                NavigationStack {
-                    IPhoneActiveWorkoutView(items: route.items, startingIndex: 0, templateId: route.templateId)
-                }
-            }
+            // iPhone-only 训练 cover 现在由 MainTabsView 全局承接，
+            // 这里只负责通过 IPhoneWorkoutController.shared.preparePlan 启动。
             // 自动模式 + 有 Watch：让用户选择在哪练
             .confirmationDialog(
                 "在哪里训练？",
@@ -187,7 +182,7 @@ struct TodayView: View {
                     pendingModeChoicePlanDate = nil
                 }
                 Button("在 iPhone 上练") {
-                    pendingIPhonePlan = planRoute(from: template)
+                    startIPhoneWorkout(from: template)
                     pendingModeChoiceTemplate = nil
                     pendingModeChoicePlanDate = nil
                 }
@@ -282,6 +277,13 @@ struct TodayView: View {
         let snap = TemplateSyncService.snapshot(of: template, on: Date())
         guard !snap.items.isEmpty else { return nil }
         return IPhonePlanRoute(items: snap.items, templateId: template.id)
+    }
+
+    /// Start an iPhone-only workout via the shared controller. Triggers the
+    /// RootView-level fullScreenCover via the controller's isActive flag.
+    private func startIPhoneWorkout(from template: Template) {
+        guard let route = planRoute(from: template) else { return }
+        IPhoneWorkoutController.shared.preparePlan(items: route.items, templateId: route.templateId)
     }
 
     /// Bridge LiveWorkoutStore.isLive @Published to fullScreenCover binding.
@@ -481,7 +483,7 @@ struct TodayView: View {
             //  · auto + has Watch → confirmationDialog
             switch WorkoutModeResolver.preference {
             case .forceIPhone:
-                pendingIPhonePlan = planRoute(from: template)
+                startIPhoneWorkout(from: template)
             case .forceWatch:
                 Task { _ = await TemplateSyncService.pushAndStart(template: template, on: plan.date) }
             case .auto:
@@ -489,7 +491,7 @@ struct TodayView: View {
                     pendingModeChoiceTemplate = template
                     pendingModeChoicePlanDate = plan.date
                 } else {
-                    pendingIPhonePlan = planRoute(from: template)
+                    startIPhoneWorkout(from: template)
                 }
             }
             Haptics.success()

@@ -18,7 +18,8 @@ import SwiftData
 @available(iOS 17.0, *)
 struct IPhoneActiveWorkoutView: View {
 
-    @StateObject var controller = IPhoneWorkoutController()
+    // 单例：训练状态在 cover 被「最小化」关闭后仍存活，悬浮窗点回来时复用。
+    @ObservedObject var controller = IPhoneWorkoutController.shared
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
@@ -113,7 +114,8 @@ struct IPhoneActiveWorkoutView: View {
 
     private var topBar: some View {
         HStack(spacing: 8) {
-            Button { dismiss() } label: {
+            // ▼ 不结束训练，只是收起到悬浮窗；用户点悬浮窗可回到此页。
+            Button { controller.minimize() } label: {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 16, weight: .bold))
                     .foregroundStyle(Tokens.Color.label)

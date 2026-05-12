@@ -18,6 +18,10 @@ import SwiftUI
 @MainActor
 public final class IPhoneWorkoutController: ObservableObject {
 
+    /// 全局单例：让训练状态在 fullScreenCover 被「最小化」 dismiss 后继续存活；
+    /// view 关闭后用户从悬浮窗点回来还能看到原训练。
+    public static let shared = IPhoneWorkoutController()
+
     public enum Phase: String { case ready, setActive, setEnded, resting, finished }
 
     @Published public private(set) var phase: Phase = .ready
@@ -25,6 +29,12 @@ public final class IPhoneWorkoutController: ObservableObject {
     @Published public var currentReps: Int = 0
     @Published public private(set) var restRemainingSec: Int = 0
     @Published public private(set) var restTotalSec: Int = 0
+
+    /// 训练是否在进行中（preparePlan → true；finishWorkout → false）。
+    /// 驱动 RootView 的 fullScreenCover 是否展示。
+    @Published public private(set) var isActive: Bool = false
+    /// 用户点了 ▼ 收起到悬浮窗。isActive=true && isMinimized=true 时显示悬浮窗。
+    @Published public var isMinimized: Bool = false
 
     /// Per-exercise logged sets, keyed by exercise index in plannedItems.
     /// 注意：本数组包含**所有**用户加入的组（含未勾选的「加一组」占位），
@@ -96,7 +106,14 @@ public final class IPhoneWorkoutController: ObservableObject {
         startedAt = Date()
         liveWorkoutId = UUID()
         loadCurrentItem()
+        isActive = true
+        isMinimized = false
     }
+
+    /// 把训练收起到悬浮窗（不结束训练，状态保留）。
+    public func minimize() { isMinimized = true }
+    /// 从悬浮窗回到全屏 cover。
+    public func expand() { isMinimized = false }
 
     /// Single-exercise convenience (back-compat for ad-hoc / TodayView quick path).
     public func preparePlanned(item: TemplateItemSnapshot, templateId: UUID? = nil) {
@@ -426,6 +443,8 @@ public final class IPhoneWorkoutController: ObservableObject {
             saveToSwiftData(context: context, endedAt: endedAt, rpe: rpe, notes: finalNotes)
         }
         pushLive(.workoutEnded)
+        isActive = false
+        isMinimized = false
     }
 
     // MARK: - Last-workout lookup
