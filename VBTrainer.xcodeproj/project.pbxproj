@@ -26,6 +26,56 @@
 		160FD385BB5482724AEE4938 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 639E293504390C1283B706AE /* UserProfile.swift */; };
 		170C28BCCAC8D0EB3909A281 /* WorkoutStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADE1F706B84F6C0B5053221E /* WorkoutStore.swift */; };
 		1A2E77D20B95681BE2CDA7B3 /* HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D3E556E0623DBEB57E04A1A /* HealthKitService.swift */; };
+		A10000000000000000000002 /* AIRecommendationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* AIRecommendationEngine.swift */; };
+		A10000000000000000000003 /* AIRecommendationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* AIRecommendationEngine.swift */; };
+		A10000000000000000000004 /* AIRecommendationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000001 /* AIRecommendationEngine.swift */; };
+		A10000000000000000000006 /* DayPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000005 /* DayPlan.swift */; };
+		A10000000000000000000007 /* DayPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000005 /* DayPlan.swift */; };
+		A10000000000000000000008 /* DayPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000005 /* DayPlan.swift */; };
+		A1000000000000000000000A /* DayPlanEventBus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000009 /* DayPlanEventBus.swift */; };
+		A1000000000000000000000B /* DayPlanEventBus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000009 /* DayPlanEventBus.swift */; };
+		A1000000000000000000000C /* DayPlanEventBus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000009 /* DayPlanEventBus.swift */; };
+		A1000000000000000000000E /* DayPlanReverseSyncer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000D /* DayPlanReverseSyncer.swift */; };
+		A1000000000000000000000F /* DayPlanReverseSyncer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000D /* DayPlanReverseSyncer.swift */; };
+		A10000000000000000000010 /* DayPlanReverseSyncer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000000D /* DayPlanReverseSyncer.swift */; };
+		A10000000000000000000012 /* DayPlanStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* DayPlanStateMachine.swift */; };
+		A10000000000000000000013 /* DayPlanStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* DayPlanStateMachine.swift */; };
+		A10000000000000000000014 /* DayPlanStateMachine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* DayPlanStateMachine.swift */; };
+		A10000000000000000000016 /* DayPlanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* DayPlanStore.swift */; };
+		A10000000000000000000017 /* DayPlanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* DayPlanStore.swift */; };
+		A10000000000000000000018 /* DayPlanStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* DayPlanStore.swift */; };
+		A1000000000000000000001A /* EventKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* EventKitService.swift */; };
+		A1000000000000000000001B /* EventKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* EventKitService.swift */; };
+		A1000000000000000000001C /* EventKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* EventKitService.swift */; };
+		A1000000000000000000001E /* GoalTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D /* GoalTheme.swift */; };
+		A1000000000000000000001F /* GoalTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D /* GoalTheme.swift */; };
+		A10000000000000000000020 /* GoalTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001D /* GoalTheme.swift */; };
+		A10000000000000000000022 /* RecommendationTemplateBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* RecommendationTemplateBuilder.swift */; };
+		A10000000000000000000023 /* RecommendationTemplateBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* RecommendationTemplateBuilder.swift */; };
+		A10000000000000000000024 /* RecommendationTemplateBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* RecommendationTemplateBuilder.swift */; };
+		A10000000000000000000026 /* TemplateSetSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000025 /* TemplateSetSpec.swift */; };
+		A10000000000000000000027 /* TemplateSetSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000025 /* TemplateSetSpec.swift */; };
+		A10000000000000000000028 /* TemplateSetSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000025 /* TemplateSetSpec.swift */; };
+		A1000000000000000000002A /* WeekOverWeekStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000029 /* WeekOverWeekStats.swift */; };
+		A1000000000000000000002B /* WeekOverWeekStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000029 /* WeekOverWeekStats.swift */; };
+		A1000000000000000000002C /* WeekOverWeekStats.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000029 /* WeekOverWeekStats.swift */; };
+		A1000000000000000000002E /* WeeklyAdherence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000002D /* WeeklyAdherence.swift */; };
+		A1000000000000000000002F /* WeeklyAdherence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000002D /* WeeklyAdherence.swift */; };
+		A10000000000000000000030 /* WeeklyAdherence.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000002D /* WeeklyAdherence.swift */; };
+		A10000000000000000000032 /* CelebrationCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000031 /* CelebrationCard.swift */; };
+		A10000000000000000000034 /* ExercisePickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000033 /* ExercisePickerSheet.swift */; };
+		A10000000000000000000036 /* IPhoneActiveWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000035 /* IPhoneActiveWorkoutView.swift */; };
+		A10000000000000000000038 /* IPhoneWorkoutController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000037 /* IPhoneWorkoutController.swift */; };
+		A1000000000000000000003A /* LiveWorkoutStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000039 /* LiveWorkoutStore.swift */; };
+		A1000000000000000000003C /* LiveWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003B /* LiveWorkoutView.swift */; };
+		A1000000000000000000003E /* PlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003D /* PlanView.swift */; };
+		A10000000000000000000040 /* PlansListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000003F /* PlansListView.swift */; };
+		A10000000000000000000042 /* RedesignComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000041 /* RedesignComponents.swift */; };
+		A10000000000000000000044 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000043 /* StatsView.swift */; };
+		A10000000000000000000046 /* TweaksQuickSwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000045 /* TweaksQuickSwitcher.swift */; };
+		A10000000000000000000048 /* WeeklyPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000047 /* WeeklyPlanView.swift */; };
+		A1000000000000000000004A /* WorkoutModeResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000049 /* WorkoutModeResolver.swift */; };
+		A1000000000000000000004C /* LiveWorkoutController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000004B /* LiveWorkoutController.swift */; };
 		A001000000000000000000A1 /* HealthKitAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000000000000000000A0 /* HealthKitAuthorization.swift */; };
 		A001000000000000000000A2 /* HealthKitAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000000000000000000A0 /* HealthKitAuthorization.swift */; };
 		A001000000000000000000A3 /* HealthKitAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000000000000000000A0 /* HealthKitAuthorization.swift */; };
@@ -238,6 +288,32 @@
 		3A4CAF996EEC73A099FB4650 /* WorkoutSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSnapshot.swift; sourceTree = "<group>"; };
 		3B022E4460ED5F163EB85388 /* ReadinessCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessCalculatorTests.swift; sourceTree = "<group>"; };
 		3D3E556E0623DBEB57E04A1A /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
+		A10000000000000000000001 /* AIRecommendationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AIRecommendationEngine.swift; path = "Shared/Services/AIRecommendationEngine.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000005 /* DayPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DayPlan.swift; path = "Shared/Models/DayPlan.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000009 /* DayPlanEventBus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DayPlanEventBus.swift; path = "Shared/Services/DayPlanEventBus.swift"; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000000D /* DayPlanReverseSyncer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DayPlanReverseSyncer.swift; path = "Shared/Services/DayPlanReverseSyncer.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000011 /* DayPlanStateMachine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DayPlanStateMachine.swift; path = "Shared/Services/DayPlanStateMachine.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000015 /* DayPlanStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DayPlanStore.swift; path = "Shared/Services/DayPlanStore.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000019 /* EventKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EventKitService.swift; path = "Shared/Services/EventKitService.swift"; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000001D /* GoalTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = GoalTheme.swift; path = "Shared/Theme/GoalTheme.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000021 /* RecommendationTemplateBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RecommendationTemplateBuilder.swift; path = "Shared/Services/RecommendationTemplateBuilder.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000025 /* TemplateSetSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TemplateSetSpec.swift; path = "Shared/Models/TemplateSetSpec.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000029 /* WeekOverWeekStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WeekOverWeekStats.swift; path = "Shared/Services/WeekOverWeekStats.swift"; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000002D /* WeeklyAdherence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WeeklyAdherence.swift; path = "Shared/Services/WeeklyAdherence.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000031 /* CelebrationCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CelebrationCard.swift; path = "VBTrainer/Views/Common/CelebrationCard.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000033 /* ExercisePickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ExercisePickerSheet.swift; path = "VBTrainer/Views/Common/ExercisePickerSheet.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000035 /* IPhoneActiveWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IPhoneActiveWorkoutView.swift; path = "VBTrainer/Views/Today/IPhoneActiveWorkoutView.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000037 /* IPhoneWorkoutController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = IPhoneWorkoutController.swift; path = "VBTrainer/Services/IPhoneWorkoutController.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000039 /* LiveWorkoutStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LiveWorkoutStore.swift; path = "VBTrainer/Services/LiveWorkoutStore.swift"; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000003B /* LiveWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LiveWorkoutView.swift; path = "VBTrainer/Views/Today/LiveWorkoutView.swift"; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000003D /* PlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlanView.swift; path = "VBTrainer/Views/Plan/PlanView.swift"; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000003F /* PlansListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = PlansListView.swift; path = "VBTrainer/Views/Plan/PlansListView.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000041 /* RedesignComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = RedesignComponents.swift; path = "VBTrainer/Views/Common/RedesignComponents.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000043 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = StatsView.swift; path = "VBTrainer/Views/Stats/StatsView.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000045 /* TweaksQuickSwitcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TweaksQuickSwitcher.swift; path = "VBTrainer/Views/Common/TweaksQuickSwitcher.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000047 /* WeeklyPlanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WeeklyPlanView.swift; path = "VBTrainer/Views/Plan/WeeklyPlanView.swift"; sourceTree = SOURCE_ROOT; };
+		A10000000000000000000049 /* WorkoutModeResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = WorkoutModeResolver.swift; path = "VBTrainer/Services/WorkoutModeResolver.swift"; sourceTree = SOURCE_ROOT; };
+		A1000000000000000000004B /* LiveWorkoutController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = LiveWorkoutController.swift; path = "VBTrainerWatch Watch App/Views/LiveWorkoutController.swift"; sourceTree = SOURCE_ROOT; };
 		A001000000000000000000A0 /* HealthKitAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitAuthorization.swift; sourceTree = "<group>"; };
 		3DDAB483744249B19D96D2C4 /* ReadinessCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessCalculator.swift; sourceTree = "<group>"; };
 		47DCBAE23144CB47319B2228 /* VBTrainerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VBTrainerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -381,6 +457,32 @@
 				A4DB88EBC293631BAD604AE0 /* CSVExporter.swift */,
 				A001000000000000000000A0 /* HealthKitAuthorization.swift */,
 				3D3E556E0623DBEB57E04A1A /* HealthKitService.swift */,
+				A10000000000000000000001 /* AIRecommendationEngine.swift */,
+				A10000000000000000000005 /* DayPlan.swift */,
+				A10000000000000000000009 /* DayPlanEventBus.swift */,
+				A1000000000000000000000D /* DayPlanReverseSyncer.swift */,
+				A10000000000000000000011 /* DayPlanStateMachine.swift */,
+				A10000000000000000000015 /* DayPlanStore.swift */,
+				A10000000000000000000019 /* EventKitService.swift */,
+				A1000000000000000000001D /* GoalTheme.swift */,
+				A10000000000000000000021 /* RecommendationTemplateBuilder.swift */,
+				A10000000000000000000025 /* TemplateSetSpec.swift */,
+				A10000000000000000000029 /* WeekOverWeekStats.swift */,
+				A1000000000000000000002D /* WeeklyAdherence.swift */,
+				A10000000000000000000031 /* CelebrationCard.swift */,
+				A10000000000000000000033 /* ExercisePickerSheet.swift */,
+				A10000000000000000000035 /* IPhoneActiveWorkoutView.swift */,
+				A10000000000000000000037 /* IPhoneWorkoutController.swift */,
+				A10000000000000000000039 /* LiveWorkoutStore.swift */,
+				A1000000000000000000003B /* LiveWorkoutView.swift */,
+				A1000000000000000000003D /* PlanView.swift */,
+				A1000000000000000000003F /* PlansListView.swift */,
+				A10000000000000000000041 /* RedesignComponents.swift */,
+				A10000000000000000000043 /* StatsView.swift */,
+				A10000000000000000000045 /* TweaksQuickSwitcher.swift */,
+				A10000000000000000000047 /* WeeklyPlanView.swift */,
+				A10000000000000000000049 /* WorkoutModeResolver.swift */,
+				A1000000000000000000004B /* LiveWorkoutController.swift */,
 				2C3811045B1D96F9876BB53E /* JSONExporter.swift */,
 				A999BC76A4F7FDFBB9C59E2B /* JumpTestStore.swift */,
 				34230946E83752830E1AA5E3 /* LVPCalculator.swift */,
@@ -757,6 +859,31 @@
 				755554C99AAE0D6A44FA5017 /* HealthKitPermissionView.swift in Sources */,
 				A001000000000000000000A1 /* HealthKitAuthorization.swift in Sources */,
 				72F85E342DE5B380143F4B78 /* HealthKitService.swift in Sources */,
+				A10000000000000000000002 /* AIRecommendationEngine.swift in Sources */,
+				A10000000000000000000006 /* DayPlan.swift in Sources */,
+				A1000000000000000000000A /* DayPlanEventBus.swift in Sources */,
+				A1000000000000000000000E /* DayPlanReverseSyncer.swift in Sources */,
+				A10000000000000000000012 /* DayPlanStateMachine.swift in Sources */,
+				A10000000000000000000016 /* DayPlanStore.swift in Sources */,
+				A1000000000000000000001A /* EventKitService.swift in Sources */,
+				A1000000000000000000001E /* GoalTheme.swift in Sources */,
+				A10000000000000000000022 /* RecommendationTemplateBuilder.swift in Sources */,
+				A10000000000000000000026 /* TemplateSetSpec.swift in Sources */,
+				A1000000000000000000002A /* WeekOverWeekStats.swift in Sources */,
+				A1000000000000000000002E /* WeeklyAdherence.swift in Sources */,
+				A10000000000000000000032 /* CelebrationCard.swift in Sources */,
+				A10000000000000000000034 /* ExercisePickerSheet.swift in Sources */,
+				A10000000000000000000036 /* IPhoneActiveWorkoutView.swift in Sources */,
+				A10000000000000000000038 /* IPhoneWorkoutController.swift in Sources */,
+				A1000000000000000000003A /* LiveWorkoutStore.swift in Sources */,
+				A1000000000000000000003C /* LiveWorkoutView.swift in Sources */,
+				A1000000000000000000003E /* PlanView.swift in Sources */,
+				A10000000000000000000040 /* PlansListView.swift in Sources */,
+				A10000000000000000000042 /* RedesignComponents.swift in Sources */,
+				A10000000000000000000044 /* StatsView.swift in Sources */,
+				A10000000000000000000046 /* TweaksQuickSwitcher.swift in Sources */,
+				A10000000000000000000048 /* WeeklyPlanView.swift in Sources */,
+				A1000000000000000000004A /* WorkoutModeResolver.swift in Sources */,
 				E671C2D9679E766A6FFEFB69 /* HeartRateZonesDonut.swift in Sources */,
 				D2C3AEEB6093F1205D0577C7 /* HistoryView.swift in Sources */,
 				0E5A581E2ABF913EDFCC6893 /* JSONExporter.swift in Sources */,
@@ -827,6 +954,19 @@
 				2F93383C6E7D81580C6F0D1D /* HapticFeedback.swift in Sources */,
 				A001000000000000000000A2 /* HealthKitAuthorization.swift in Sources */,
 				56EBF7844F87C525B79FB29D /* HealthKitService.swift in Sources */,
+				A10000000000000000000003 /* AIRecommendationEngine.swift in Sources */,
+				A10000000000000000000007 /* DayPlan.swift in Sources */,
+				A1000000000000000000000B /* DayPlanEventBus.swift in Sources */,
+				A1000000000000000000000F /* DayPlanReverseSyncer.swift in Sources */,
+				A10000000000000000000013 /* DayPlanStateMachine.swift in Sources */,
+				A10000000000000000000017 /* DayPlanStore.swift in Sources */,
+				A1000000000000000000001B /* EventKitService.swift in Sources */,
+				A1000000000000000000001F /* GoalTheme.swift in Sources */,
+				A10000000000000000000023 /* RecommendationTemplateBuilder.swift in Sources */,
+				A10000000000000000000027 /* TemplateSetSpec.swift in Sources */,
+				A1000000000000000000002B /* WeekOverWeekStats.swift in Sources */,
+				A1000000000000000000002F /* WeeklyAdherence.swift in Sources */,
+				A1000000000000000000004C /* LiveWorkoutController.swift in Sources */,
 				81D1A826F75362E7068BF892 /* HeartRateManager.swift in Sources */,
 				83854887FC8C3FA3E8423368 /* JSONExporter.swift in Sources */,
 				7FAF84BA7C75177E165E54F7 /* JumpDetector.swift in Sources */,
@@ -883,6 +1023,18 @@
 				95BB85384C5BAD9F7165CB32 /* ExerciseLookup.swift in Sources */,
 				A001000000000000000000A3 /* HealthKitAuthorization.swift in Sources */,
 				1A2E77D20B95681BE2CDA7B3 /* HealthKitService.swift in Sources */,
+				A10000000000000000000004 /* AIRecommendationEngine.swift in Sources */,
+				A10000000000000000000008 /* DayPlan.swift in Sources */,
+				A1000000000000000000000C /* DayPlanEventBus.swift in Sources */,
+				A10000000000000000000010 /* DayPlanReverseSyncer.swift in Sources */,
+				A10000000000000000000014 /* DayPlanStateMachine.swift in Sources */,
+				A10000000000000000000018 /* DayPlanStore.swift in Sources */,
+				A1000000000000000000001C /* EventKitService.swift in Sources */,
+				A10000000000000000000020 /* GoalTheme.swift in Sources */,
+				A10000000000000000000024 /* RecommendationTemplateBuilder.swift in Sources */,
+				A10000000000000000000028 /* TemplateSetSpec.swift in Sources */,
+				A1000000000000000000002C /* WeekOverWeekStats.swift in Sources */,
+				A10000000000000000000030 /* WeeklyAdherence.swift in Sources */,
 				1220CAD708737A0100B41005 /* JSONExporter.swift in Sources */,
 				F97D7316130EFBA1C5CAF541 /* JumpDetector.swift in Sources */,
 				651AE16667A1A1DD91643F06 /* JumpDetectorTests.swift in Sources */,
