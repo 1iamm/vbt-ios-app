@@ -91,9 +91,9 @@ struct IPhoneActiveWorkoutView: View {
                 isInteger: target.kind == .reps
             ) { newValue in
                 if target.kind == .weight {
-                    controller.currentWeightKg = max(0, min(500, newValue))
+                    controller.updateCurrentWeight(newValue)
                 } else {
-                    controller.currentReps = max(1, min(99, Int(newValue)))
+                    controller.updateCurrentReps(Int(newValue))
                 }
             }
             .presentationDetents([.height(360)])
@@ -170,7 +170,7 @@ struct IPhoneActiveWorkoutView: View {
     @ViewBuilder
     private func exerciseChip(idx: Int, item: TemplateItemSnapshot, proxy: ScrollViewProxy) -> some View {
         let isCurrent = idx == controller.currentItemIndex
-        let done = controller.loggedSetsByExercise[idx]?.count ?? 0
+        let done = controller.completedSetCount(forExerciseIndex: idx)
         let total = max(1, item.effectiveWorkSetCount)
         let allDone = done >= total
         let bg: Color = isCurrent
@@ -306,8 +306,9 @@ struct IPhoneActiveWorkoutView: View {
                 Text("#").frame(width: 28, alignment: .leading)
                 Text("上次").frame(width: 70, alignment: .leading)
                 Text("重量").frame(maxWidth: .infinity, alignment: .center)
-                Text("次数").frame(width: 56, alignment: .center)
-                Text("").frame(width: 36)
+                Text("次数").frame(width: 50, alignment: .center)
+                Text("").frame(width: 32)   // 勾选列
+                Text("").frame(width: 28)   // 删除列
             }
             .font(.system(size: 10, weight: .heavy))
             .tracking(0.5)
@@ -328,33 +329,27 @@ struct IPhoneActiveWorkoutView: View {
                 }
             }
 
-            // Add ad-hoc set (only when no specs or all specs done)
-            if showAddSetButton {
-                Button {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    controller.completeCurrentSet()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 12, weight: .bold))
-                        Text("加一组")
-                            .font(.system(size: 13, weight: .semibold))
-                    }
-                    .foregroundStyle(Tokens.Color.accent)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+            // Add ad-hoc set (always shown so user can extend the plan any time).
+            // 「加一组」只追加一行空白未勾选条目，不触发休息；用户后续点行末
+            // 圆圈或底部「完成本组」 才标记为完成。
+            Button {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                controller.appendPendingSet()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .bold))
+                    Text("加一组")
+                        .font(.system(size: 13, weight: .semibold))
                 }
-                .buttonStyle(.plain)
-                .background(Tokens.Color.card)
+                .foregroundStyle(Tokens.Color.accent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
             }
+            .buttonStyle(.plain)
+            .background(Tokens.Color.card)
         }
         .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 16))
-    }
-
-    private var showAddSetButton: Bool {
-        let specs = controller.currentPlannedSpecs
-        if specs.isEmpty { return true }
-        return controller.loggedSetsForCurrent.count >= specs.count
     }
 
     private struct SetRow: Identifiable {
@@ -371,10 +366,13 @@ struct IPhoneActiveWorkoutView: View {
         let logged = controller.loggedSetsForCurrent
         var rows: [SetRow] = []
         let rowCount = max(specs.count, logged.count)
+        // 「当前组」= 第一个未勾选的条目；若所有条目都已勾选，则指向下一个未填写的 planned slot。
+        let firstPendingInLogged = logged.firstIndex(where: { !$0.completed })
+        let currentIdx = firstPendingInLogged ?? logged.count
         for i in 0..<rowCount {
             let spec = i < specs.count ? specs[i] : nil
             let actual = i < logged.count ? logged[i] : nil
-            let isCurrent = (i == logged.count) && (controller.phase != .finished)
+            let isCurrent = (i == currentIdx) && (controller.phase != .finished)
             rows.append(SetRow(
                 id: spec?.id ?? actual?.id ?? UUID(),
                 displayIndex: i + 1,
@@ -388,8 +386,14 @@ struct IPhoneActiveWorkoutView: View {
     }
 
     private func setRowView(_ row: SetRow) -> some View {
-        let isDone = row.actual != nil
+        let actual = row.actual
+        let isDone = actual?.completed == true
         let isCurrent = row.isCurrent
+        let hasEntry = actual != nil
+        // 数据来源：若该行已有条目（无论是否勾选），用条目自身的数据；
+        // 否则当前行显示 controller.currentXxx，其他 planned 行显示计划值。
+        let displayWeight = actual?.weightKg ?? (isCurrent ? controller.currentWeightKg : row.plannedWeight)
+        let displayReps = actual?.reps ?? (isCurrent ? controller.currentReps : row.plannedReps)
         return HStack(spacing: 0) {
             // # column
             Text("\(row.displayIndex)")
@@ -406,7 +410,7 @@ struct IPhoneActiveWorkoutView: View {
 
             // 重量 column
             cellView(
-                value: isDone ? "\(formatKg(row.actual!.weightKg))" : "\(formatKg(isCurrent ? controller.currentWeightKg : row.plannedWeight))",
+                value: formatKg(displayWeight),
                 unit: "kg",
                 isCurrent: isCurrent,
                 isDone: isDone
@@ -418,7 +422,7 @@ struct IPhoneActiveWorkoutView: View {
 
             // 次数 column
             cellView(
-                value: isDone ? "\(row.actual!.reps)" : "\(isCurrent ? controller.currentReps : row.plannedReps)",
+                value: "\(displayReps)",
                 unit: nil,
                 isCurrent: isCurrent,
                 isDone: isDone
@@ -426,16 +430,39 @@ struct IPhoneActiveWorkoutView: View {
                 guard isCurrent else { return }
                 editingTarget = EditTarget(id: row.id, kind: .reps)
             }
-            .frame(width: 56)
+            .frame(width: 50)
 
-            // Status column: tap to toggle 勾选 / 未勾选 状态。
+            // 勾选 column — 点击翻转 completed 标志，保留数据。
             Button {
                 toggleRow(row)
             } label: {
                 statusBadge(isDone: isDone, isCurrent: isCurrent)
             }
             .buttonStyle(.plain)
-            .frame(width: 36)
+            .frame(width: 32)
+
+            // 删除 column — 仅在该行已有条目（done 或 pending）时可见；
+            // 真正从数组中删除整行（区别于「取消勾选」）。
+            Group {
+                if hasEntry {
+                    Button {
+                        deleteRow(row)
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Tokens.Color.tertiaryLabel)
+                            .frame(width: 22, height: 22)
+                            .background(
+                                Circle()
+                                    .stroke(Tokens.Color.secondaryLabel.opacity(0.18), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Color.clear.frame(width: 22, height: 22)
+                }
+            }
+            .frame(width: 28)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -450,20 +477,29 @@ struct IPhoneActiveWorkoutView: View {
         return controller.loggedSetsForCurrent.firstIndex(where: { $0.id == actual.id })
     }
 
-    /// Tap on the row's status badge:
-    /// - 已完成 → 直接取消勾选（delete the logged set）
-    /// - 未完成 → 按 plannedWeight/plannedReps 直接 log 一组（视为补勾选）
+    /// 点击行末勾选框：
+    /// - 已存在条目 → 翻转 completed 标志，**保留** weight/reps 数据
+    /// - 不存在条目（纯 planned 行）→ 视为「补勾选」直接新建一条完成态条目
     /// 不弹确认对话框；用户可来回切多次。
     private func toggleRow(_ row: SetRow) {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         if let loggedIdx = loggedIndex(for: row) {
-            controller.deleteLoggedSet(at: loggedIdx)
+            controller.toggleSetCompleted(at: loggedIdx)
         } else {
             controller.addLoggedSet(
                 weightKg: row.plannedWeight,
                 reps: row.plannedReps,
                 atSetIndex: row.displayIndex - 1
             )
+        }
+    }
+
+    /// 点击行末 「×」 按钮：把整行从数组中移除（区别于 toggleRow 仅翻转勾选）。
+    private func deleteRow(_ row: SetRow) {
+        guard let loggedIdx = loggedIndex(for: row) else { return }
+        UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
+        withAnimation(.easeOut(duration: 0.18)) {
+            controller.deleteLoggedSet(at: loggedIdx)
         }
     }
 
@@ -583,13 +619,19 @@ struct IPhoneActiveWorkoutView: View {
     private var completeButtonText: String {
         let logged = controller.loggedSetsForCurrent
         let specs = controller.currentPlannedSpecs
-        if logged.isEmpty { return "完成第 \(controller.currentSetIndex + 1) 组" }
-        if !specs.isEmpty && controller.currentSetIndex + 1 == specs.count { return "完成最后一组" }
+        // 「下一次按下『完成本组』要标完成的行」 = 第一个未勾选条目；
+        // 若不存在则是 logged.count（追加新行）。
+        let firstPending = logged.firstIndex(where: { !$0.completed })
+        let nextIdx = firstPending ?? logged.count
+        let completedCount = logged.filter { $0.completed }.count
+        if completedCount == 0 && firstPending == nil { return "完成第 \(nextIdx + 1) 组" }
+        if !specs.isEmpty && nextIdx + 1 == specs.count { return "完成最后一组" }
         // Sameness shortcut: same weight + same reps as last logged → 同上完成
-        if let last = logged.last, last.weightKg == controller.currentWeightKg && last.reps == controller.currentReps {
+        if let last = logged.last(where: { $0.completed }),
+           last.weightKg == controller.currentWeightKg && last.reps == controller.currentReps {
             return "同上完成"
         }
-        return "完成第 \(controller.currentSetIndex + 1) 组"
+        return "完成第 \(nextIdx + 1) 组"
     }
 
     // MARK: - Lookups
