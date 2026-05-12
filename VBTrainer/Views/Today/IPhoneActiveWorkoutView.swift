@@ -57,7 +57,7 @@ struct IPhoneActiveWorkoutView: View {
             Tokens.Color.groupedBg.ignoresSafeArea()
             VStack(spacing: 0) {
                 topBar
-                if controller.plannedItems.count > 1 {
+                if !controller.plannedItems.isEmpty {
                     exerciseStrip
                 }
                 if controller.phase == .resting {
