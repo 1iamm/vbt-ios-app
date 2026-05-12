@@ -26,6 +26,9 @@
 		160FD385BB5482724AEE4938 /* UserProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 639E293504390C1283B706AE /* UserProfile.swift */; };
 		170C28BCCAC8D0EB3909A281 /* WorkoutStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADE1F706B84F6C0B5053221E /* WorkoutStore.swift */; };
 		1A2E77D20B95681BE2CDA7B3 /* HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D3E556E0623DBEB57E04A1A /* HealthKitService.swift */; };
+		A001000000000000000000A1 /* HealthKitAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000000000000000000A0 /* HealthKitAuthorization.swift */; };
+		A001000000000000000000A2 /* HealthKitAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000000000000000000A0 /* HealthKitAuthorization.swift */; };
+		A001000000000000000000A3 /* HealthKitAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A001000000000000000000A0 /* HealthKitAuthorization.swift */; };
 		1BC697F764D278F790CC40C6 /* ExerciseLookup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24DFA524CE4163EFC863F701 /* ExerciseLookup.swift */; };
 		1E14E0E82999D336B118C463 /* ARCHITECTURE.md in Resources */ = {isa = PBXBuildFile; fileRef = 3532D67088DA0F478C423C3E /* ARCHITECTURE.md */; };
 		1E57A191D7E28F4350B0E5ED /* WorkoutSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A4CAF996EEC73A099FB4650 /* WorkoutSnapshot.swift */; };
@@ -235,6 +238,7 @@
 		3A4CAF996EEC73A099FB4650 /* WorkoutSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSnapshot.swift; sourceTree = "<group>"; };
 		3B022E4460ED5F163EB85388 /* ReadinessCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessCalculatorTests.swift; sourceTree = "<group>"; };
 		3D3E556E0623DBEB57E04A1A /* HealthKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitService.swift; sourceTree = "<group>"; };
+		A001000000000000000000A0 /* HealthKitAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitAuthorization.swift; sourceTree = "<group>"; };
 		3DDAB483744249B19D96D2C4 /* ReadinessCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessCalculator.swift; sourceTree = "<group>"; };
 		47DCBAE23144CB47319B2228 /* VBTrainerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VBTrainerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4842559AE225408225D4FD30 /* RepDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepDetector.swift; sourceTree = "<group>"; };
@@ -375,6 +379,7 @@
 			children = (
 				569DE0277D9DFDEFC064B3B1 /* ConnectivityProtocol.swift */,
 				A4DB88EBC293631BAD604AE0 /* CSVExporter.swift */,
+				A001000000000000000000A0 /* HealthKitAuthorization.swift */,
 				3D3E556E0623DBEB57E04A1A /* HealthKitService.swift */,
 				2C3811045B1D96F9876BB53E /* JSONExporter.swift */,
 				A999BC76A4F7FDFBB9C59E2B /* JumpTestStore.swift */,
@@ -750,6 +755,7 @@
 				A9E45D22097CF72EE888625B /* ExerciseTrendView.swift in Sources */,
 				91654FA6A16D5342CB48A3BC /* ExportView.swift in Sources */,
 				755554C99AAE0D6A44FA5017 /* HealthKitPermissionView.swift in Sources */,
+				A001000000000000000000A1 /* HealthKitAuthorization.swift in Sources */,
 				72F85E342DE5B380143F4B78 /* HealthKitService.swift in Sources */,
 				E671C2D9679E766A6FFEFB69 /* HeartRateZonesDonut.swift in Sources */,
 				D2C3AEEB6093F1205D0577C7 /* HistoryView.swift in Sources */,
@@ -819,6 +825,7 @@
 				0812BD942EDA622AAAB7E9DB /* ExerciseLibrary.swift in Sources */,
 				927035AD72D3B4670CBB4A2B /* ExerciseLookup.swift in Sources */,
 				2F93383C6E7D81580C6F0D1D /* HapticFeedback.swift in Sources */,
+				A001000000000000000000A2 /* HealthKitAuthorization.swift in Sources */,
 				56EBF7844F87C525B79FB29D /* HealthKitService.swift in Sources */,
 				81D1A826F75362E7068BF892 /* HeartRateManager.swift in Sources */,
 				83854887FC8C3FA3E8423368 /* JSONExporter.swift in Sources */,
@@ -874,6 +881,7 @@
 				76A9AABAD08EE75846B48078 /* Exercise.swift in Sources */,
 				0BDA0D023CB04F5C2DF1010A /* ExerciseLibrary.swift in Sources */,
 				95BB85384C5BAD9F7165CB32 /* ExerciseLookup.swift in Sources */,
+				A001000000000000000000A3 /* HealthKitAuthorization.swift in Sources */,
 				1A2E77D20B95681BE2CDA7B3 /* HealthKitService.swift in Sources */,
 				1220CAD708737A0100B41005 /* JSONExporter.swift in Sources */,
 				F97D7316130EFBA1C5CAF541 /* JumpDetector.swift in Sources */,
