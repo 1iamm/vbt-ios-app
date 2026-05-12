@@ -134,7 +134,15 @@ public final class IPhoneWorkoutController: ObservableObject {
     // MARK: - User actions
 
     public func completeCurrentSet(rpe: Int? = nil) {
-        guard phase == .ready || phase == .setActive else { return }
+        // V1.x: 「加一组」 during rest means「再做一组」— cancel the
+        // running countdown, log the new set, then restart rest. Without
+        // this the rest-phase guard silently dropped the tap and the
+        // 「加一组」 button looked broken to the user.
+        if phase == .resting {
+            restTask?.cancel()
+            restTask = nil
+        }
+        guard phase == .ready || phase == .setActive || phase == .resting else { return }
         let logged = LoggedSet(
             id: UUID(),
             setIndex: currentSetIndex,
