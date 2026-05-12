@@ -126,12 +126,39 @@ public final class IPhoneWorkoutController: ObservableObject {
     private func loadCurrentItem() {
         currentSetIndex = 0
         let specs = currentPlannedSpecs
-        if let first = specs.first {
-            currentWeightKg = first.weightKg
-            currentReps = first.reps
-            restTotalSec = first.restSeconds
-            restRemainingSec = first.restSeconds
+        let targetCount = max(specs.count, currentItem?.effectiveWorkSetCount ?? 0)
+
+        // 关键：开训时按 specs / targetSets 预填 N 条 pending 条目，让每一行视图
+        // = 一条条目。这样「加一组」 永远在末尾追加新行（而不是替换第一个 spec
+        // 位），状态徽章点击也精确翻转用户点的那一行。
+        let existing = loggedSetsByExercise[currentItemIndex] ?? []
+        if existing.isEmpty && targetCount > 0 {
+            var seed: [LoggedSet] = []
+            for i in 0..<targetCount {
+                let spec = i < specs.count ? specs[i] : nil
+                seed.append(LoggedSet(
+                    id: UUID(),
+                    setIndex: i,
+                    weightKg: spec?.weightKg ?? currentItem?.targetWeightKg ?? 60,
+                    reps: spec?.reps ?? currentItem?.targetReps ?? 5,
+                    rpe: nil,
+                    completedAt: Date(),
+                    completed: false
+                ))
+            }
+            loggedSetsByExercise[currentItemIndex] = seed
+        }
+
+        let list = loggedSetsByExercise[currentItemIndex] ?? []
+        if let pendingIdx = list.firstIndex(where: { !$0.completed }) {
+            let pending = list[pendingIdx]
+            currentWeightKg = pending.weightKg
+            currentReps = pending.reps
+            let spec = pendingIdx < specs.count ? specs[pendingIdx] : nil
+            restTotalSec = spec?.restSeconds ?? currentItem?.restSeconds ?? 90
+            restRemainingSec = restTotalSec
         } else if let item = currentItem {
+            // 所有组已勾选完成（用户切回旧动作的场景）。
             currentWeightKg = item.targetWeightKg ?? 60
             currentReps = item.targetReps
             restTotalSec = item.restSeconds
@@ -347,22 +374,24 @@ public final class IPhoneWorkoutController: ObservableObject {
     private func advanceToNextSet() {
         currentSetIndex += 1
         let specs = currentPlannedSpecs
-        // 当前动作总组数：优先 setSpecs 个数；若 legacy 模板没有 specs，
-        // 回退到 effectiveWorkSetCount（= targetSets）。这样避免 specs
-        // 为空时第 1 组刚完就被判定「全部完成」直接跳到下一动作。
-        let totalForExercise = max(specs.count, currentItem?.effectiveWorkSetCount ?? 0)
-        let doneCount = loggedSetsForCurrent.filter { $0.completed }.count
+        let list = loggedSetsForCurrent
+        // 总组数 = list 当前长度（用户加的「加一组」 已经把行算进 list）；
+        // 若 list 为空（纯 legacy / ad-hoc），回退到 effectiveWorkSetCount。
+        let totalForExercise = list.isEmpty
+            ? (currentItem?.effectiveWorkSetCount ?? 0)
+            : list.count
+        let doneCount = list.filter { $0.completed }.count
 
-        // 还有未完成的组 → 留在当前动作。
+        // 还有未勾选条目 → 留在当前动作，加载下一条 pending 的 weight/reps。
         if doneCount < totalForExercise {
-            if currentSetIndex < specs.count {
-                let next = specs[currentSetIndex]
+            if let nextPendingIdx = list.firstIndex(where: { !$0.completed }) {
+                let next = list[nextPendingIdx]
                 currentWeightKg = next.weightKg
                 currentReps = next.reps
-                restTotalSec = next.restSeconds
-                restRemainingSec = next.restSeconds
+                let spec = nextPendingIdx < specs.count ? specs[nextPendingIdx] : nil
+                restTotalSec = spec?.restSeconds ?? currentItem?.restSeconds ?? restTotalSec
+                restRemainingSec = restTotalSec
             }
-            // 若 specs 不足（legacy / ad-hoc），保持上一组的 weight/reps。
             phase = .ready
             pushLive(.ready)
             return

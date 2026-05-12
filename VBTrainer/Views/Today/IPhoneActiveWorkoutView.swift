@@ -362,22 +362,21 @@ struct IPhoneActiveWorkoutView: View {
     }
 
     private var setRowModels: [SetRow] {
-        let specs = controller.currentPlannedSpecs
+        // 现在控制器会在 preparePlan 时按 specs 预填 N 条 pending 条目，所以
+        // 表格 1:1 对应 logged 数组，行 ↔ 条目恒等映射。
         let logged = controller.loggedSetsForCurrent
         var rows: [SetRow] = []
-        let rowCount = max(specs.count, logged.count)
-        // 「当前组」= 第一个未勾选的条目；若所有条目都已勾选，则指向下一个未填写的 planned slot。
-        let firstPendingInLogged = logged.firstIndex(where: { !$0.completed })
-        let currentIdx = firstPendingInLogged ?? logged.count
-        for i in 0..<rowCount {
-            let spec = i < specs.count ? specs[i] : nil
-            let actual = i < logged.count ? logged[i] : nil
+        // 「当前组」= 第一个未勾选条目；若全部勾选则没有「当前」行（currentIdx 越界）。
+        let firstPending = logged.firstIndex(where: { !$0.completed })
+        let currentIdx = firstPending ?? logged.count
+        for i in 0..<logged.count {
+            let actual = logged[i]
             let isCurrent = (i == currentIdx) && (controller.phase != .finished)
             rows.append(SetRow(
-                id: spec?.id ?? actual?.id ?? UUID(),
+                id: actual.id,
                 displayIndex: i + 1,
-                plannedWeight: spec?.weightKg ?? actual?.weightKg ?? controller.currentWeightKg,
-                plannedReps: spec?.reps ?? actual?.reps ?? controller.currentReps,
+                plannedWeight: actual.weightKg,
+                plannedReps: actual.reps,
                 actual: actual,
                 isCurrent: isCurrent
             ))
@@ -386,14 +385,12 @@ struct IPhoneActiveWorkoutView: View {
     }
 
     private func setRowView(_ row: SetRow) -> some View {
-        let actual = row.actual
-        let isDone = actual?.completed == true
+        // 现在每一行都对应一条 entry（preparePlan 时按 specs 预填）；
+        // row.actual 永远非空，weight/reps 直接读 entry。
+        let isDone = row.actual?.completed == true
         let isCurrent = row.isCurrent
-        let hasEntry = actual != nil
-        // 数据来源：若该行已有条目（无论是否勾选），用条目自身的数据；
-        // 否则当前行显示 controller.currentXxx，其他 planned 行显示计划值。
-        let displayWeight = actual?.weightKg ?? (isCurrent ? controller.currentWeightKg : row.plannedWeight)
-        let displayReps = actual?.reps ?? (isCurrent ? controller.currentReps : row.plannedReps)
+        let displayWeight = row.actual?.weightKg ?? row.plannedWeight
+        let displayReps = row.actual?.reps ?? row.plannedReps
         return HStack(spacing: 0) {
             // # column
             Text("\(row.displayIndex)")
@@ -441,27 +438,20 @@ struct IPhoneActiveWorkoutView: View {
             .buttonStyle(.plain)
             .frame(width: 32)
 
-            // 删除 column — 仅在该行已有条目（done 或 pending）时可见；
-            // 真正从数组中删除整行（区别于「取消勾选」）。
-            Group {
-                if hasEntry {
-                    Button {
-                        deleteRow(row)
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Tokens.Color.tertiaryLabel)
-                            .frame(width: 22, height: 22)
-                            .background(
-                                Circle()
-                                    .stroke(Tokens.Color.secondaryLabel.opacity(0.18), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                } else {
-                    Color.clear.frame(width: 22, height: 22)
-                }
+            // 删除 column — 真正从数组中删除整行（区别于「取消勾选」）。
+            Button {
+                deleteRow(row)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Tokens.Color.tertiaryLabel)
+                    .frame(width: 22, height: 22)
+                    .background(
+                        Circle()
+                            .stroke(Tokens.Color.secondaryLabel.opacity(0.18), lineWidth: 1)
+                    )
             }
+            .buttonStyle(.plain)
             .frame(width: 28)
         }
         .padding(.horizontal, 14)
@@ -477,21 +467,12 @@ struct IPhoneActiveWorkoutView: View {
         return controller.loggedSetsForCurrent.firstIndex(where: { $0.id == actual.id })
     }
 
-    /// 点击行末勾选框：
-    /// - 已存在条目 → 翻转 completed 标志，**保留** weight/reps 数据
-    /// - 不存在条目（纯 planned 行）→ 视为「补勾选」直接新建一条完成态条目
+    /// 点击行末勾选框：翻转该行的 completed 标志，**保留**该行 weight/reps 数据。
     /// 不弹确认对话框；用户可来回切多次。
     private func toggleRow(_ row: SetRow) {
+        guard let loggedIdx = loggedIndex(for: row) else { return }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        if let loggedIdx = loggedIndex(for: row) {
-            controller.toggleSetCompleted(at: loggedIdx)
-        } else {
-            controller.addLoggedSet(
-                weightKg: row.plannedWeight,
-                reps: row.plannedReps,
-                atSetIndex: row.displayIndex - 1
-            )
-        }
+        controller.toggleSetCompleted(at: loggedIdx)
     }
 
     /// 点击行末 「×」 按钮：把整行从数组中移除（区别于 toggleRow 仅翻转勾选）。
