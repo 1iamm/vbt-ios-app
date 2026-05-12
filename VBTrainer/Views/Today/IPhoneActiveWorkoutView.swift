@@ -599,15 +599,16 @@ struct IPhoneActiveWorkoutView: View {
 
     private var completeButtonText: String {
         let logged = controller.loggedSetsForCurrent
-        let specs = controller.currentPlannedSpecs
-        // 「下一次按下『完成本组』要标完成的行」 = 第一个未勾选条目；
-        // 若不存在则是 logged.count（追加新行）。
         let firstPending = logged.firstIndex(where: { !$0.completed })
         let nextIdx = firstPending ?? logged.count
-        let completedCount = logged.filter { $0.completed }.count
-        if completedCount == 0 && firstPending == nil { return "完成第 \(nextIdx + 1) 组" }
-        if !specs.isEmpty && nextIdx + 1 == specs.count { return "完成最后一组" }
-        // Sameness shortcut: same weight + same reps as last logged → 同上完成
+        let pendingCount = logged.filter { !$0.completed }.count
+
+        // 「完成最后一组」: 仅当当前 pending 是数组中最后一条 且 它是唯一剩下
+        // 未勾选的条目时才显示；用户在中间几组未完成时不应误导成「最后一组」。
+        if pendingCount == 1 && nextIdx == logged.count - 1 {
+            return "完成最后一组"
+        }
+        // 「同上完成」: 当前 weight/reps 与最近一次已勾选条目完全一致。
         if let last = logged.last(where: { $0.completed }),
            last.weightKg == controller.currentWeightKg && last.reps == controller.currentReps {
             return "同上完成"
