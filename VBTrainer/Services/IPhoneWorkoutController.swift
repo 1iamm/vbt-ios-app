@@ -115,6 +115,30 @@ public final class IPhoneWorkoutController: ObservableObject {
     /// 从悬浮窗回到全屏 cover。
     public func expand() { isMinimized = false }
 
+    /// 训练中追加一个新动作 tab 在末尾。默认 3 组 × 5 reps @ 60kg，90s 休息。
+    /// 用户可以在新 tab 内编辑 cell / 加一组 / 删除组。追加后自动切到新 tab。
+    public func appendExercise(_ exerciseId: String) {
+        let nextIdx = plannedItems.count
+        let snap = TemplateItemSnapshot(
+            id: UUID(),
+            index: nextIdx,
+            exerciseId: exerciseId,
+            targetSets: 3,
+            targetReps: 5,
+            targetWeightKg: 60,
+            targetVelocityMin: nil,
+            targetVelocityMax: nil,
+            vlCeiling: nil,
+            restSeconds: 90,
+            sideRaw: "both",
+            setSpecs: []
+        )
+        plannedItems.append(snap)
+        currentItemIndex = nextIdx
+        loadCurrentItem()  // 预填 3 条 pending entries
+        if !isActive { isActive = true }
+    }
+
     /// Single-exercise convenience (back-compat for ad-hoc / TodayView quick path).
     public func preparePlanned(item: TemplateItemSnapshot, templateId: UUID? = nil) {
         preparePlan(items: [item], templateId: templateId)

@@ -26,6 +26,7 @@ struct IPhoneActiveWorkoutView: View {
     @State private var showFinishConfirm = false
     @State private var editingTarget: EditTarget?
     @State private var elapsedTick: Date = Date()
+    @State private var showAddExercise = false
 
     let initialItems: [TemplateItemSnapshot]
     let initialItemIndex: Int
@@ -155,6 +156,8 @@ struct IPhoneActiveWorkoutView: View {
                         exerciseChip(idx: idx, item: item, proxy: proxy)
                             .id(idx)
                     }
+                    addExerciseChip
+                        .id("__add__")
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
@@ -167,6 +170,50 @@ struct IPhoneActiveWorkoutView: View {
             }
         }
         .background(.thinMaterial)
+        .sheet(isPresented: $showAddExercise) {
+            NavigationStack {
+                ExercisePickerSheet { ex in
+                    controller.appendExercise(ex.id)
+                    showAddExercise = false
+                }
+                .navigationTitle("添加动作")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("取消") { showAddExercise = false }
+                    }
+                }
+            }
+        }
+    }
+
+    /// 末尾的「+ 动作」 chip。点击弹出动作库选择，选中后追加新 tab 到最后。
+    /// 跟在最后一个动作 chip 之后，宽度会随 ForEach 联动右移。
+    private var addExerciseChip: some View {
+        Button {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            showAddExercise = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "plus")
+                    .font(.system(size: 11, weight: .heavy))
+                Text("动作")
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            .foregroundStyle(Tokens.Color.accent)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .frame(minHeight: 40)
+            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(
+                        Tokens.Color.accent.opacity(0.45),
+                        style: StrokeStyle(lineWidth: 1, dash: [3, 2])
+                    )
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
