@@ -163,6 +163,25 @@ public final class IPhoneWorkoutController: ObservableObject {
         }
     }
 
+    /// V1.x: log a set with explicit weight/reps without going through the
+    /// rest countdown. Used by the table-row 「未勾选 → 勾选」 toggle so the
+    /// user can re-check a slot they un-toggled, or check ahead a row.
+    /// Doesn't touch phase or rest — just inserts a LoggedSet.
+    public func addLoggedSet(weightKg: Double, reps: Int, atSetIndex slot: Int) {
+        let logged = LoggedSet(
+            id: UUID(),
+            setIndex: slot,
+            weightKg: weightKg,
+            reps: reps,
+            rpe: nil,
+            completedAt: Date()
+        )
+        var list = loggedSetsByExercise[currentItemIndex] ?? []
+        list.append(logged)
+        loggedSetsByExercise[currentItemIndex] = list
+        pushLive(phase == .ready ? .ready : .setEnded)
+    }
+
     /// Delete a previously-logged set for the current exercise. Cancels any
     /// running rest countdown and snaps phase back to .ready so the user
     /// can re-do that slot. Index is the row position in

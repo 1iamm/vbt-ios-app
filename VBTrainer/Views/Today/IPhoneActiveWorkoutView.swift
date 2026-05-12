@@ -428,25 +428,14 @@ struct IPhoneActiveWorkoutView: View {
             }
             .frame(width: 56)
 
-            // Status column / overflow menu (delete on done rows)
-            if isDone {
-                Menu {
-                    Button(role: .destructive) {
-                        if let loggedIdx = loggedIndex(for: row) {
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            controller.deleteLoggedSet(at: loggedIdx)
-                        }
-                    } label: {
-                        Label("删除本组", systemImage: "trash")
-                    }
-                } label: {
-                    statusBadge(isDone: true, isCurrent: false)
-                }
-                .frame(width: 36)
-            } else {
-                statusBadge(isDone: false, isCurrent: isCurrent)
-                    .frame(width: 36)
+            // Status column: tap to toggle 勾选 / 未勾选 状态。
+            Button {
+                toggleRow(row)
+            } label: {
+                statusBadge(isDone: isDone, isCurrent: isCurrent)
             }
+            .buttonStyle(.plain)
+            .frame(width: 36)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -459,6 +448,23 @@ struct IPhoneActiveWorkoutView: View {
     private func loggedIndex(for row: SetRow) -> Int? {
         guard let actual = row.actual else { return nil }
         return controller.loggedSetsForCurrent.firstIndex(where: { $0.id == actual.id })
+    }
+
+    /// Tap on the row's status badge:
+    /// - 已完成 → 直接取消勾选（delete the logged set）
+    /// - 未完成 → 按 plannedWeight/plannedReps 直接 log 一组（视为补勾选）
+    /// 不弹确认对话框；用户可来回切多次。
+    private func toggleRow(_ row: SetRow) {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        if let loggedIdx = loggedIndex(for: row) {
+            controller.deleteLoggedSet(at: loggedIdx)
+        } else {
+            controller.addLoggedSet(
+                weightKg: row.plannedWeight,
+                reps: row.plannedReps,
+                atSetIndex: row.displayIndex - 1
+            )
+        }
     }
 
     private func cellView(value: String, unit: String?, isCurrent: Bool, isDone: Bool, onTap: @escaping () -> Void) -> some View {
