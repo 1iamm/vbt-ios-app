@@ -215,26 +215,44 @@ public final class IPhoneWorkoutController: ObservableObject {
     private func advanceToNextSet() {
         currentSetIndex += 1
         let specs = currentPlannedSpecs
-        if currentSetIndex < specs.count {
-            let next = specs[currentSetIndex]
-            currentWeightKg = next.weightKg
-            currentReps = next.reps
-            restTotalSec = next.restSeconds
-            restRemainingSec = next.restSeconds
+        // 当前动作总组数：优先 setSpecs 个数；若 legacy 模板没有 specs，
+        // 回退到 effectiveWorkSetCount（= targetSets）。这样避免 specs
+        // 为空时第 1 组刚完就被判定「全部完成」直接跳到下一动作。
+        let totalForExercise = max(specs.count, currentItem?.effectiveWorkSetCount ?? 0)
+        let doneCount = loggedSetsForCurrent.count
+
+        // 还有未完成的组 → 留在当前动作。
+        if doneCount < totalForExercise {
+            if currentSetIndex < specs.count {
+                let next = specs[currentSetIndex]
+                currentWeightKg = next.weightKg
+                currentReps = next.reps
+                restTotalSec = next.restSeconds
+                restRemainingSec = next.restSeconds
+            }
+            // 若 specs 不足（legacy / ad-hoc），保持上一组的 weight/reps。
             phase = .ready
             pushLive(.ready)
-        } else if currentItemIndex + 1 < plannedItems.count {
-            // Next exercise.
+            return
+        }
+
+        // 当前动作所有组已完成 → 自动切到下一动作。
+        if currentItemIndex + 1 < plannedItems.count {
             currentItemIndex += 1
             loadCurrentItem()
-        } else if plannedItems.count == 1 && specs.isEmpty {
-            // Ad-hoc single-exercise mode → keep going indefinitely.
+            return
+        }
+
+        // 纯 ad-hoc 单动作：无限继续。
+        if plannedItems.count == 1 && totalForExercise == 0 {
             phase = .ready
             pushLive(.ready)
-        } else {
-            phase = .finished
-            pushLive(.workoutEnded)
+            return
         }
+
+        // 全部动作完成 → 整场训练结束。
+        phase = .finished
+        pushLive(.workoutEnded)
     }
 
     public func finishWorkout(context: ModelContext? = nil, rpe: Int? = nil, notes: String? = nil) {
