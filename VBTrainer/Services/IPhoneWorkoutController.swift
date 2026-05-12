@@ -163,6 +163,32 @@ public final class IPhoneWorkoutController: ObservableObject {
         }
     }
 
+    /// Delete a previously-logged set for the current exercise. Cancels any
+    /// running rest countdown and snaps phase back to .ready so the user
+    /// can re-do that slot. Index is the row position in
+    /// `loggedSetsForCurrent` (0-based).
+    public func deleteLoggedSet(at index: Int) {
+        guard var list = loggedSetsByExercise[currentItemIndex],
+              list.indices.contains(index) else { return }
+        list.remove(at: index)
+        loggedSetsByExercise[currentItemIndex] = list
+
+        restTask?.cancel()
+        restTask = nil
+        // 把游标拉回到「下一个待完成」组并刷新当前 weight/reps。
+        currentSetIndex = list.count
+        let specs = currentPlannedSpecs
+        if currentSetIndex < specs.count {
+            let next = specs[currentSetIndex]
+            currentWeightKg = next.weightKg
+            currentReps = next.reps
+            restTotalSec = next.restSeconds
+            restRemainingSec = next.restSeconds
+        }
+        phase = .ready
+        pushLive(.ready)
+    }
+
     /// User jumped to a different exercise via the carousel/picker. Rest
     /// is interrupted; sets logged on the previous exercise remain.
     public func switchToExercise(at index: Int) {

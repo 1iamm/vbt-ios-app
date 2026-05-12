@@ -428,13 +428,37 @@ struct IPhoneActiveWorkoutView: View {
             }
             .frame(width: 56)
 
-            // Status column
-            statusBadge(isDone: isDone, isCurrent: isCurrent)
+            // Status column / overflow menu (delete on done rows)
+            if isDone {
+                Menu {
+                    Button(role: .destructive) {
+                        if let loggedIdx = loggedIndex(for: row) {
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            controller.deleteLoggedSet(at: loggedIdx)
+                        }
+                    } label: {
+                        Label("删除本组", systemImage: "trash")
+                    }
+                } label: {
+                    statusBadge(isDone: true, isCurrent: false)
+                }
                 .frame(width: 36)
+            } else {
+                statusBadge(isDone: false, isCurrent: isCurrent)
+                    .frame(width: 36)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(isCurrent ? Tokens.Color.accent.opacity(0.06) : Color.clear)
+    }
+
+    /// Map a SetRow to its index in `controller.loggedSetsForCurrent` so the
+    /// controller can splice it out. Rows that are already 「done」 line up
+    /// with the head of the logged array in order.
+    private func loggedIndex(for row: SetRow) -> Int? {
+        guard let actual = row.actual else { return nil }
+        return controller.loggedSetsForCurrent.firstIndex(where: { $0.id == actual.id })
     }
 
     private func cellView(value: String, unit: String?, isCurrent: Bool, isDone: Bool, onTap: @escaping () -> Void) -> some View {
