@@ -512,25 +512,13 @@ public final class IPhoneWorkoutController: ObservableObject {
     }
 
     // MARK: - Live progress push
-
+    //
+    // 历史遗留：早期把 iPhone-only 训练的状态也镜像到 LiveWorkoutStore，结果
+    // 触发了给「Watch 镜像」 用的 LiveWorkoutView 弹 fullScreenCover 盖在
+    // IPhoneActiveWorkoutView 之上，按钮发往不存在的 Watch → 看起来「点了
+    // 没反应」。LiveWorkoutStore 只该由 iPhoneConnectivityService 在收到
+    // Watch 推送时写入，iPhone-only 流程读取 controller 自身状态即可。
     private func pushLive(_ p: LiveProgressPayload.Phase) {
-        let last = loggedSetsForCurrent.last
-        let payload = LiveProgressPayload(
-            phase: p,
-            workoutId: liveWorkoutId,
-            setIndex: currentSetIndex,
-            exerciseName: exerciseDisplayName,
-            targetReps: currentReps,
-            targetWeightKg: currentWeightKg,
-            currentRep: currentReps,
-            lastRepVelocity: nil,
-            setBestVelocity: nil,
-            vlPercent: nil,
-            repVelocities: last.map { Array(repeating: 0.0, count: $0.reps) } ?? [],
-            restRemainingSec: p == .restCountdown ? restRemainingSec : nil,
-            restTotalSec: p == .restCountdown ? restTotalSec : nil,
-            heartRate: nil
-        )
-        LiveWorkoutStore.shared.apply(payload)
+        _ = p   // no-op: 保留方法签名，避免散布在 controller 各处的调用站都得改
     }
 }
