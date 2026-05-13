@@ -381,8 +381,9 @@ struct PlanView: View {
     @ViewBuilder
     private func setRows(for item: TemplateItem) -> some View {
         if item.orderedSetSpecs.isEmpty {
-            // Backfill from legacy fields
-            ForEach(0..<max(1, item.targetSets), id: \.self) { idx in
+            // Backfill from legacy fields. 不用 max(1, ...) —— 用户删光所有
+            // specs（同时把 targetSets 清零）时应渲染 0 行而非 1 行幽灵行。
+            ForEach(0..<item.targetSets, id: \.self) { idx in
                 Button {
                     let spec = TemplateSetSpec(
                         index: idx + 1,
@@ -855,7 +856,13 @@ struct SetSpecEditorSheet: View {
             }
             Section {
                 Button(role: .destructive) {
+                    let parentItem = set.item
+                    let wasLastSpec = (parentItem?.setSpecs.count ?? 0) <= 1
                     context.delete(set)
+                    // 删的是最后一条 → 同时把 targetSets 清零，
+                    // 否则 setRows 的 legacy fallback (item.setSpecs.isEmpty 分支)
+                    // 会按 targetSets 渲染「幽灵行」，看起来像没删掉。
+                    if wasLastSpec { parentItem?.targetSets = 0 }
                     try? context.save()
                     dismiss()
                 } label: {
