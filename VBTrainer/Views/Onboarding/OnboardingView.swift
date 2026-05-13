@@ -31,7 +31,9 @@ struct OnboardingView: View {
 
     var onCompleted: () -> Void
 
-    private let totalSteps = 4
+    // Under UI test we collapse the HealthKit step (index 2) so the
+    // total is 3 (welcome / valueProp / profile). See `content`.
+    private var totalSteps: Int { ProcessInfo.isUITestMode ? 3 : 4 }
     private var accent: Color { GoalTheme.accent(for: goal) }
 
     var body: some View {
@@ -39,8 +41,10 @@ struct OnboardingView: View {
             progressDots
                 .padding(.top, 16)
                 .padding(.bottom, 8)
+                .accessibilityIdentifier("onboarding.progress")
 
             content
+                .accessibilityIdentifier("onboarding.step.\(step)")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.horizontal, 24)
                 .transition(.asymmetric(
@@ -75,7 +79,16 @@ struct OnboardingView: View {
         switch step {
         case 0: welcomeStep
         case 1: valuePropStep
-        case 2: HealthKitPermissionView()
+        // Under UI tests we skip HealthKitPermissionView entirely — the
+        // permission system sheet halts the runner. profileStep takes
+        // its place at index 2 so `step == totalSteps - 1` math still
+        // works (totalSteps becomes 3 below).
+        case 2:
+            if ProcessInfo.isUITestMode {
+                profileStep
+            } else {
+                HealthKitPermissionView()
+            }
         case 3: profileStep
         default: EmptyView()
         }
@@ -310,7 +323,9 @@ struct OnboardingView: View {
                     .shadow(color: accent.opacity(0.5), radius: 12, x: 0, y: 6)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier(step == totalSteps - 1 ? "onboarding.cta.finish" : "onboarding.cta.continue")
         }
+        .accessibilityIdentifier("onboarding.footer")
     }
 
     private func advance() {
