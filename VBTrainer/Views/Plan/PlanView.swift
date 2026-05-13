@@ -204,9 +204,9 @@ struct PlanView: View {
     }
 
     private func statBlock(value: String, label: String, unit: String? = nil,
-                           alignment: HorizontalAlignment = .leading) -> some View {
-        // 去掉 tracking 负值（之前为节省横向空间挤数字，但导致 2 位数字「13」 与
-        // 下方 label「组」 视觉错行）。同时把 label spacing 增加到 4。
+                           alignment: HorizontalAlignment = .center) -> some View {
+        // value 与 label 默认居中对齐：1 位数 / 2 位数与下方单字 label 视觉
+        // 中线对齐，避免「13 / 组」 错行的观感。预估列调用方传 .trailing。
         VStack(alignment: alignment, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(value)
