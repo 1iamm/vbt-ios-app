@@ -123,52 +123,67 @@ jobs:
             const sha = context.sha.slice(0, 7);
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
 
-            // Detect which step failed: the last log file that contains an error pattern.
-            // We use `error:` (xcodebuild style) but exclude CoreData noise.
-            const errorRe = /(^|\n)[^\n]*\berror:/i;
+            // A section "succeeded" if its log ends with BUILD/TEST SUCCEEDED and
+            // contains no actual error lines (excluding CoreData noise). We skip
+            // those entirely so the comment focuses on the failing step.
             const ignoreRe = /CoreData: error:|CoreData: annotation:/;
+            const realErrorRe = /(?:^|\s)(error:|fatal error:|\*\* (BUILD|TEST) FAILED \*\*|XCTAssertEqual failed|XCTAssertTrue failed|Test Case .* failed)/;
+
+            function classify(content) {
+              const lines = content.split('\n');
+              const succeeded = /\*\* (BUILD|TEST) SUCCEEDED \*\*/.test(content);
+              const realErrors = lines.filter(l => realErrorRe.test(l) && !ignoreRe.test(l));
+              return { lines, succeeded, realErrors };
+            }
 
             let body = `## ❌ CI failed on \`${sha}\`\n\n`;
             body += `Run: ${runUrl}\n\n`;
 
-            let foundAny = false;
+            // First pass: figure out which sections actually failed.
+            const enriched = [];
             for (const s of sections) {
               if (!fs.existsSync(s.file)) continue;
               const content = fs.readFileSync(s.file, 'utf8');
-              const lines = content.split('\n');
+              if (content.trim().length === 0) continue;
+              const info = classify(content);
+              enriched.push({ ...s, content, ...info });
+            }
 
-              // Extract real error lines (excluding CoreData noise).
-              const errors = lines
-                .filter(l => /\berror:/i.test(l) && !ignoreRe.test(l))
-                .slice(-40);
+            const failingSections = enriched.filter(s => !s.succeeded);
+            const summarySections = enriched.filter(s => s.succeeded);
 
-              // Also surface lines starting with ** like ** TEST FAILED **
-              const milestones = lines
+            if (summarySections.length) {
+              body += `**Passed steps:** ${summarySections.map(s => `\`${s.name}\``).join(', ')}\n\n`;
+            }
+
+            // Per-section budget: total 50K, divided among failing sections.
+            const PER_BUDGET = Math.max(8000, Math.floor(50000 / Math.max(1, failingSections.length)));
+
+            for (const s of failingSections) {
+              body += `### ❌ ${s.name}\n\n`;
+
+              const milestones = s.lines
                 .filter(l => /^\*\*[^*]+\*\*/.test(l))
                 .slice(-10);
-
-              // Tail of the log as fallback context.
-              const tail = lines.slice(-150).join('\n');
-
-              if (errors.length === 0 && milestones.length === 0 && lines.length < 5) continue;
-
-              foundAny = true;
-              body += `### ${s.name}\n\n`;
-
               if (milestones.length) {
                 body += `**Milestones:**\n\`\`\`\n${milestones.join('\n')}\n\`\`\`\n\n`;
               }
-              if (errors.length) {
-                body += `**Errors detected (${errors.length}):**\n\`\`\`\n${errors.join('\n')}\n\`\`\`\n\n`;
+
+              if (s.realErrors.length) {
+                const errs = s.realErrors.slice(-50);
+                body += `**Errors (${s.realErrors.length}, last ${errs.length}):**\n\`\`\`\n${errs.join('\n').slice(0, 8000)}\n\`\`\`\n\n`;
               }
-              body += `<details><summary>Last 150 lines of ${s.name.toLowerCase()}</summary>\n\n\`\`\`\n${tail}\n\`\`\`\n</details>\n\n`;
+
+              // Tail of log, capped to remaining per-section budget.
+              const tail = s.lines.slice(-200).join('\n');
+              const capped = tail.length > PER_BUDGET ? '…' + tail.slice(-PER_BUDGET) : tail;
+              body += `<details><summary>Last 200 lines of ${s.name.toLowerCase()}</summary>\n\n\`\`\`\n${capped}\n\`\`\`\n</details>\n\n`;
             }
 
-            if (!foundAny) {
-              body += `_No captured logs to dump. Failure likely occurred in a step earlier than \`Generate Xcode project\` (e.g. brew install). Check the run page directly._\n`;
+            if (failingSections.length === 0) {
+              body += `_All captured steps reported success — failure likely in a step before xcodegen (e.g. brew install / Xcode setup). Check the run page directly._\n`;
             }
 
-            // GitHub comment body has ~65k char limit; truncate if needed.
             const MAX = 60000;
             if (body.length > MAX) {
               body = body.slice(0, MAX) + '\n\n_…truncated. See the run page for full output._';
