@@ -9,6 +9,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Required so the failure-log step can post a PR comment.
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   build-test:
     name: Build + AlgorithmTests
@@ -36,20 +42,21 @@ jobs:
       # follow-up PR (drop `continue-on-error`).
       - name: SwiftFormat (lint mode, advisory)
         continue-on-error: true
-        run: swiftformat --lint .
+        run: swiftformat --lint . 2>&1 | tee /tmp/swiftformat.log
 
       - name: SwiftLint (advisory)
         continue-on-error: true
-        run: swiftlint lint --reporter github-actions-logging
+        run: swiftlint lint --reporter github-actions-logging 2>&1 | tee /tmp/swiftlint.log
 
       - name: Generate Xcode project
-        run: xcodegen generate
+        run: xcodegen generate 2>&1 | tee /tmp/xcodegen.log
 
       # 注意：不传 -sdk。Xcode 会按 target.platform 自动选 SDK
       # （iOS target 用 iphonesimulator，被依赖的 watchOS target 用 watchsimulator）。
       # 传 -sdk iphonesimulator 会强制所有 target 用 iOS SDK，watchOS 子 target 会编译失败。
       - name: Build iOS (simulator)
         run: |
+          set -o pipefail
           xcodebuild \
             -project VBTrainer.xcodeproj \
             -scheme VBTrainer \
@@ -58,10 +65,11 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build
+            build 2>&1 | tee /tmp/build-ios.log
 
       - name: Build watchOS (simulator)
         run: |
+          set -o pipefail
           xcodebuild \
             -project VBTrainer.xcodeproj \
             -scheme "VBTrainerWatch Watch App" \
@@ -70,10 +78,11 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build
+            build 2>&1 | tee /tmp/build-watch.log
 
       - name: Run algorithm tests
         run: |
+          set -o pipefail
           # Pick the newest iPhone simulator available on the runner.
           DEST=$(xcrun simctl list devices available -j \
             | python3 -c "import json,sys;d=json.load(sys.stdin)['devices'];cands=[x for runt,xs in d.items() if 'iOS' in runt for x in xs if 'iPhone' in x['name']];print(sorted(cands,key=lambda x:x['name'])[-1]['udid'])")
@@ -89,4 +98,85 @@ jobs:
             -skip-testing:VBTrainerTests/JumpDetectorTests/testSyntheticThirtyCmJump \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/test.log
+
+      # ──────────────────────────────────────────────────────────────────
+      # Always-on diagnostic: on any failure above, post a triage comment
+      # to the PR with the real errors. This closes the loop so AI agents
+      # iterating in the cloud can read CI failures via the PR comments
+      # API without needing GitHub Actions log access.
+      # ──────────────────────────────────────────────────────────────────
+      - name: Post failure log to PR
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            const sections = [
+              { name: 'Generate Xcode project', file: '/tmp/xcodegen.log' },
+              { name: 'Build iOS (simulator)',  file: '/tmp/build-ios.log' },
+              { name: 'Build watchOS (simulator)', file: '/tmp/build-watch.log' },
+              { name: 'Run algorithm tests', file: '/tmp/test.log' },
+            ];
+
+            const sha = context.sha.slice(0, 7);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Detect which step failed: the last log file that contains an error pattern.
+            // We use `error:` (xcodebuild style) but exclude CoreData noise.
+            const errorRe = /(^|\n)[^\n]*\berror:/i;
+            const ignoreRe = /CoreData: error:|CoreData: annotation:/;
+
+            let body = `## ❌ CI failed on \`${sha}\`\n\n`;
+            body += `Run: ${runUrl}\n\n`;
+
+            let foundAny = false;
+            for (const s of sections) {
+              if (!fs.existsSync(s.file)) continue;
+              const content = fs.readFileSync(s.file, 'utf8');
+              const lines = content.split('\n');
+
+              // Extract real error lines (excluding CoreData noise).
+              const errors = lines
+                .filter(l => /\berror:/i.test(l) && !ignoreRe.test(l))
+                .slice(-40);
+
+              // Also surface lines starting with ** like ** TEST FAILED **
+              const milestones = lines
+                .filter(l => /^\*\*[^*]+\*\*/.test(l))
+                .slice(-10);
+
+              // Tail of the log as fallback context.
+              const tail = lines.slice(-150).join('\n');
+
+              if (errors.length === 0 && milestones.length === 0 && lines.length < 5) continue;
+
+              foundAny = true;
+              body += `### ${s.name}\n\n`;
+
+              if (milestones.length) {
+                body += `**Milestones:**\n\`\`\`\n${milestones.join('\n')}\n\`\`\`\n\n`;
+              }
+              if (errors.length) {
+                body += `**Errors detected (${errors.length}):**\n\`\`\`\n${errors.join('\n')}\n\`\`\`\n\n`;
+              }
+              body += `<details><summary>Last 150 lines of ${s.name.toLowerCase()}</summary>\n\n\`\`\`\n${tail}\n\`\`\`\n</details>\n\n`;
+            }
+
+            if (!foundAny) {
+              body += `_No captured logs to dump. Failure likely occurred in a step earlier than \`Generate Xcode project\` (e.g. brew install). Check the run page directly._\n`;
+            }
+
+            // GitHub comment body has ~65k char limit; truncate if needed.
+            const MAX = 60000;
+            if (body.length > MAX) {
+              body = body.slice(0, MAX) + '\n\n_…truncated. See the run page for full output._';
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body,
+            });
