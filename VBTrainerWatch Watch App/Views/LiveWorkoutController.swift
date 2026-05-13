@@ -615,9 +615,12 @@ public final class LiveWorkoutController: ObservableObject {
             if self.isRunning {
                 HapticFeedback.inactivityWarning()
             }
-            // 4 more seconds → 12s total → auto-end
+            // 4 more seconds → 12s total → auto-end. `self` is already
+            // non-Optional from the guard above (a second `let self` would
+            // be a compile error against the bound non-Optional binding);
+            // only re-check cancellation.
             try? await Task.sleep(nanoseconds: Self.inactivityEndNanos - Self.inactivityWarnNanos)
-            guard !Task.isCancelled, let self else { return }
+            guard !Task.isCancelled else { return }
             await self.inactivityAutoEnd()
         }
     }
