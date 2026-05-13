@@ -118,6 +118,7 @@ targets:
         # watchOS 的测试 target。先排除让 CI 能跑起来。
         excludes:
           - "AlgorithmTests/LiveWorkoutControllerVLTests.swift"
+          - "UITests"  # XCUITest 在 UITests target 里编译，不属于 unit-test target
       - path: Shared
     dependencies:
       - target: VBTrainer
@@ -127,17 +128,40 @@ targets:
         BUNDLE_LOADER: $(TEST_HOST)
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/VBTrainer.app/VBTrainer
 
+  # ─────────────────────────────────────────────────────────────
+  # UI Tests (XCUITest — black-box screen automation)
+  # Separate target because:
+  #   - 不同 product type: bundle.ui-testing vs bundle.unit-test
+  #   - UI tests run outside the host app process (XCUITest 模式)
+  #   - Linked to the iOS app via TEST_TARGET_NAME
+  # ─────────────────────────────────────────────────────────────
+  VBTrainerUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: Tests/UITests
+    dependencies:
+      - target: VBTrainer
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vbtrainer.app.uitests
+        TEST_TARGET_NAME: VBTrainer
+
 schemes:
   VBTrainer:
     build:
       targets:
         VBTrainer: all
+        VBTrainerTests: [test]
+        VBTrainerUITests: [test]
     run:
       config: Debug
     test:
       config: Debug
       targets:
         - VBTrainerTests
+        - VBTrainerUITests
     archive:
       config: Release
 

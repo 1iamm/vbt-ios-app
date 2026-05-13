@@ -140,28 +140,68 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             build 2>&1 | tee /tmp/build-watch.log
 
-      - name: Run algorithm tests
+      - name: Pick simulator
+        id: sim
         run: |
-          set -o pipefail
-          # Pick the newest iPhone simulator available on the runner.
           DEST=$(xcrun simctl list devices available -j \
             | python3 -c "import json,sys;d=json.load(sys.stdin)['devices'];cands=[x for runt,xs in d.items() if 'iOS' in runt for x in xs if 'iPhone' in x['name']];print(sorted(cands,key=lambda x:x['name'])[-1]['udid'])")
           echo "Using simulator: $DEST"
+          echo "udid=$DEST" >> "$GITHUB_OUTPUT"
+
+      - name: Run algorithm tests
+        run: |
+          set -o pipefail
           # 已知 flaky / 预存在失败（不是本 PR 引入，留作 follow-up）：
           # - JumpDetectorTests.testSyntheticThirtyCmJump：合成 30cm 跳跃信号目前不达检测阈值
           # - RepDetectorTests.testCleanFiveReps：合成 5-rep 信号偶尔只检出 3-4 reps
-          #   （PR #49 第 2 次 run 通过，PR #50 第 1 次 run 失败）
           # 修好后从 -skip-testing 列表移除。
           xcodebuild test \
             -project VBTrainer.xcodeproj \
             -scheme VBTrainer \
-            -destination "platform=iOS Simulator,id=$DEST" \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
             -only-testing:VBTrainerTests \
             -skip-testing:VBTrainerTests/JumpDetectorTests/testSyntheticThirtyCmJump \
             -skip-testing:VBTrainerTests/RepDetectorTests/testCleanFiveReps \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/test.log
+
+      - name: Reset simulator before UI tests
+        # Algorithm tests run inside the host app's process; SwiftData
+        # writes survive to the simulator's container. Without erase,
+        # UI tests may launch into MainTabsView (UserProfile exists)
+        # instead of OnboardingView, failing the test.
+        run: |
+          xcrun simctl shutdown "${{ steps.sim.outputs.udid }}" 2>/dev/null || true
+          xcrun simctl erase "${{ steps.sim.outputs.udid }}"
+
+      - name: Run UI tests
+        # XCUITest takes a screenshot per step and stores them in the
+        # .xcresult bundle. PR #5 will read these out and upload as a
+        # release for embedding in the PR comment.
+        run: |
+          set -o pipefail
+          rm -rf /tmp/UITestResults.xcresult
+          xcodebuild test \
+            -project VBTrainer.xcodeproj \
+            -scheme VBTrainer \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
+            -only-testing:VBTrainerUITests \
+            -resultBundlePath /tmp/UITestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/uitest.log
+
+      - name: Upload xcresult bundle
+        # Available to download from the run page on success or failure.
+        # PR #5 will swap the artifact upload for extract+upload-to-release.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: UITestResults-${{ github.sha }}
+          path: /tmp/UITestResults.xcresult
+          retention-days: 7
+          if-no-files-found: warn
 
       # ──────────────────────────────────────────────────────────────────
       # Always-on diagnostic: on any failure above, post a triage comment
@@ -181,6 +221,7 @@ jobs:
               { name: 'Build iOS (simulator)',  file: '/tmp/build-ios.log' },
               { name: 'Build watchOS (simulator)', file: '/tmp/build-watch.log' },
               { name: 'Run algorithm tests', file: '/tmp/test.log' },
+              { name: 'Run UI tests', file: '/tmp/uitest.log' },
             ];
 
             const sha = context.sha.slice(0, 7);
