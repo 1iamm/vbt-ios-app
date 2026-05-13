@@ -1,0 +1,54 @@
+name: Format Baseline
+
+# One-shot helper: runs SwiftFormat across the entire repo and commits any
+# diff back to the branch that triggered it. Use this:
+#   1. After merging the SwiftLint/SwiftFormat tooling PR to apply the
+#      first wave of formatting fixes to existing files.
+#   2. Any time the .swiftformat config changes and existing files need
+#      re-normalization.
+#
+# Manual trigger only (workflow_dispatch). Won't run on push to main.
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to format (will commit back to it)"
+        required: true
+        default: "main"
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Install SwiftFormat
+        run: brew install swiftformat
+
+      - name: Print SwiftFormat version
+        run: swiftformat --version
+
+      - name: Apply SwiftFormat
+        run: swiftformat .
+
+      - name: Commit + push if changes
+        run: |
+          if git diff --quiet; then
+            echo "✓ Nothing to format — repo already normalized."
+            exit 0
+          fi
+          git config user.email "format-bot@vbtrainer.local"
+          git config user.name "SwiftFormat Bot"
+          git add -A
+          git commit -m "chore: apply swiftformat baseline"
+          git push origin "HEAD:${{ inputs.branch }}"

@@ -9,6 +9,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Required so the failure-log step can post a PR comment.
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   build-test:
     name: Build + AlgorithmTests
@@ -27,17 +33,30 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Install xcodegen
-        run: brew install xcodegen
+      - name: Install xcodegen + linters
+        run: brew install xcodegen swiftlint swiftformat
+
+      # Phase A rollout: lint steps run but do NOT block CI yet.
+      # After this PR merges, trigger `Format Baseline` workflow on main to
+      # normalize existing files, then escalate these steps to required in a
+      # follow-up PR (drop `continue-on-error`).
+      - name: SwiftFormat (lint mode, advisory)
+        continue-on-error: true
+        run: swiftformat --lint . 2>&1 | tee /tmp/swiftformat.log
+
+      - name: SwiftLint (advisory)
+        continue-on-error: true
+        run: swiftlint lint --reporter github-actions-logging 2>&1 | tee /tmp/swiftlint.log
 
       - name: Generate Xcode project
-        run: xcodegen generate
+        run: xcodegen generate 2>&1 | tee /tmp/xcodegen.log
 
       # 注意：不传 -sdk。Xcode 会按 target.platform 自动选 SDK
       # （iOS target 用 iphonesimulator，被依赖的 watchOS target 用 watchsimulator）。
       # 传 -sdk iphonesimulator 会强制所有 target 用 iOS SDK，watchOS 子 target 会编译失败。
       - name: Build iOS (simulator)
         run: |
+          set -o pipefail
           xcodebuild \
             -project VBTrainer.xcodeproj \
             -scheme VBTrainer \
@@ -46,10 +65,11 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build
+            build 2>&1 | tee /tmp/build-ios.log
 
       - name: Build watchOS (simulator)
         run: |
+          set -o pipefail
           xcodebuild \
             -project VBTrainer.xcodeproj \
             -scheme "VBTrainerWatch Watch App" \
@@ -58,10 +78,11 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
-            build
+            build 2>&1 | tee /tmp/build-watch.log
 
       - name: Run algorithm tests
         run: |
+          set -o pipefail
           # Pick the newest iPhone simulator available on the runner.
           DEST=$(xcrun simctl list devices available -j \
             | python3 -c "import json,sys;d=json.load(sys.stdin)['devices'];cands=[x for runt,xs in d.items() if 'iOS' in runt for x in xs if 'iPhone' in x['name']];print(sorted(cands,key=lambda x:x['name'])[-1]['udid'])")
@@ -77,4 +98,100 @@ jobs:
             -skip-testing:VBTrainerTests/JumpDetectorTests/testSyntheticThirtyCmJump \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/test.log
+
+      # ──────────────────────────────────────────────────────────────────
+      # Always-on diagnostic: on any failure above, post a triage comment
+      # to the PR with the real errors. This closes the loop so AI agents
+      # iterating in the cloud can read CI failures via the PR comments
+      # API without needing GitHub Actions log access.
+      # ──────────────────────────────────────────────────────────────────
+      - name: Post failure log to PR
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            const sections = [
+              { name: 'Generate Xcode project', file: '/tmp/xcodegen.log' },
+              { name: 'Build iOS (simulator)',  file: '/tmp/build-ios.log' },
+              { name: 'Build watchOS (simulator)', file: '/tmp/build-watch.log' },
+              { name: 'Run algorithm tests', file: '/tmp/test.log' },
+            ];
+
+            const sha = context.sha.slice(0, 7);
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // A section "succeeded" if its log ends with BUILD/TEST SUCCEEDED and
+            // contains no actual error lines (excluding CoreData noise). We skip
+            // those entirely so the comment focuses on the failing step.
+            const ignoreRe = /CoreData: error:|CoreData: annotation:/;
+            const realErrorRe = /(?:^|\s)(error:|fatal error:|\*\* (BUILD|TEST) FAILED \*\*|XCTAssertEqual failed|XCTAssertTrue failed|Test Case .* failed)/;
+
+            function classify(content) {
+              const lines = content.split('\n');
+              const succeeded = /\*\* (BUILD|TEST) SUCCEEDED \*\*/.test(content);
+              const realErrors = lines.filter(l => realErrorRe.test(l) && !ignoreRe.test(l));
+              return { lines, succeeded, realErrors };
+            }
+
+            let body = `## ❌ CI failed on \`${sha}\`\n\n`;
+            body += `Run: ${runUrl}\n\n`;
+
+            // First pass: figure out which sections actually failed.
+            const enriched = [];
+            for (const s of sections) {
+              if (!fs.existsSync(s.file)) continue;
+              const content = fs.readFileSync(s.file, 'utf8');
+              if (content.trim().length === 0) continue;
+              const info = classify(content);
+              enriched.push({ ...s, content, ...info });
+            }
+
+            const failingSections = enriched.filter(s => !s.succeeded);
+            const summarySections = enriched.filter(s => s.succeeded);
+
+            if (summarySections.length) {
+              body += `**Passed steps:** ${summarySections.map(s => `\`${s.name}\``).join(', ')}\n\n`;
+            }
+
+            // Per-section budget: total 50K, divided among failing sections.
+            const PER_BUDGET = Math.max(8000, Math.floor(50000 / Math.max(1, failingSections.length)));
+
+            for (const s of failingSections) {
+              body += `### ❌ ${s.name}\n\n`;
+
+              const milestones = s.lines
+                .filter(l => /^\*\*[^*]+\*\*/.test(l))
+                .slice(-10);
+              if (milestones.length) {
+                body += `**Milestones:**\n\`\`\`\n${milestones.join('\n')}\n\`\`\`\n\n`;
+              }
+
+              if (s.realErrors.length) {
+                const errs = s.realErrors.slice(-50);
+                body += `**Errors (${s.realErrors.length}, last ${errs.length}):**\n\`\`\`\n${errs.join('\n').slice(0, 8000)}\n\`\`\`\n\n`;
+              }
+
+              // Tail of log, capped to remaining per-section budget.
+              const tail = s.lines.slice(-200).join('\n');
+              const capped = tail.length > PER_BUDGET ? '…' + tail.slice(-PER_BUDGET) : tail;
+              body += `<details><summary>Last 200 lines of ${s.name.toLowerCase()}</summary>\n\n\`\`\`\n${capped}\n\`\`\`\n</details>\n\n`;
+            }
+
+            if (failingSections.length === 0) {
+              body += `_All captured steps reported success — failure likely in a step before xcodegen (e.g. brew install / Xcode setup). Check the run page directly._\n`;
+            }
+
+            const MAX = 60000;
+            if (body.length > MAX) {
+              body = body.slice(0, MAX) + '\n\n_…truncated. See the run page for full output._';
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body,
+            });
