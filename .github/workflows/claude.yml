@@ -75,6 +75,15 @@ jobs:
             - 验收步骤至少写 1 步（操作 + 预期），多步更好
             - 风险点必填，没有就写"无"
 
+            **新功能必须配 UI test + a11y identifier**（如果改了 SwiftUI View）：
+            - 新 View 里的关键控件加 `.accessibilityIdentifier("feature.element")`
+              形如 `onboarding.cta.continue`、`today.workout.start`，命名稳定可 grep
+            - 在 Tests/UITests/ 写对应的 XCUITest 走通这个新流程
+            - 每个关键步骤调 `attachScreenshot("NN-step-name")`（数字前缀按时序排）
+            - 启动参数加 `-UI_TEST_MODE` 跳过 HealthKit/Auth 等系统 sheet
+            - 跑通后 CI 会自动把截图上传到 PR 的 Draft Release 并嵌入评论
+            - 用户验收时看 PR 评论里的图，不点 Merge 之前你别催
+
             ── 通用风格 ──
             - 直接说结论，不要前情提要
             - 中文
