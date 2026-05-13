@@ -1,0 +1,10 @@
+- [x] 1. 创建 `.github/workflows/ci.yml`：iOS + watchOS build + AlgorithmTests，macos-26 runner
+- [x] 2. 创建 `.github/workflows/claude.yml`：PR auto-review + `@claude` 互动，ubuntu-latest runner
+- [x] 3. 创建 `CONTRIBUTING.md`：`@claude` 用法、token 轮换、CI 边界
+- [x] 4. 本地 xcodegen + iOS/watchOS xcodebuild build 验证（确认 CI yml 命令本地能跑通）
+- [x] 5. `project.yml` 排除 `LiveWorkoutControllerVLTests.swift`（watchOS-only 类型在 iOS 测试 target 编译不过；预存在债务）
+- [ ] 6. 用户在 GitHub Settings → Secrets 添加 `CLAUDE_CODE_OAUTH_TOKEN`（本地 `claude setup-token` 生成）
+- [ ] 7. 第一个 PR 上来后验证：`ci.yml` 通过 + `claude.yml` 留下 review 评论
+- [ ] 8.（可选）将 repo 切 public 以获得无限 macOS 分钟
+- [ ] 9. **Follow-up 债务**：修 `JumpDetectorTests.testSyntheticThirtyCmJump`（合成信号不达检测阈值），然后从 ci.yml `-skip-testing` 移除
+- [ ] 10. **Follow-up 债务**：把 `LiveWorkoutController` 抽象到 Shared/ 或加 watchOS 测试 target，让 `LiveWorkoutControllerVLTests` 能跑
