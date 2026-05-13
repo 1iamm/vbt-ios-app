@@ -189,13 +189,13 @@ struct PlanView: View {
                     .font(.system(size: 12))
                     .foregroundStyle(Tokens.Color.secondaryLabel)
             }
-            HStack(alignment: .firstTextBaseline, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 24) {
                 statBlock(value: "\(summary.ex)", label: "动作")
                 statBlock(value: "\(summary.sets)", label: "组")
                 statBlock(value: formatVolume(summary.volumeKg), label: "训练量",
                           unit: summary.volumeKg >= 1000 ? "t" : "kg")
                 Spacer(minLength: 0)
-                statBlock(value: "~\(summary.est)", label: "预估", unit: "min", alignment: .trailing)
+                statBlock(value: "\(summary.est)", label: "预估", unit: "min", alignment: .trailing)
             }
         }
         .padding(.horizontal, Tokens.Space.xl)
@@ -205,12 +205,13 @@ struct PlanView: View {
 
     private func statBlock(value: String, label: String, unit: String? = nil,
                            alignment: HorizontalAlignment = .leading) -> some View {
-        VStack(alignment: alignment, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 2) {
+        // 去掉 tracking 负值（之前为节省横向空间挤数字，但导致 2 位数字「13」 与
+        // 下方 label「组」 视觉错行）。同时把 label spacing 增加到 4。
+        VStack(alignment: alignment, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
                 Text(value)
                     .font(.system(size: 24, weight: .bold, design: .rounded))
                     .monospacedDigit()
-                    .tracking(-0.5)
                 if let unit {
                     Text(unit)
                         .font(.system(size: 11))
