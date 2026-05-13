@@ -1,8 +1,12 @@
 name: Claude
 
 on:
-  pull_request:
-    types: [opened, synchronize]
+  # Auto-review on every PR push has been removed: redundant with the
+  # cloud Claude session already writing the code, frequently flakes
+  # on Anthropic SDK header bugs, and pollutes the check list with red
+  # decoration. Trigger an on-demand review by commenting `@claude
+  # review` on the PR. Same channel handles `@claude implement X`
+  # write-code requests.
   issue_comment:
     types: [created]
   pull_request_review_comment:
@@ -12,13 +16,12 @@ on:
 # session should finish (it may already be committing code) before a newer
 # trigger starts.
 concurrency:
-  group: claude-${{ github.event.pull_request.number || github.event.issue.number || github.ref }}
+  group: claude-${{ github.event.issue.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
   claude:
     if: |
-      github.event_name == 'pull_request' ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude'))
     runs-on: ubuntu-latest
