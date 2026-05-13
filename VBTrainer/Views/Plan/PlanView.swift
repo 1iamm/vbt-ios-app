@@ -345,29 +345,22 @@ struct PlanView: View {
 
     private func summaryLine(_ item: TemplateItem) -> String {
         let workSpecs = item.orderedSetSpecs.filter { $0.kind == .work }
+        // 「共 N 组 · 重量 · 次数」格式；统一时显示单值，不同时显示范围。
         if !workSpecs.isEmpty {
-            // 全空 sentinel（刚添加、无历史） → 提示用户填写。
             if workSpecs.allSatisfy({ $0.weightKg == 0 && $0.reps == 0 }) {
                 return "未填写 · 点击下方组配置"
             }
-            let uniqueWeights = Set(workSpecs.map(\.weightKg))
-            let uniqueReps = Set(workSpecs.map(\.reps))
-            // 所有正式组完全相同 → 紧凑显示「reps×组数 @重量」
-            if uniqueWeights.count == 1 && uniqueReps.count == 1,
-               let first = workSpecs.first {
-                return "\(first.reps)×\(workSpecs.count) @\(Int(first.weightKg))kg"
-            }
-            // 各组不同 → 显示重量和次数范围，避免误导性的 5×3@60kg
             let wMin = Int(workSpecs.map(\.weightKg).min() ?? 0)
             let wMax = Int(workSpecs.map(\.weightKg).max() ?? 0)
             let rMin = workSpecs.map(\.reps).min() ?? 0
             let rMax = workSpecs.map(\.reps).max() ?? 0
             let weightStr = wMin == wMax ? "\(wMin)kg" : "\(wMin)-\(wMax)kg"
-            let repStr = rMin == rMax ? "\(rMin) reps" : "\(rMin)-\(rMax) reps"
-            return "\(weightStr) · \(repStr)"
+            let repStr = rMin == rMax ? "\(rMin)次" : "\(rMin)-\(rMax)次"
+            return "共\(workSpecs.count)组 · \(weightStr) · \(repStr)"
         }
+        // Legacy 模板（无 per-set specs）：用模板 target 值。
         let kg = item.targetWeightKg.map { "\(Int($0))kg" } ?? "—"
-        return "\(item.targetReps)×\(item.targetSets) @\(kg)"
+        return "共\(item.targetSets)组 · \(kg) · \(item.targetReps)次"
     }
 
     private var setTableHeader: some View {
