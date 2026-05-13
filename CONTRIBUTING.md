@@ -118,3 +118,5 @@ xcodebuild test -project VBTrainer.xcodeproj -scheme VBTrainer \
 - 私有 repo + Free 套餐 = 每月 2000 总分钟，**macOS 算 10× → 实际 200 macOS 分钟**
 - 一次完整 CI ≈ 8–12 分钟 → 月 ~20 个 PR 就用光
 - 如果不够用：把 repo 切 public（无公司信息，可公开）→ macOS 分钟无限免费
+
+<!-- ci smoketest 2026-05-13 -->

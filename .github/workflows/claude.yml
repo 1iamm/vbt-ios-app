@@ -38,6 +38,10 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 让 Claude 在 PR 上发可见评论（一条 sticky 评论，多次运行会 update 同一条）
+          use_sticky_comment: true
+          # 用 checkbox 形式展示进度
+          track_progress: true
           # 让 CI 上的 Claude 读项目记忆 + 关键约束
           prompt: |
             你正在 review 一个 VBTrainer 的 PR（Apple Watch + iPhone 的 VBT 训练工具）。
