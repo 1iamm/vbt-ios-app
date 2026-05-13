@@ -1,0 +1,61 @@
+name: Claude
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+# One Claude run per PR/ref at a time. Don't cancel: a running interactive
+# session should finish (it may already be committing code) before a newer
+# trigger starts.
+concurrency:
+  group: claude-${{ github.event.pull_request.number || github.event.issue.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  claude:
+    if: |
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 让 CI 上的 Claude 读项目记忆 + 关键约束
+          prompt: |
+            你正在 review 一个 VBTrainer 的 PR（Apple Watch + iPhone 的 VBT 训练工具）。
+
+            行动前先读：
+            - .claude/CLAUDE.md（项目大脑，必读）
+            - openspec/ 目录里相关的 change（如果 PR 引用了某个 change）
+
+            重点检查项：
+            1. 算法常量必须有论文引用注释（参考 Shared/Algorithms/Citations.swift）
+            2. SwiftData @Model 改动是否破坏 schema 兼容性
+            3. Shared/ 改动是否 iOS+watchOS 两端都能编译（用 #if os(...) 守卫平台 API）
+            4. 跨端类名是否避开 Swift 内建（如用 WorkoutSet 不用 ExerciseSet）
+            5. 是否有未补的单元测试（算法/纯逻辑必须有，UI 不写测试）
+            6. 设计 token 改动是否两端同步（design/ 和 Shared/Theme/Tokens.swift）
+
+            评审风格：
+            - 直接说结论，不要前情提要
+            - 中文
+            - 不要罗列多个方案让用户选，给一个最优建议 + 一句理由
+            - 如果是 @claude 评论触发的写代码请求，按指示动手 commit，不要先问"要不要这样做"

@@ -112,6 +112,12 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - path: Tests
+        # 这两个测试引用了 watchOS-only 的 LiveWorkoutController，
+        # 在 iOS-only 的测试 target 里无法编译。后续 task：
+        # 要么把 LiveWorkoutController 抽象到 Shared/，要么开一个
+        # watchOS 的测试 target。先排除让 CI 能跑起来。
+        excludes:
+          - "AlgorithmTests/LiveWorkoutControllerVLTests.swift"
       - path: Shared
     dependencies:
       - target: VBTrainer
