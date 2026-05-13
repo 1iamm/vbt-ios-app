@@ -860,10 +860,11 @@ struct SetSpecEditorSheet: View {
                     let parentItem = set.item
                     let wasLastSpec = (parentItem?.setSpecs.count ?? 0) <= 1
                     context.delete(set)
-                    // 删的是最后一条 → 同时把 targetSets 清零，
-                    // 否则 setRows 的 legacy fallback (item.setSpecs.isEmpty 分支)
-                    // 会按 targetSets 渲染「幽灵行」，看起来像没删掉。
-                    if wasLastSpec { parentItem?.targetSets = 0 }
+                    // 删的是最后一条 spec → 把整个 TemplateItem 也一起删掉，
+                    // 让用户看到「这个动作没了」 而不是「0 组 × 5 reps」 的尴尬空壳。
+                    if wasLastSpec, let parentItem {
+                        context.delete(parentItem)
+                    }
                     try? context.save()
                     dismiss()
                 } label: {
