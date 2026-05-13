@@ -95,6 +95,54 @@ jobs:
           xcodebuild -version
           swift --version
 
+      # PR #6 (CI 加速): detect whether this PR has UI / build-relevant
+      # changes. Docs-only PRs (openspec/, .claude/, *.md, no project.yml)
+      # skip the macOS UI test entirely — saves 5-7 min for paperwork PRs.
+      - name: Detect change scope
+        id: changes
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 300,
+            });
+            const paths = files.map(f => f.filename);
+            // UI / build-affecting paths. If any match, we run the full UI
+            // test + screenshot pipeline. Otherwise we skip those steps.
+            const uiOrBuildRE = new RegExp([
+              '^VBTrainer/Views/',
+              '^VBTrainerWatch Watch App/Views/',
+              '^VBTrainerWatch Watch App/Sensors/',
+              '^Shared/Theme/',
+              '^Shared/Models/',
+              '^VBTrainer/App/',
+              '^VBTrainerWatch Watch App/App/',
+              '^Tests/UITests/',
+              '^Shared/Extensions/.+UITestMode',
+              '^project\\.yml$',
+            ].join('|'));
+            const hasUI = paths.some(p => uiOrBuildRE.test(p));
+            core.setOutput('has_ui', hasUI ? 'true' : 'false');
+            console.log(`Changed files: ${paths.length}, UI-relevant: ${hasUI}`);
+            console.log(paths.slice(0, 30).map(p => `  ${p}`).join('\n'));
+
+      - name: Cache Homebrew downloads
+        # Caches bottle downloads so brew install reuses them. Doesn't cache
+        # /opt/homebrew/Cellar directly (fragile across runner image changes);
+        # cache hit is good enough — install becomes a copy not a download.
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/Homebrew/downloads
+            ~/Library/Caches/Homebrew/api
+          key: brew-${{ runner.os }}-xcodegen-swiftlint-swiftformat-xcparse-v2
+          restore-keys: |
+            brew-${{ runner.os }}-
+
       - name: Install xcodegen + linters
         run: brew install xcodegen swiftlint swiftformat
 
@@ -173,14 +221,17 @@ jobs:
         # writes survive to the simulator's container. Without erase,
         # UI tests may launch into MainTabsView (UserProfile exists)
         # instead of OnboardingView, failing the test.
+        if: steps.changes.outputs.has_ui == 'true'
         run: |
           xcrun simctl shutdown "${{ steps.sim.outputs.udid }}" 2>/dev/null || true
           xcrun simctl erase "${{ steps.sim.outputs.udid }}"
 
       - name: Run UI tests
         # XCUITest takes a screenshot per step and stores them in the
-        # .xcresult bundle. PR #5 will read these out and upload as a
-        # release for embedding in the PR comment.
+        # .xcresult bundle. PR #5 reads them out and uploads as a release
+        # for embedding in the PR comment.
+        # Skipped on docs-only / openspec-only / CI-only PRs to save 5-7 min.
+        if: steps.changes.outputs.has_ui == 'true'
         run: |
           set -o pipefail
           rm -rf /tmp/UITestResults.xcresult
@@ -198,7 +249,8 @@ jobs:
         # xcparse pulls every XCTAttachment(screenshot:) into a directory.
         # Our test names attachments like 01-welcome, 02-value-prop, etc.,
         # so the output is already human-sortable.
-        if: always() && github.event_name == 'pull_request'
+        # Skipped on non-UI PRs (matching "Run UI tests" gate).
+        if: always() && steps.changes.outputs.has_ui == 'true'
         run: |
           brew install chargepoint/xcparse/xcparse
           mkdir -p /tmp/screenshots
@@ -216,7 +268,7 @@ jobs:
         # image URLs stay stable for the *latest* commit. The release
         # lives forever after PR close — kept as a draft so it doesn't
         # pollute the public Releases page.
-        if: always() && github.event_name == 'pull_request'
+        if: always() && steps.changes.outputs.has_ui == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -240,7 +292,7 @@ jobs:
           echo "Uploaded ${#shots[@]} screenshots to release $TAG."
 
       - name: Post screenshot summary comment to PR
-        if: success() && github.event_name == 'pull_request'
+        if: success() && steps.changes.outputs.has_ui == 'true'
         uses: actions/github-script@v7
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -318,7 +370,8 @@ jobs:
 
       - name: Upload xcresult bundle (raw)
         # Still keep the raw .xcresult around for debugging.
-        if: always()
+        # Skipped on non-UI PRs (nothing to upload).
+        if: always() && steps.changes.outputs.has_ui == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: UITestResults-${{ github.sha }}
