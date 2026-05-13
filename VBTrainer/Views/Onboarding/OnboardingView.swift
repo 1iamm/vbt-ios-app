@@ -322,10 +322,15 @@ struct OnboardingView: View {
                     .background(accent, in: RoundedRectangle(cornerRadius: 14))
                     .shadow(color: accent.opacity(0.5), radius: 12, x: 0, y: 6)
             }
-            .buttonStyle(.plain)
+            // a11y modifiers BEFORE buttonStyle — order matters. With
+            // .buttonStyle(.plain) applied after, SwiftUI sometimes lands the
+            // identifier on a child element XCUITest can't query via
+            // `app.buttons[...]`. Also setting accessibilityLabel as a
+            // fallback so the button can be found by visible text as well.
+            .accessibilityLabel(step == totalSteps - 1 ? "开始使用" : "继续")
             .accessibilityIdentifier(step == totalSteps - 1 ? "onboarding.cta.finish" : "onboarding.cta.continue")
+            .buttonStyle(.plain)
         }
-        .accessibilityIdentifier("onboarding.footer")
     }
 
     private func advance() {

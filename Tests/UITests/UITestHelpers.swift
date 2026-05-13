@@ -24,10 +24,23 @@ extension XCTestCase {
 
     /// Wait up to `timeout` seconds for the given element to exist.
     /// Returns true on success, false on timeout (also fails the test).
+    /// On failure: dumps the full app accessibility hierarchy as an
+    /// attachment so post-failure triage shows what WAS on screen.
     @discardableResult
-    func waitForExistence(of element: XCUIElement, timeout: TimeInterval = 5, message: String = "") -> Bool {
+    func waitForExistence(
+        of element: XCUIElement,
+        in app: XCUIApplication? = nil,
+        timeout: TimeInterval = 5,
+        message: String = ""
+    ) -> Bool {
         let exists = element.waitForExistence(timeout: timeout)
         if !exists {
+            if let app {
+                let dump = XCTAttachment(string: app.debugDescription)
+                dump.name = "a11y-hierarchy-at-failure"
+                dump.lifetime = .keepAlways
+                add(dump)
+            }
             XCTFail("Expected element to exist: \(element.description). \(message)")
         }
         return exists

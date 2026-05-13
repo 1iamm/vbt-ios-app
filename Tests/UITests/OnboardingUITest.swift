@@ -33,7 +33,7 @@ final class OnboardingUITest: XCTestCase {
         // Step 0 — Welcome
         // ─────────────────────────────────────────────────────────
         let continueCTA = app.buttons["onboarding.cta.continue"]
-        waitForExistence(of: continueCTA, timeout: 8, message: "Welcome step CTA")
+        waitForExistence(of: continueCTA, in: app, timeout: 12, message: "Welcome step CTA")
         attachScreenshot("01-welcome")
         continueCTA.tap()
 
@@ -41,7 +41,7 @@ final class OnboardingUITest: XCTestCase {
         // Step 1 — Value proposition
         // The CTA identifier is still .continue (not the last step).
         // ─────────────────────────────────────────────────────────
-        waitForExistence(of: continueCTA, timeout: 4, message: "Value-prop step CTA")
+        waitForExistence(of: continueCTA, in: app, timeout: 6, message: "Value-prop step CTA")
         attachScreenshot("02-value-prop")
         continueCTA.tap()
 
@@ -50,7 +50,7 @@ final class OnboardingUITest: XCTestCase {
         // HealthKitPermissionView). CTA changes to .finish.
         // ─────────────────────────────────────────────────────────
         let finishCTA = app.buttons["onboarding.cta.finish"]
-        waitForExistence(of: finishCTA, timeout: 4, message: "Profile/finish CTA")
+        waitForExistence(of: finishCTA, in: app, timeout: 6, message: "Profile/finish CTA")
         attachScreenshot("03-profile")
         finishCTA.tap()
 

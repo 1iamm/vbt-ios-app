@@ -166,6 +166,15 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/test.log
 
+      - name: Reset simulator before UI tests
+        # Algorithm tests run inside the host app's process; SwiftData
+        # writes survive to the simulator's container. Without erase,
+        # UI tests may launch into MainTabsView (UserProfile exists)
+        # instead of OnboardingView, failing the test.
+        run: |
+          xcrun simctl shutdown "${{ steps.sim.outputs.udid }}" 2>/dev/null || true
+          xcrun simctl erase "${{ steps.sim.outputs.udid }}"
+
       - name: Run UI tests
         # XCUITest takes a screenshot per step and stores them in the
         # .xcresult bundle. PR #5 will read these out and upload as a
