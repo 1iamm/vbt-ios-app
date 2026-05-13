@@ -1,0 +1,57 @@
+# SwiftFormat config for VBTrainer.
+#
+# Aligns to Apple Swift API Design Guidelines + the existing house style.
+# Run via `swiftformat .` to apply, or `swiftformat --lint .` to check.
+
+# Swift version (matches project.yml SWIFT_VERSION)
+--swiftversion 5.10
+
+# Indentation
+--indent 4
+--tabwidth 4
+--smarttabs enabled
+
+# Line length: 140 (matches SwiftLint config)
+--maxwidth 140
+
+# Wrapping
+--wraparguments before-first
+--wrapparameters before-first
+--wrapcollections before-first
+--wrapconditions after-first
+--wrapreturntype preserve
+--closingparen balanced
+
+# Spacing
+--ranges no-space
+--operatorfunc spaced
+--nospaceoperators ...,..<
+
+# Imports
+--importgrouping testable-bottom
+
+# Self
+--self remove                  # let `name` not `self.name`
+--selfrequired @escaping       # except in escaping closures where compiler requires it
+
+# Braces / structure
+--allman false                 # K&R style
+--elseposition same-line
+--guardelse same-line
+--shortoptionals always
+
+# Trailing closures / commas
+--trailingclosures             # allow trailing closure syntax
+--commas inline                # trailing commas in multi-line collections
+
+# Headers — leave existing file headers alone (we keep `// VBTrainer · YYYY-MM`)
+--header ignore
+
+# Excluded paths
+--exclude .build
+--exclude build
+--exclude VBTrainer.xcodeproj
+--exclude openspec
+--exclude scripts
+--exclude design
+--exclude DerivedData

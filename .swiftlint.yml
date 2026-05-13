@@ -1,0 +1,46 @@
+# SwiftLint config for VBTrainer.
+#
+# Goal: catch real bugs (force-unwrap, force-try) and enforce minimal hygiene,
+# without fighting the existing codebase. We start permissive and tighten
+# over time. Each disabled rule has a one-line reason — don't disable silently.
+
+disabled_rules:
+  - trailing_whitespace        # handled by SwiftFormat
+  - todo                       # we use TODO/FIXME for intentional follow-ups
+  - file_length                # large View files are normal in SwiftUI
+  - type_body_length           # ditto
+  - function_body_length       # algorithm functions can be long
+  - cyclomatic_complexity      # state machines have many branches
+  - identifier_name            # we use short names like `dt`, `mv`, `e1` for algorithm math
+  - line_length                # handled by SwiftFormat (140)
+  - large_tuple                # algorithm sample tuples (t,v,a) are intentional
+
+opt_in_rules:
+  - empty_count
+  - empty_string
+  - first_where
+  - last_where
+  - closure_spacing
+  - explicit_init
+  - redundant_nil_coalescing
+  - unused_import
+  - vertical_whitespace_closing_braces
+  - vertical_whitespace_opening_braces
+
+excluded:
+  - .build
+  - build
+  - Pods
+  - VBTrainer.xcodeproj
+  - openspec
+  - scripts
+  - design
+
+# Catch real bugs.
+force_cast: error
+force_try: error
+force_unwrapping:
+  severity: warning            # too many in tests; warn but don't block
+
+# Keep lint output usable.
+reporter: "github-actions-logging"

@@ -27,8 +27,19 @@ jobs:
           xcodebuild -version
           swift --version
 
-      - name: Install xcodegen
-        run: brew install xcodegen
+      - name: Install xcodegen + linters
+        run: brew install xcodegen swiftlint swiftformat
+
+      - name: SwiftFormat (lint mode)
+        # --lint does not write; exits non-zero on any unformatted file.
+        # Config: .swiftformat at repo root.
+        run: swiftformat --lint .
+
+      - name: SwiftLint
+        # Config: .swiftlint.yml at repo root. Fails on `error` severity rules
+        # (force_cast / force_try). Warnings stay informational for now —
+        # escalate to --strict once the codebase is clean.
+        run: swiftlint lint --reporter github-actions-logging
 
       - name: Generate Xcode project
         run: xcodegen generate
