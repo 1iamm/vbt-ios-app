@@ -16,7 +16,67 @@ permissions:
   issues: write
 
 jobs:
+  fast-fail:
+    name: Static checks (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Project structure check
+        # Pure bash, instant. Enforces: no UI imports in Models/Algorithms,
+        # no WatchKit in iOS target, no UIKit in Watch target, Views live
+        # under Views/. See scripts/check-structure.sh for rules.
+        run: bash scripts/check-structure.sh
+
+      - name: PR diff size warning
+        # Advisory only — does NOT fail CI. Posts a comment if the PR is
+        # large enough that a human-or-AI reviewer might miss things.
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const total = (pr.additions || 0) + (pr.deletions || 0);
+            const WARN = 800;
+            const LARGE = 1500;
+            if (total < WARN) return;
+
+            const tag = '<!-- pr-size-warning -->';
+            const tier = total >= LARGE
+              ? `🚨 **Very large PR** (${total} lines changed). Strongly consider splitting.`
+              : `⚠️ **Large PR** (${total} lines changed). Review quality drops past ~${WARN} LOC — consider splitting.`;
+
+            const body = `${tag}\n${tier}\n\n` +
+              `Adds: +${pr.additions}, Deletes: -${pr.deletions}, Files: ${pr.changed_files}\n\n` +
+              `_Posted by fast-fail. Advisory only — does not block merge._`;
+
+            const { data: existing } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              per_page: 100,
+            });
+            const prior = existing.find(c => c.body && c.body.startsWith(tag));
+            if (prior) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: prior.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body,
+              });
+            }
+
   build-test:
+    needs: fast-fail
     name: Build + AlgorithmTests
     runs-on: macos-26
     timeout-minutes: 25
