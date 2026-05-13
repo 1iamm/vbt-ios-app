@@ -1,0 +1,15 @@
+# Single-owner repo: every PR auto-requests review from @1iamm.
+# Even if branch protection doesn't *require* review (you're one person),
+# this populates the "Reviewers" sidebar so you don't miss new PRs.
+#
+# Format: <path-pattern> @owner1 @owner2 ...
+# Order matters — last matching pattern wins.
+
+# Default catch-all.
+* @1iamm
+
+# CI / tooling — same owner, kept here for clarity if a future contributor
+# joins and wants finer-grained ownership.
+/.github/         @1iamm
+/scripts/         @1iamm
+/openspec/        @1iamm

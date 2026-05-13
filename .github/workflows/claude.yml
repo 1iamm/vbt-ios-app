@@ -44,12 +44,16 @@ jobs:
           track_progress: true
           # 让 CI 上的 Claude 读项目记忆 + 关键约束
           prompt: |
-            你正在 review 一个 VBTrainer 的 PR（Apple Watch + iPhone 的 VBT 训练工具）。
+            你正在处理一个 VBTrainer 的 PR（Apple Watch + iPhone 的 VBT 训练工具）。
 
-            行动前先读：
-            - .claude/CLAUDE.md（项目大脑，必读）
+            行动前先读（必读）：
+            - .claude/CLAUDE.md（项目大脑）
+            - .github/pull_request_template.md（PR 模板格式）
             - openspec/ 目录里相关的 change（如果 PR 引用了某个 change）
 
+            ── 你的两种工作模式 ──
+
+            **A. PR review 模式**（pull_request 事件触发）：
             重点检查项：
             1. 算法常量必须有论文引用注释（参考 Shared/Algorithms/Citations.swift）
             2. SwiftData @Model 改动是否破坏 schema 兼容性
@@ -57,9 +61,21 @@ jobs:
             4. 跨端类名是否避开 Swift 内建（如用 WorkoutSet 不用 ExerciseSet）
             5. 是否有未补的单元测试（算法/纯逻辑必须有，UI 不写测试）
             6. 设计 token 改动是否两端同步（design/ 和 Shared/Theme/Tokens.swift）
+            7. **PR body 是否按 .github/pull_request_template.md 填了所有 section**：
+               - 📝 本次改动 / 影响范围 / 关联 OpenSpec
+               - ✅ 验收步骤（至少 1 步，操作+预期）
+               - ⚠️ 风险点（写"无"也要写）
 
-            评审风格：
+            **B. @claude 评论触发模式**：
+            按指示动手 commit，不要先问"要不要这样做"。
+            写完代码 + 开 PR 时：
+            - 标题格式：`<type>: <subject> [openspec-change-name]`
+              type 枚举：feat / fix / chore / ci / refactor / docs / test
+            - body **必须**用 .github/pull_request_template.md 的全部 section
+            - 验收步骤至少写 1 步（操作 + 预期），多步更好
+            - 风险点必填，没有就写"无"
+
+            ── 通用风格 ──
             - 直接说结论，不要前情提要
             - 中文
             - 不要罗列多个方案让用户选，给一个最优建议 + 一句理由
-            - 如果是 @claude 评论触发的写代码请求，按指示动手 commit，不要先问"要不要这样做"
