@@ -290,6 +290,137 @@ gh repo view --web      # 浏览器打开仓库
 
 ---
 
+## 11. CI / 流水线现状（2026-05-13 后）
+
+云端 Claude Code（不是 IDE）开发流程已工程化：
+
+```
+push → PR opened
+   ↓
+Linux fast-fail (5s)：scripts/check-structure.sh + PR 大小报警
+   ↓ pass
+macOS build-test (~8 min)：
+  • Install xcodegen + swiftlint + swiftformat
+  • SwiftFormat --lint (advisory)
+  • SwiftLint (advisory)
+  • Generate Xcode project (xcodegen)
+  • Build iOS (sim)
+  • Build watchOS (sim)
+  • Run algorithm tests (-skip-testing 已知 flaky 两项)
+  • Reset simulator (xcrun simctl erase)
+  • Run UI tests (XCUITest，每步 attachScreenshot)
+  • Extract screenshots from xcresult (xcparse)
+  • Upload to per-PR Draft Release (gh release)
+  • Post screenshot summary comment (sticky)
+   ↓ if any step fails
+Post failure log to PR comment (sticky, 智能过滤 CoreData 噪音 + 跳过 succeeded 步骤)
+   ↓ all green
+Claude（云端 / 本地）按文件路径分类自决合 vs 等用户确认（见 §12）
+```
+
+**关键文件**：
+- `.github/workflows/ci.yml`：主 pipeline
+- `.github/workflows/claude.yml`：Claude bot（**已改 @mention-only**，不再自动 review PR）
+- `.github/workflows/format-baseline.yml`：手动触发，全仓 swiftformat（一次性应用）
+- `.github/pull_request_template.md`：PR 必填模板
+- `.github/CODEOWNERS`：@1iamm
+- `scripts/check-structure.sh`：5 条结构规则
+- `scripts/verify.sh`：本地预检（pre-push 用，Linux 上做"假"类型检查）
+- `.swiftlint.yml` / `.swiftformat`：风格基线
+
+**UI 测试基础设施**：
+- `Tests/UITests/UITestHelpers.swift`：`attachScreenshot()` + `waitForExistence(in: app)`
+- `Tests/UITests/OnboardingUITest.swift`：示范 e2e
+- `Shared/Extensions/ProcessInfo+UITestMode.swift`：`-UI_TEST_MODE` 启动参数检测
+- 写新 SwiftUI feature 时：必加 `.accessibilityIdentifier("feature.element")` + 同步写对应 XCUITest
+
+**截图上传机制**：
+- xcparse 从 .xcresult 提取 → push 到 GitHub Draft Release（tag `screenshots-pr-N`）
+- PR 评论 sticky 嵌入 `<img>` 引用 release URL
+- 一次 push 重建 release（旧 PR commit 的图丢，最新版本始终可见）
+
+---
+
+## 12. 三大长期 mandate（自动跑直到完成）
+
+用户在 2026-05-13 下达。下次会话开起来直接读这一节即可上手。
+
+### Task 1 · 全自动 AI 协助开发工作流搭建
+**OpenSpec**: `openspec/changes/auto-dev-workflow-buildup/`
+**状态**: ~80% 完成。PR #49-52 已合，PR #53 + #5.5 + #6 + #7 + #8 + #9 待做。
+**退出条件**: 3-agent 终审（DX / 可靠性 / 成本）通过。
+
+### Task 2 · 多 Agent UX 迭代
+**OpenSpec**: `openspec/changes/multi-agent-ux-iteration/`
+**状态**: Round 1 audit 完（61 条 finding 全量记录于 `tasks.md`）。Round 1 修复 PR 待启动。
+**节奏**: Round 1 修复 → Round 2 复审 → Round 3 复审，迭代直到 3-agent 连续两 round PASS。
+**退出条件**: 0 条 P0 + 0 条 P1（或 P1 全有 wontfix-rationale）。
+
+### Task 3 · V1 代码结构重构
+**OpenSpec**: `openspec/changes/codebase-refactor-v1/`
+**状态**: 未启动。前置：Task 2 substantively 完成。
+**退出条件**: 3-agent（架构师 / 性能 / 测试）复审通过 + LOC 净减或持平 + 孤儿代码全删 + OpenSpec 归档干净。
+
+### 关键约束
+- **不要丢任务**：context 压缩后新会话开起来，先读 §12 这节 + 3 个 OpenSpec change 的 `tasks.md`，立刻进入状态。
+- **不保留老版本代码**：用户明确说"如果你之前写了代码 但是后面没用到的 直接删了就可以了"。重构期间该删的全删。
+- **OpenSpec 同步更新**：每个 PR commit 前更新对应 change 的 `tasks.md` 打勾。
+
+---
+
+## 13. 自动合并 vs 等用户确认（按文件路径分类）
+
+云端 / IDE 内 Claude 自决合并的规则（2026-05-13 用户约定）：
+
+### 🤖 我自决合（CI 全绿后 squash merge + 删分支）
+
+PR 改动**仅涉及**以下路径：
+- `.github/**`（CI / workflows / templates）
+- `scripts/**`（验证脚本）
+- `project.yml`（XcodeGen 配置）
+- `Shared/Algorithms/**`（算法常量 / 纯逻辑，有论文引用注释）
+- `Shared/Services/**`（除非引入新 entitlement）
+- `Tests/**`（unit / UI tests）
+- `openspec/**`（spec 文档）
+- `.claude/CLAUDE.md`（项目大脑更新）
+- `*.md` 文档
+
+### 🙋 必须等用户确认（开 PR 后等点 Merge，不催）
+
+PR 改动**触及**：
+- `VBTrainer/Views/**`（任何 iOS UI 改动）
+- `VBTrainerWatch Watch App/Views/**`（任何 Watch UI 改动）
+- `Shared/Theme/**`（设计 token）
+- `Shared/Models/**`（SwiftData schema —— 影响用户数据）
+- `design/**`（设计文件源）
+- 引入第三方依赖
+- 引入新 entitlement / 签名 / TestFlight 等不可逆
+
+### 边界情况
+- Algorithms 加新论文常量（如调整 VL% 阈值）→ 算 schema 改 → 告诉用户
+- 仅 accessibilityIdentifier / 注释改 → 算非 UI 改动 → 自决合
+- UI 涉及但仅 `accessibilityLabel` 兜底（不影响视觉）→ 仍自决合
+
+---
+
+## 14. 主动行为指南（不要等用户提醒）
+
+### 自动决策清单（直接做，不问）
+- 看到 flaky 测试不只 skip，能修就开新 PR 修根因
+- 看到 CI 冗余 step / 慢点立刻识别 + 加进下个 PR
+- 看到代码异味（重复、未用、命名漂移）顺手清理
+- openspec change 完成的可以 archive 时主动 archive
+- PR 标题 / commit message 风格漂的主动统一
+- 文档与代码漂的（comment 说"PR #5 会做"但 PR #5 没做）补上
+
+### 主动建议（先告诉用户再做）
+- 涉及用户可见行为 / UX 改动 / 数据 schema → 写明 + 等用户确认
+- 涉及第三方依赖引入（违反零依赖原则）→ 解释为什么 + 等确认
+- 涉及部署 / 签名 / 上架等不可逆操作 → 严格请示
+
+---
+
 ## 文档版本
 
 - 2026-05-08 v1.0：初版，基于 Phase 0 完成时点
+- 2026-05-13 v2.0：加入 §11-14（CI 流水线现状 / 三大 mandate / 自动合规则 / 主动行为指南）

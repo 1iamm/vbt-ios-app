@@ -1,0 +1,119 @@
+# Tasks: 多 Agent UX 迭代 · Round 1 Findings + 处理状态
+
+> Round 1 audit 由 4 个 subagent 平行跑（2026-05-13），共 61 条 finding。本 tasks.md 是**持久化**——下次会话开启后查这里看下一步。
+
+## Round 1 状态总览
+
+- Round 1 audit：✅ 完成（4 agent 报告全部归档于本目录）
+- Round 1 修复：⏳ 排队中
+- Round 2 复审：未开始
+- Round 3 复审：未开始
+
+## 高优先级 finding（多 agent 印证 / 单 agent 高严重度）
+
+按修复批次组织。每条 finding 编号 `<agent>-F<N>`：PM/UI/IX/USR 分别代表 产品/UI/交互/用户。
+
+### B1 · 数据正确性 / 完整性硬伤（自决，不打扰用户）
+
+- [ ] **IX-F3** [P0] LiveWorkoutController 5s 自动结组 → 12s + 8s 震动预警
+  - File: `LiveWorkoutController.swift:597-614`
+  - 后果：重深蹲架杠 5-7s 会被算成下一组
+- [ ] **IX-F4** [P0] WorkoutDone Watch→iPhone 同步加 ACK + 本地 outbox
+  - File: `WatchScreens.swift:1466-1476`, `WatchConnectivityService.swift`
+  - 后果：弱信号训练记录可能完全丢
+- [ ] **IX-F7** [P1] iPhone/Watch 跳过 rest 双触发去重（workoutId + restCycleId）
+  - File: `LiveWorkoutView.swift:380-396`, `WatchScreens.swift:418-424`
+
+### B2 · 关键 UX（需用户确认设计）
+
+- [ ] **USR-F4 / IX-F8 / USR-F14** [P0 三 agent 印证] 「在 Watch / iPhone 上练」每次都问 → 记住默认
+  - File: `TodayView.swift:177-200`, `482-494`
+  - 用户决策：默认改成 "上次用的" 还是加个 settings toggle
+- [ ] **IX-F1 / IX-F2 / USR-F8** [P0 多 agent 印证] 「结束本组」按钮重设计
+  - File: `WatchScreens.swift:243-260`, `LiveWorkoutView.swift:187-202`
+  - 用户决策：accent 色 vs 视觉方案；长按 vs 长按确认 vs 单击+撤销 buffer
+- [ ] **IX-F11 / USR-F6** [P0 双 agent 印证] SetResult 屏 → 叠加在 RestView 上 / 自动 advance
+  - File: `WatchScreens.swift:1371-1380`
+  - 用户决策：保留独立屏 + 自动 advance 3s 还是合并到 Rest 顶部
+- [ ] **PM-F7 / USR-F5** [P0 双 agent 印证] "AI 推荐" Section 处理
+  - File: `TodayView.swift:84-101`, `AIRecommendationEngine.swift`
+  - 用户决策：删 / 改名"训练建议" / 保留但 V1 标注
+- [ ] **USR-F12** [P0] PR 庆祝路径接线
+  - File: `WatchScreens.swift:739`（孤儿 view） + `WatchNavigation.swift:24`（路由存在） + `iPhoneConnectivityService.swift:101`（detector 调用）
+  - 用户决策：触发时机（举完最后一组 / Watch 同步成功 / iPhone push）+ 通知方式
+
+### B3 · 视觉一致性（视觉 token / 颜色 / 字号）
+
+- [ ] **UI-§3-P0** [P0] `Color.orange` 写死 8 处 → 跟随 `accent`（GoalTheme）
+  - Files: `LiveWorkoutView.swift:200-201,235,258,415,436,489`、`TodayView.swift:235,258`
+- [ ] **UI-§1-P0** [P0] `Tokens.Font` 扩档 + 全局替换 401 处 `.font(.system(size:))` 
+  - 大改动，可能要分多个 PR 按文件目录批量推
+- [ ] **UI-§2-P0 / UI-§6-P0 / IX-F5** [P0] Watch 字号 7-9pt 27 处 → caption2(13)+；±10s 按钮 28×28 → 44×44
+  - File: `WatchScreens.swift:201,236,251,393,407,454,471,474,487,492`
+
+### B4 · 功能补全 / 架构
+
+- [ ] **PM-F1** [P0] Watch 端 CMJ 测试 View（算法 + 模型 + Store 全在，缺 Watch UI 入口）
+  - Files: `WatchRootView.swift` 路由 / 新 `WatchCMJTestView.swift`
+- [ ] **PM-F2** [P0] Workout 多动作模型（schema migration）
+  - Files: `Workout.swift:17`、`WorkoutDetailView.swift:282`
+  - 用户决策：加 `parentSessionId: UUID?` 串起多个 Workout vs 让 WorkoutSet 直接持 `exerciseId`
+  - **V1.5 云同步前最后窗口**
+
+### P1 · 次优先级（一句话概述，详情见 audit 报告原文）
+
+- [ ] PM-F3：Onboarding 缺 measuredHRMax / restingHR 采集
+- [ ] PM-F4：WorkoutDetail 不展示 VL% / Peak Velocity
+- [ ] PM-F5：长期趋势"训练频率热力图"完全没做
+- [ ] PM-F8：Watch 多动作训练总结丢 RPE
+- [ ] PM-F9：CelebrationCard 加"查看复盘 →"主按钮
+- [ ] PM-F10：Readiness 卡片点击无反应（chevron 是装饰）
+- [ ] PM-F11：主导航没"趋势" tab；ExerciseTrendView 入口深
+- [ ] PM-F14：Readiness 5 维度数据采到但 UI 不全
+- [ ] UI-§2-P1：iOS LiveWorkout 大数字 56/96/40/88 横跳无规律
+- [ ] UI-§2-P1：RedesignComponents 内部 SectionHeader 13pt vs TodayHeader 30pt 阶梯异常
+- [ ] UI-§3-P1：HRZone 颜色 `.blue/.green/.orange/.red` 用 SwiftUI 内建色
+- [ ] UI-§4-P1：4pt grid 系统性破坏（spacing 10/14/18 等非 token 值散落）
+- [ ] UI-§5-P1：7 处手搓 RoundedRectangle 卡片 → 抽 `CardContainer` modifier
+- [ ] UI-§5-P1：primary CTA 按钮重复实现 3 次 → 抽 `PrimaryCTAButtonStyle(accent:)`
+- [ ] IX-F5 [P1] Watch LiveWorkout 顶部 9pt 文字 + 缺大字号 set index
+- [ ] IX-F6 [P1] iPhone LiveWorkoutView "结束训练" 二级按钮位置鬼祟
+- [ ] IX-F9 [P1] Watch 新用户进 Today 后开始第一次训练需 5+ 次点击
+- [ ] IX-F10 [P1] AI 推荐 deload 卡片缺"我就要这个，直接开始"按钮
+- [ ] IX-F12 [P1] SetReady 4 个 cell focus + crown 手感不一致
+- [ ] USR-F1 [P0/争议] "体型 5 选 1" 训练背景字段无意义 → 删 or 改成"深蹲 1RM"
+- [ ] USR-F2 [P1] 身高字段 V1 算法用不到 → 删
+- [ ] USR-F3 [P1] Onboarding 强制选 trainingGoal → 默认"力量"+ 入口
+- [ ] USR-F10 [P1] 综合时间轴漂亮但无结论文案
+- [ ] USR-F11 [P2] Watch summary RPE + Feeling 双填 → 删 Feeling
+- [ ] USR-F13 [P1] e1RM 藏在第 4 层级 → WorkoutDetail Hero + Watch summary 露出
+- [ ] USR-F15 [P1] Today readiness 圆环占 1/3 屏但无 action call
+- [ ] USR-F16 [P0 功能建议] 「上次同组对比」横向叠加（VBT 核心价值）
+
+### P2 · 低优先级
+
+- [ ] PM-F6：M9 本地备份只有导出没恢复
+- [ ] PM-F12：HRZonesDonut 是孤儿组件，WorkoutDetail 没引用
+- [ ] PM-F13：5 种 PR 平级列在深处
+- [ ] PM-F15：HealthKit 部分数据采了但 UI 完全不读（血氧 / VO2Max / 步数）
+- [ ] PM-F16：Profile 文案 "V1 阶段数据仅本地" 与 CLAUDE.md 2026-05-08 修订冲突
+- [ ] PM-F17：训练模式术语 SettingsView vs TodayView 不一致
+- [ ] UI-§3-P2：`aiHue` private 在组件内 + TodayView 又复制一份 → 提为 `Tokens.Color.ai`
+- [ ] UI-§4-P2：Section header 上下间距各处不一 → 抽 `.sectionPadding()`
+- [ ] UI-§5-P2：StatsView deltaTile vs ScheduledTrainingCard.stat() 重复
+- [ ] UI-§6-P1：Watch chip 用 `.blue` 实色不友好 OLED
+- [ ] IX-F13 [P2] iPhone RestView 88pt 倒计时在 SE 屏裁切
+- [ ] IX-F14 [P2] WorkoutDetail 综合时间轴横屏过渡突兀
+- [ ] IX-F15 [P2] Watch/iPhone 速度精度一致性测试用例（防止以后 drift）
+- [ ] USR-F9 [P2] Watch 休息倒计时 ±10s 按钮触控目标太小（与 UI-§6 重叠）
+
+## Round 2 触发条件
+
+- B1 + B2 + B3 + B4 中至少 80% 标记 done 或 wontfix
+- 截图 e2e 跑通：onboarding → today → start → live → rest → summary → history
+- 准备好 audit 重启 prompt（复用 `design.md` 中的 3 角色定义）
+
+## Round 1 → Round 2 → Round 3 闭环
+
+每 round 完成 → 跑 3 agent 复审 → 写新 round 报告 → 更新本 `tasks.md` 状态。
+所有 P0/P1 都 done/wontfix-rationale 且两轮复审都 PASS → Task 2 完成。
