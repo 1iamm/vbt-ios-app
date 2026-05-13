@@ -120,3 +120,5 @@ xcodebuild test -project VBTrainer.xcodeproj -scheme VBTrainer \
 - 如果不够用：把 repo 切 public（无公司信息，可公开）→ macOS 分钟无限免费
 
 <!-- ci smoketest 2026-05-13 -->
+
+<!-- smoketest 2 - 验证 sticky comment 已启用 -->
