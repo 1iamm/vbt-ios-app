@@ -53,6 +53,16 @@ public enum HapticFeedback {
         #endif
     }
 
+    /// Pre-warning that the inactivity auto-end will fire in ~4 seconds.
+    /// Lets the user raise their wrist and decide to lift again (cancelling
+    /// the timer) before the set is closed for them. Uses `.notification`
+    /// — short and attention-grabbing without feeling like a failure.
+    public static func inactivityWarning() {
+        #if canImport(WatchKit)
+        WKInterfaceDevice.current().play(.notification)
+        #endif
+    }
+
     /// Whole workout finished — single `.success` (not double; watchOS drops
     /// the 2nd play() within ~200ms of the 1st).
     public static func workoutEnded() {
