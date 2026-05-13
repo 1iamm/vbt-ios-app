@@ -62,3 +62,4 @@ GoogleService-Info.plist
 
 # Claude Code session state (kept private, not project state)
 .claude/settings.local.json
+.claude/worktrees/

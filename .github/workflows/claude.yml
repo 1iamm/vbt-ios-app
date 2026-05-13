@@ -1,8 +1,12 @@
 name: Claude
 
 on:
-  pull_request:
-    types: [opened, synchronize]
+  # Auto-review on every PR push has been removed: redundant with the
+  # cloud Claude session already writing the code, frequently flakes
+  # on Anthropic SDK header bugs, and pollutes the check list with red
+  # decoration. Trigger an on-demand review by commenting `@claude
+  # review` on the PR. Same channel handles `@claude implement X`
+  # write-code requests.
   issue_comment:
     types: [created]
   pull_request_review_comment:
@@ -12,13 +16,12 @@ on:
 # session should finish (it may already be committing code) before a newer
 # trigger starts.
 concurrency:
-  group: claude-${{ github.event.pull_request.number || github.event.issue.number || github.ref }}
+  group: claude-${{ github.event.issue.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
   claude:
     if: |
-      github.event_name == 'pull_request' ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude'))
     runs-on: ubuntu-latest
@@ -74,6 +77,15 @@ jobs:
             - body **必须**用 .github/pull_request_template.md 的全部 section
             - 验收步骤至少写 1 步（操作 + 预期），多步更好
             - 风险点必填，没有就写"无"
+
+            **新功能必须配 UI test + a11y identifier**（如果改了 SwiftUI View）：
+            - 新 View 里的关键控件加 `.accessibilityIdentifier("feature.element")`
+              形如 `onboarding.cta.continue`、`today.workout.start`，命名稳定可 grep
+            - 在 Tests/UITests/ 写对应的 XCUITest 走通这个新流程
+            - 每个关键步骤调 `attachScreenshot("NN-step-name")`（数字前缀按时序排）
+            - 启动参数加 `-UI_TEST_MODE` 跳过 HealthKit/Auth 等系统 sheet
+            - 跑通后 CI 会自动把截图上传到 PR 的 Draft Release 并嵌入评论
+            - 用户验收时看 PR 评论里的图，不点 Merge 之前你别催
 
             ── 通用风格 ──
             - 直接说结论，不要前情提要

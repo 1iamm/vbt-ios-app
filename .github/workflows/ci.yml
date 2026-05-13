@@ -9,9 +9,11 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-# Required so the failure-log step can post a PR comment.
+# Required so:
+#   - failure-log + screenshot-summary steps can post PR comments
+#   - gh release create can upload screenshot assets (contents: write)
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
   issues: write
 
@@ -192,9 +194,130 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/uitest.log
 
-      - name: Upload xcresult bundle
-        # Available to download from the run page on success or failure.
-        # PR #5 will swap the artifact upload for extract+upload-to-release.
+      - name: Extract screenshots from xcresult
+        # xcparse pulls every XCTAttachment(screenshot:) into a directory.
+        # Our test names attachments like 01-welcome, 02-value-prop, etc.,
+        # so the output is already human-sortable.
+        if: always() && github.event_name == 'pull_request'
+        run: |
+          brew install chargepoint/xcparse/xcparse
+          mkdir -p /tmp/screenshots
+          if [ -d /tmp/UITestResults.xcresult ]; then
+            xcparse screenshots --test /tmp/UITestResults.xcresult /tmp/screenshots/
+            echo "Extracted:"
+            ls -la /tmp/screenshots/ || true
+          else
+            echo "No xcresult bundle (UI test step probably did not run)."
+          fi
+
+      - name: Publish screenshots as GitHub release asset
+        # Per-PR release tagged `screenshots-pr-N`. On each push we
+        # delete-and-recreate the release so the embedded PR-comment
+        # image URLs stay stable for the *latest* commit. The release
+        # lives forever after PR close — kept as a draft so it doesn't
+        # pollute the public Releases page.
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -e
+          shopt -s nullglob
+          shots=(/tmp/screenshots/*.png)
+          if [ ${#shots[@]} -eq 0 ]; then
+            echo "No screenshots — skipping release upload."
+            exit 0
+          fi
+          TAG="screenshots-pr-$PR_NUMBER"
+          # Always re-create so old assets from prior commits don't linger.
+          gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$TAG" \
+            --draft \
+            --title "Screenshots for PR #$PR_NUMBER" \
+            --notes "Automated screenshots from commit \`$SHA\`. PR #$PR_NUMBER. This release is a draft (hidden from main Releases page)." \
+            "${shots[@]}"
+          echo "Uploaded ${#shots[@]} screenshots to release $TAG."
+
+      - name: Post screenshot summary comment to PR
+        if: success() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const dir = '/tmp/screenshots';
+            if (!fs.existsSync(dir)) {
+              console.log('No screenshots dir — nothing to post.');
+              return;
+            }
+            const pngs = fs.readdirSync(dir).filter(f => f.endsWith('.png')).sort();
+            if (pngs.length === 0) {
+              console.log('No PNG screenshots found.');
+              return;
+            }
+
+            const prNum = parseInt(process.env.PR_NUMBER, 10);
+            const tag = `screenshots-pr-${prNum}`;
+            const repo = `${context.repo.owner}/${context.repo.repo}`;
+            const baseUrl = `https://github.com/${repo}/releases/download/${tag}`;
+
+            // Map filename → caption. Names follow `NN-some-label.png` from
+            // our XCTAttachment naming convention.
+            const friendlyName = (filename) => {
+              const stem = filename.replace(/\.png$/, '');
+              return stem.replace(/^\d+-/, '').replace(/-/g, ' ');
+            };
+
+            const sha = context.sha.slice(0, 7);
+            const tag_marker = '<!-- pr-screenshots -->';
+
+            let body = `${tag_marker}\n## 🎬 自动验收 · 截图 (${sha})\n\n`;
+            body += `测试跑通 \`OnboardingUITest.testOnboardingFlow\`，按以下顺序展示动线：\n\n`;
+            body += `<table><tr>\n`;
+            for (const png of pngs) {
+              const url = `${baseUrl}/${encodeURIComponent(png)}`;
+              body += `<td align="center" valign="top" width="200">\n`;
+              body += `<a href="${url}"><img src="${url}" width="200"/></a><br/>\n`;
+              body += `<sub><b>${friendlyName(png)}</b></sub>\n`;
+              body += `</td>\n`;
+            }
+            body += `</tr></table>\n\n`;
+            body += `<details><summary>验收说明</summary>\n\n`;
+            body += `- 截图来源：每次 UI test pass 自动从 .xcresult bundle 提取\n`;
+            body += `- 存储：Draft GitHub Release \`${tag}\`（每次 push 覆盖）\n`;
+            body += `- 点图可放大\n\n`;
+            body += `</details>\n`;
+
+            // Sticky comment — update existing one if present, otherwise create.
+            const { data: existing } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNum,
+              per_page: 100,
+            });
+            const prior = existing.find(c => c.body && c.body.startsWith(tag_marker));
+            if (prior) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: prior.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNum,
+                body,
+              });
+            }
+
+      - name: Upload xcresult bundle (raw)
+        # Still keep the raw .xcresult around for debugging.
         if: always()
         uses: actions/upload-artifact@v4
         with:
