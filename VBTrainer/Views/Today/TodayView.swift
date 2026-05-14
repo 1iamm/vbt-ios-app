@@ -83,6 +83,7 @@ struct TodayView: View {
                             onSecondary: { handleSecondary(plan: plan, template: template) },
                             accent: accent
                         )
+                        .accessibilityIdentifier("today.scheduledCard")
                         .padding(.bottom, 12)
                     }
 
@@ -98,6 +99,7 @@ struct TodayView: View {
                                         AIRecommendationCard(rec: rec)
                                     }
                                     .buttonStyle(.plain)
+                                    .accessibilityIdentifier("today.aiRec.\(rec.kind.rawValue)")
                                 }
                             }
                             .padding(.horizontal, Tokens.Space.lg)
@@ -116,6 +118,7 @@ struct TodayView: View {
             .background(Tokens.Color.groupedBg.ignoresSafeArea())
             .overlay(alignment: .topTrailing) {
                 TweaksButton { showingTweaks = true }
+                    .accessibilityIdentifier("today.tweaks")
                     .padding(.top, 4)
                     .padding(.trailing, 12)
             }
@@ -363,6 +366,7 @@ struct TodayView: View {
                         .background(accent, in: Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("today.newTemplate")
                 .padding(.top, 4)
             }
             .frame(maxWidth: .infinity)
@@ -372,13 +376,14 @@ struct TodayView: View {
             .padding(.bottom, 12)
         } else {
             VStack(spacing: 0) {
-                ForEach(templates.prefix(5)) { tpl in
+                ForEach(Array(templates.prefix(5).enumerated()), id: \.element.id) { idx, tpl in
                     Button {
                         pendingPlanTemplate = tpl
                     } label: {
                         TemplateRowItem(template: tpl, accent: accent)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("today.template.\(idx)")
                     if tpl.id != templates.prefix(5).last?.id {
                         Divider().padding(.leading, 32)
                     }
