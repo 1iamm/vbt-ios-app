@@ -1084,7 +1084,12 @@ struct SetReadyView: View {
     /// Which value the user is currently editing. Crown rotates the focused
     /// field. Tapping a field toggles focus to it. Default = weight on entry.
     enum Field: Hashable { case weight, reps, mvLow, mvHigh }
-    @State private var focus: Field = .weight
+    // Round 3 IX-F12: was @State Field — `.focusable(isFocused)` per cell
+    // only worked AFTER the user tapped a cell, because no view actually
+    // held system focus on appear. @FocusState binds system focus to our
+    // local Field, so .onAppear setting `focus = .weight` immediately
+    // makes the Crown rotate the weight cell.
+    @FocusState private var focus: Field?
 
     private let weightStep: Double = 2.5
 
@@ -1232,7 +1237,7 @@ struct SetReadyView: View {
             )
         }
         .buttonStyle(.plain)
-        .focusable(isFocused)
+        .focused($focus, equals: field)
         .digitalCrownRotation(
             crownBinding(for: field),
             from: crownRange(for: field).lowerBound,
