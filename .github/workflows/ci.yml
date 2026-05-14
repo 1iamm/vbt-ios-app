@@ -430,7 +430,7 @@ jobs:
             body += `</tr></table>\n\n`;
             body += `<details><summary>验收说明</summary>\n\n`;
             body += `- 截图来源：每次 UI test pass 自动从 .xcresult bundle 提取\n`;
-            body += `- 存储：Draft GitHub Release \`${tag}\`（每次 push 覆盖）\n`;
+            body += `- 存储：Prerelease \`${tag}\`（每次 push 覆盖；PR close 时由 cleanup workflow 删）\n`;
             body += `- 点图可放大\n\n`;
             body += `</details>\n`;
 
