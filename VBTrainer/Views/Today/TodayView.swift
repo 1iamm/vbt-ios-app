@@ -488,10 +488,12 @@ struct TodayView: View {
     private func handlePrimary(plan: DayPlan, template: Template) {
         switch plan.status {
         case .scheduled:
-            // V2.x: route by mode preference:
-            //  · forceIPhone / auto + no Watch → present iPhone training cover
-            //  · forceWatch → push to Watch
-            //  · auto + has Watch → confirmationDialog
+            // V2.x: route by mode preference (Task 2 USR-F4 / IX-F8 / USR-F14 P0):
+            //  · forceIPhone                       → iPhone cover
+            //  · forceWatch                        → Watch push
+            //  · auto + no Watch                   → iPhone cover
+            //  · auto + Watch reachable RIGHT NOW  → silent Watch push (NO dialog)
+            //  · auto + Watch installed BUT asleep → dialog ("wait or iPhone now")
             switch WorkoutModeResolver.preference {
             case .forceIPhone:
                 pendingIPhonePlan = planRoute(from: template)
@@ -499,8 +501,15 @@ struct TodayView: View {
                 Task { _ = await TemplateSyncService.pushAndStart(template: template, on: plan.date) }
             case .auto:
                 if WorkoutModeResolver.hasWatch {
-                    pendingModeChoiceTemplate = template
-                    pendingModeChoicePlanDate = plan.date
+                    if WorkoutModeResolver.isWatchReachable {
+                        // Happy path: Watch awake — just push, no friction.
+                        Task { _ = await TemplateSyncService.pushAndStart(template: template, on: plan.date) }
+                    } else {
+                        // Watch installed but currently unreachable — let the
+                        // user choose to wait for Watch or fall back to iPhone.
+                        pendingModeChoiceTemplate = template
+                        pendingModeChoicePlanDate = plan.date
+                    }
                 } else {
                     pendingIPhonePlan = planRoute(from: template)
                 }
