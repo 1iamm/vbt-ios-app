@@ -355,9 +355,23 @@ private struct SetEndedView: View {
 private struct RestView: View {
     let payload: LiveProgressPayload
     @State private var showingDetails = false
+    /// Round 1 IX-F7 (P1) — dedup guard. Once the user taps「跳过」, ignore
+    /// further taps in the same rest cycle. Reset when restRemainingSec is
+    /// re-populated by a new payload (next rest cycle).
+    @State private var lastSkippedRemaining: Int?
 
     private var isFinal10s: Bool {
         (payload.restRemainingSec ?? 999) <= 10
+    }
+
+    /// True once a skip was issued for the current rest cycle. Cleared
+    /// implicitly when the payload's restRemainingSec rises again (next
+    /// cycle), since `lastSkippedRemaining` tracks the value at-tap.
+    private var hasSkippedCurrentCycle: Bool {
+        guard let snapshot = lastSkippedRemaining,
+              let current = payload.restRemainingSec else { return false }
+        // Same cycle iff current ≤ what we last collapsed to.
+        return current <= snapshot
     }
 
     private var avg: Double {
@@ -385,6 +399,14 @@ private struct RestView: View {
                             .foregroundStyle(.white.opacity(0.85))
                         Spacer()
                         Button {
+                            // Round 1 IX-F7 (P1) — refuse if already skipped
+                            // this cycle. Watch side has its own `advanced`
+                            // flag (WatchScreens.swift:575), so this protects
+                            // against (a) iPhone double-tap → 2 WC messages
+                            // and (b) the brief window before the Watch
+                            // .ready payload echoes back.
+                            guard !hasSkippedCurrentCycle else { return }
+                            lastSkippedRemaining = 0
                             TemplateSyncService.pushRestSkip(workoutId: payload.workoutId)
                             // Optimistic: collapse remaining to 0 immediately so
                             // the iPhone RestView animates closed even if WC is
@@ -397,9 +419,10 @@ private struct RestView: View {
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 8)
-                                .background(Color.white.opacity(0.12), in: Capsule())
+                                .background(Color.white.opacity(0.12).opacity(hasSkippedCurrentCycle ? 0.5 : 1.0), in: Capsule())
                         }
                         .buttonStyle(.plain)
+                        .disabled(hasSkippedCurrentCycle)
                     }
 
                     // Prominent 「查看本组详情」 button — full width, accent color
