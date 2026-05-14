@@ -85,21 +85,28 @@ public enum AIRecommendationEngine {
         }
 
         // Rule 2: PR re-test if no recent PR attempt
+        //
+        // Round 2 perf review B: hoist single fetch — `daysSinceLastWorkout`
+        // used to be called twice (gate + subtitle interpolation), each
+        // call running its own `FetchDescriptor<Workout>` over up to 5
+        // rows. Now computed once into `days`.
         if let topExId = topExerciseId(context: context),
-           let exName = ExerciseLookup.exercise(byId: topExId)?.nameZH,
-           daysSinceLastWorkout(exerciseId: topExId, context: context) >= 21
+           let exName = ExerciseLookup.exercise(byId: topExId)?.nameZH
         {
-            let topW = lastTopWeight(exerciseId: topExId, context: context) ?? 100
-            out.append(.init(
-                title: "\(exName) · PR 重测",
-                subtitle: "距离上次 \(daysSinceLastWorkout(exerciseId: topExId, context: context)) 天",
-                reason: "建议冲 1RM · 6 组金字塔加重",
-                meta: "1 动作 · 6 组 · ~40min",
-                tags: ["PR 重测"],
-                kind: .prRetest,
-                exerciseIdHint: topExId,
-                weightHint: topW
-            ))
+            let days = daysSinceLastWorkout(exerciseId: topExId, context: context)
+            if days >= 21 {
+                let topW = lastTopWeight(exerciseId: topExId, context: context) ?? 100
+                out.append(.init(
+                    title: "\(exName) · PR 重测",
+                    subtitle: "距离上次 \(days) 天",
+                    reason: "建议冲 1RM · 6 组金字塔加重",
+                    meta: "1 动作 · 6 组 · ~40min",
+                    tags: ["PR 重测"],
+                    kind: .prRetest,
+                    exerciseIdHint: topExId,
+                    weightHint: topW
+                ))
+            }
         }
 
         // Rule 3: CMJ test if not done recently
