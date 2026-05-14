@@ -483,8 +483,6 @@ struct TemplateRowItem: View {
 struct AIRecommendationCard: View {
     let rec: AIRecommendation
 
-    private static let aiHue = Color(hex: "7C5CFF")
-
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
@@ -492,9 +490,9 @@ struct AIRecommendationCard: View {
                     Text(tag)
                         .font(.system(size: 9, weight: .semibold))
                         .tracking(0.4)
-                        .foregroundStyle(Self.aiHue)
+                        .foregroundStyle(Tokens.Color.ai)
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Self.aiHue.opacity(0.16), in: RoundedRectangle(cornerRadius: 4))
+                        .background(Tokens.Color.ai.opacity(0.16), in: RoundedRectangle(cornerRadius: 4))
                 }
             }
             Text(rec.title)
@@ -505,7 +503,7 @@ struct AIRecommendationCard: View {
                 .foregroundStyle(Tokens.Color.secondaryLabel)
             Text(rec.reason)
                 .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(Self.aiHue)
+                .foregroundStyle(Tokens.Color.ai)
                 .padding(.top, 2)
             Divider()
                 .padding(.top, 6)
@@ -516,10 +514,10 @@ struct AIRecommendationCard: View {
         }
         .padding(14)
         .frame(width: 250, alignment: .leading)
-        .background(Self.aiHue.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
+        .background(Tokens.Color.ai.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(Self.aiHue.opacity(0.22), lineWidth: 1)
+                .stroke(Tokens.Color.ai.opacity(0.22), lineWidth: 1)
         )
     }
 }
