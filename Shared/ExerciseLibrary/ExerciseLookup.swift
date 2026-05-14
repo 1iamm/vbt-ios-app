@@ -6,7 +6,6 @@
 import Foundation
 
 public enum ExerciseLookup {
-
     /// O(n) lookup by id — fine for V1 (30 exercises). If we ever exceed
     /// ~200, switch to a precomputed dictionary.
     public static func exercise(byId id: String) -> Exercise? {
@@ -24,5 +23,7 @@ public enum ExerciseLookup {
         }
     }
 
-    public static var totalCount: Int { exerciseLibrary.count }
+    public static var totalCount: Int {
+        exerciseLibrary.count
+    }
 }

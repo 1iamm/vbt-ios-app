@@ -49,10 +49,10 @@ public func defaultVelocityRange(
 /// PRD §8.4.
 public func defaultVLCeiling(for goal: TrainingGoal) -> Double {
     switch goal {
-    case .power:    return 10
-    case .strength: return 20
-    case .muscle:   return 30
-    case .fatLoss:  return 35
-    case .general:  return 25
+    case .power: 10
+    case .strength: 20
+    case .muscle: 30
+    case .fatLoss: 35
+    case .general: 25
     }
 }

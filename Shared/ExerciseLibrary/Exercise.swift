@@ -8,9 +8,9 @@
 import Foundation
 
 public struct Exercise: Identifiable, Codable, Hashable, Sendable {
-    public let id: String                              // kebab-case, e.g. "back-squat"
-    public let nameZH: String                          // 中文名
-    public let nameEN: String                          // English
+    public let id: String // kebab-case, e.g. "back-squat"
+    public let nameZH: String // 中文名
+    public let nameEN: String // English
     public let category: ExerciseCategory
     public let defaultVelocityVariant: VelocityVariant
 

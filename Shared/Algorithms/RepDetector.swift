@@ -15,7 +15,6 @@
 import Foundation
 
 public final class RepDetector {
-
     public enum State: String, Sendable {
         case rest
         case eccentric
@@ -27,14 +26,14 @@ public final class RepDetector {
     // MARK: - Tunable thresholds
 
     public struct Tuning: Sendable {
-        public var concentricEntryAccel: Double = 0.8        // m/s², upward
-        public var eccentricEntryAccel: Double = -0.6        // m/s², downward
-        public var restAccelMagnitude: Double = 0.40         // m/s², "still"
-        public var minEccentricDwell: Double = 0.20          // s
-        public var minConcentricDwell: Double = 0.20         // s
-        public var minBottomDwell: Double = 0.05             // s
-        public var minTopDwell: Double = 0.10                // s
-        public var minRestForCompletion: Double = 0.20       // s
+        public var concentricEntryAccel: Double = 0.8 // m/s², upward
+        public var eccentricEntryAccel: Double = -0.6 // m/s², downward
+        public var restAccelMagnitude: Double = 0.40 // m/s², "still"
+        public var minEccentricDwell: Double = 0.20 // s
+        public var minConcentricDwell: Double = 0.20 // s
+        public var minBottomDwell: Double = 0.05 // s
+        public var minTopDwell: Double = 0.10 // s
+        public var minRestForCompletion: Double = 0.20 // s
 
         public init() {}
     }
@@ -85,45 +84,45 @@ public final class RepDetector {
 
         switch state {
         case .rest:
-            if a < tuning.eccentricEntryAccel && dwell > 0.05 {
+            if a < tuning.eccentricEntryAccel, dwell > 0.05 {
                 transition(to: .eccentric, at: t)
             }
 
         case .eccentric:
             // Eccentric → bottom on velocity zero-crossing from negative,
             // after the minimum dwell.
-            if dwell >= tuning.minEccentricDwell && lastVelocity < 0 && v >= 0 {
+            if dwell >= tuning.minEccentricDwell, lastVelocity < 0, v >= 0 {
                 transition(to: .bottom, at: t)
             }
 
         case .bottom:
             // Bottom → concentric when upward acceleration kicks in.
-            if dwell >= tuning.minBottomDwell && a > tuning.concentricEntryAccel {
+            if dwell >= tuning.minBottomDwell, a > tuning.concentricEntryAccel {
                 concentricStart = t
                 transition(to: .concentric, at: t)
             }
             // If we somehow drift back into eccentric (false bottom), abort.
-            if dwell > 1.0 && a < tuning.eccentricEntryAccel {
+            if dwell > 1.0, a < tuning.eccentricEntryAccel {
                 transition(to: .eccentric, at: t)
             }
 
         case .concentric:
             // Concentric → top on velocity zero-crossing from positive.
-            if dwell >= tuning.minConcentricDwell && lastVelocity > 0 && v <= 0 {
+            if dwell >= tuning.minConcentricDwell, lastVelocity > 0, v <= 0 {
                 concentricEnd = t
                 transition(to: .top, at: t)
             }
 
         case .top:
             // Top → rest when motion settles.
-            if dwell >= tuning.minTopDwell && abs(a) < tuning.restAccelMagnitude {
+            if dwell >= tuning.minTopDwell, abs(a) < tuning.restAccelMagnitude {
                 // The rep is complete only after sustained rest.
                 if dwell >= tuning.minTopDwell + tuning.minRestForCompletion {
                     finalizeRep(at: t)
                 }
             }
             // If user starts the next rep before resting, also count it.
-            if dwell >= tuning.minTopDwell && a < tuning.eccentricEntryAccel {
+            if dwell >= tuning.minTopDwell, a < tuning.eccentricEntryAccel {
                 finalizeRep(at: t)
                 transition(to: .eccentric, at: t)
             }

@@ -21,8 +21,8 @@ public struct VBTBackup: Codable, Sendable {
         readinessSnapshots: [ReadinessSnapshotDTO],
         personalRecords: [PRDTO]
     ) {
-        self.exportedAt = Date()
-        self.schemaVersion = 1
+        exportedAt = Date()
+        schemaVersion = 1
         self.workouts = workouts
         self.jumpTests = jumpTests
         self.readinessSnapshots = readinessSnapshots
@@ -50,7 +50,6 @@ public struct PRDTO: Codable, Sendable {
 
 @available(iOS 17.0, watchOS 10.0, *)
 public enum JSONExporter {
-
     public static func backup(in context: ModelContext) -> VBTBackup {
         let workouts: [WorkoutSnapshot] = WorkoutStore.all(in: context).map(WorkoutStore.snapshot(of:))
 

@@ -14,7 +14,6 @@
 import Foundation
 
 public let exerciseLibrary: [Exercise] = [
-
     // MARK: - Barbell (16)
 
     // Reference: Citations.gonzalezBadillo2010Velocity (squat MV ≈ 0.30 m/s @ 1RM)
@@ -30,7 +29,7 @@ public let exerciseLibrary: [Exercise] = [
         sfSymbol: "figure.strengthtraining.traditional",
         citationIds: [
             Citations.gonzalezBadillo2010Velocity.id,
-            Citations.sanchezMedina2011VL.id,
+            Citations.sanchezMedina2011VL.id
         ]
     ),
 
@@ -92,7 +91,7 @@ public let exerciseLibrary: [Exercise] = [
             Citations.gonzalezBadillo2010Velocity.id,
             Citations.sanchezMedina2010Propulsive.id,
             Citations.sanchezMedina2011VL.id,
-            Citations.balshaw2023AppleWatch.id,
+            Citations.balshaw2023AppleWatch.id
         ]
     ),
 
@@ -273,7 +272,7 @@ public let exerciseLibrary: [Exercise] = [
         nameEN: "Dumbbell Fly",
         category: .dumbbell,
         defaultVelocityVariant: .mv,
-        referenceV1RM: nil,                  // single-joint isolation; LVP not commonly profiled
+        referenceV1RM: nil, // single-joint isolation; LVP not commonly profiled
         defaultVLCeiling: 30,
         defaultTargetVelocityRange: 0.40...0.70,
         sfSymbol: "dumbbell.fill",
@@ -436,15 +435,15 @@ public let exerciseLibrary: [Exercise] = [
         nameEN: "Counter-Movement Jump",
         category: .jump,
         defaultVelocityVariant: .pv,
-        referenceV1RM: nil,                   // jump height is the metric, not load
+        referenceV1RM: nil, // jump height is the metric, not load
         defaultVLCeiling: 15,
         defaultTargetVelocityRange: 2.0...4.0, // peak takeoff velocity (m/s)
         sfSymbol: "figure.run",
         citationIds: [
             Citations.claudino2017CMJ.id,
             Citations.watkins2017CMJReadiness.id,
-            Citations.linthorne2001Jump.id,
+            Citations.linthorne2001Jump.id
         ],
         notes: "Used both as an exercise and (more commonly) as a daily neuromuscular state test."
-    ),
+    )
 ]

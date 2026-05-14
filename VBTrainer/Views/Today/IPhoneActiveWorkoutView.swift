@@ -12,33 +12,32 @@
 //   ├ notesField       — collapsed; tap to expand
 //   └ bottomCTA        — 完成本组 / 同上完成 / 跳过休息
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @available(iOS 17.0, *)
 struct IPhoneActiveWorkoutView: View {
-
     @StateObject var controller = IPhoneWorkoutController()
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
     @State private var showFinishConfirm = false
     @State private var editingTarget: EditTarget?
-    @State private var elapsedTick: Date = Date()
+    @State private var elapsedTick: Date = .init()
 
     let initialItems: [TemplateItemSnapshot]
     let initialItemIndex: Int
     let templateId: UUID?
 
     init(item: TemplateItemSnapshot? = nil, templateId: UUID? = nil) {
-        self.initialItems = item.map { [$0] } ?? []
-        self.initialItemIndex = 0
+        initialItems = item.map { [$0] } ?? []
+        initialItemIndex = 0
         self.templateId = templateId
     }
 
     init(items: [TemplateItemSnapshot], startingIndex: Int = 0, templateId: UUID? = nil) {
-        self.initialItems = items
-        self.initialItemIndex = startingIndex
+        initialItems = items
+        initialItemIndex = startingIndex
         self.templateId = templateId
     }
 
@@ -282,10 +281,12 @@ struct IPhoneActiveWorkoutView: View {
                     Image(systemName: "clock.arrow.circlepath")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(Tokens.Color.secondaryLabel)
-                    Text("上次 \(formatKg(lastSummary.topWeightKg))kg × \(lastSummary.topReps) · \(lastSummary.setCount) 组 · \(relativeDays(lastSummary.startedAt))")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Tokens.Color.secondaryLabel)
-                        .monospacedDigit()
+                    Text(
+                        "上次 \(formatKg(lastSummary.topWeightKg))kg × \(lastSummary.topReps) · \(lastSummary.setCount) 组 · \(relativeDays(lastSummary.startedAt))"
+                    )
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Tokens.Color.secondaryLabel)
+                    .monospacedDigit()
                     Spacer()
                 }
                 .padding(.horizontal, 14)
@@ -307,8 +308,8 @@ struct IPhoneActiveWorkoutView: View {
                 Text("上次").frame(width: 70, alignment: .leading)
                 Text("重量").frame(maxWidth: .infinity, alignment: .center)
                 Text("次数").frame(width: 50, alignment: .center)
-                Text("").frame(width: 32)   // 勾选列
-                Text("").frame(width: 28)   // 删除列
+                Text("").frame(width: 32) // 勾选列
+                Text("").frame(width: 28) // 删除列
             }
             .font(.system(size: 10, weight: .heavy))
             .tracking(0.5)
@@ -623,12 +624,13 @@ struct IPhoneActiveWorkoutView: View {
         // 若不存在则是 logged.count（追加新行）。
         let firstPending = logged.firstIndex(where: { !$0.completed })
         let nextIdx = firstPending ?? logged.count
-        let completedCount = logged.filter { $0.completed }.count
-        if completedCount == 0 && firstPending == nil { return "完成第 \(nextIdx + 1) 组" }
-        if !specs.isEmpty && nextIdx + 1 == specs.count { return "完成最后一组" }
+        let completedCount = logged.filter(\.completed).count
+        if completedCount == 0, firstPending == nil { return "完成第 \(nextIdx + 1) 组" }
+        if !specs.isEmpty, nextIdx + 1 == specs.count { return "完成最后一组" }
         // Sameness shortcut: same weight + same reps as last logged → 同上完成
         if let last = logged.last(where: { $0.completed }),
-           last.weightKg == controller.currentWeightKg && last.reps == controller.currentReps {
+           last.weightKg == controller.currentWeightKg, last.reps == controller.currentReps
+        {
             return "同上完成"
         }
         return "完成第 \(nextIdx + 1) 组"
@@ -644,10 +646,10 @@ struct IPhoneActiveWorkoutView: View {
         )
     }
 
-    private func lastSetReference(for displayIndex: Int) -> String {
+    private func lastSetReference(for _: Int) -> String {
         // V1: just show "—". V2 will load per-set history from last Workout.
         // Caller is fast since we display once per row regardless.
-        return "—"
+        "—"
     }
 
     private func exerciseName(_ id: String) -> String {

@@ -10,7 +10,6 @@ import Foundation
 import simd
 
 public enum SyntheticMotionGenerator {
-
     /// Generates a sequence of MotionSamples representing a clean set of N
     /// reps with the given peak concentric velocity and duration profile.
     ///
@@ -45,7 +44,7 @@ public enum SyntheticMotionGenerator {
             t = appendHalfSine(
                 into: &samples,
                 duration: eccentricDuration,
-                peakVelocity: -peakVelocity * 0.7,   // descent slower than ascent
+                peakVelocity: -peakVelocity * 0.7, // descent slower than ascent
                 startTime: t, hz: hz, noise: noise
             )
             // Bottom dwell
@@ -171,9 +170,9 @@ public enum SyntheticMotionGenerator {
     }
 }
 
-extension MotionSample {
+public extension MotionSample {
     /// Convenience constructor for synthetic samples — only az matters.
-    public static func synthetic(t: TimeInterval, az: Double) -> MotionSample {
+    static func synthetic(t: TimeInterval, az: Double) -> MotionSample {
         MotionSample(
             timestamp: t,
             userAccel: SIMD3(0, 0, az),

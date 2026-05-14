@@ -8,8 +8,8 @@
 // Tapping a template / recommendation opens the single-screen Plan editor
 // (PlanView). "从 Watch 开始" pushes the template snapshot to Watch.
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct TodayView: View {
     @Environment(\.modelContext) private var context
@@ -41,8 +41,13 @@ struct TodayView: View {
         let templateId: UUID?
     }
 
-    private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
-    private var accent: Color { GoalTheme.accent(for: goal) }
+    private var goal: TrainingGoal {
+        profiles.first?.trainingGoal ?? .strength
+    }
+
+    private var accent: Color {
+        GoalTheme.accent(for: goal)
+    }
 
     private var todayPlan: DayPlan? {
         let today = Calendar.current.startOfDay(for: Date())
@@ -132,7 +137,8 @@ struct TodayView: View {
                     if case let .completed(_, workoutId) = event {
                         await MainActor.run {
                             if let kind = CelebrationResolver.resolve(
-                                completedWorkoutId: workoutId, context: context) {
+                                completedWorkoutId: workoutId, context: context
+                            ) {
                                 withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
                                     pendingCelebration = kind
                                 }
@@ -308,7 +314,8 @@ struct TodayView: View {
         switch rec.kind {
         case .deload:
             guard let baseId = rec.templateIdHint,
-                  let base = templates.first(where: { $0.id == baseId }) else {
+                  let base = templates.first(where: { $0.id == baseId }) else
+            {
                 // No reference template — fall back to creating a new blank.
                 createNewTemplate()
                 return
@@ -321,7 +328,8 @@ struct TodayView: View {
                 return
             }
             let tpl = RecommendationTemplateBuilder.buildPRRetest(
-                exerciseId: exId, lastTopWeight: weight, in: context)
+                exerciseId: exId, lastTopWeight: weight, in: context
+            )
             pendingPlanTemplate = tpl
         case .cmjTest:
             cmjPromptShown = true
@@ -430,11 +438,12 @@ struct TodayView: View {
         return "无"
     }
 
-    private func scheduledSource(plan: DayPlan) -> String? {
+    private func scheduledSource(plan _: DayPlan) -> String? {
         // templateId is non-Optional; check whether last week's workout
         // referenced the same template instead of nil-checking it.
         if let last = workouts.first,
-           Calendar.current.isDate(last.startedAt, equalTo: Date(), toGranularity: .weekOfYear) == false {
+           Calendar.current.isDate(last.startedAt, equalTo: Date(), toGranularity: .weekOfYear) == false
+        {
             return "重做 \(formatShort(last.startedAt))"
         }
         return nil
@@ -451,19 +460,18 @@ struct TodayView: View {
 
     private func bannerSectionTitle(for status: DayPlanStatus) -> String {
         switch status {
-        case .scheduled:  return "已安排今日"
-        case .inProgress: return "训练中"
-        case .completed:  return "今日已完成"
-        case .skipped:    return "今日跳过"
-        case .missed:     return "昨日未完成"
+        case .scheduled: "已安排今日"
+        case .inProgress: "训练中"
+        case .completed: "今日已完成"
+        case .skipped: "今日跳过"
+        case .missed: "昨日未完成"
         }
     }
 
     private func completedSummary(for plan: DayPlan) -> ScheduledTrainingCard.ScheduledSummary? {
         guard plan.status == .completed,
               let workoutId = plan.completedWorkoutId,
-              let workout = workouts.first(where: { $0.id == workoutId })
-        else { return nil }
+              let workout = workouts.first(where: { $0.id == workoutId }) else { return nil }
         let dur = Int(workout.durationSeconds / 60)
         let vol = workout.totalVolumeKg
         let setCount = workout.sets.count
@@ -573,18 +581,19 @@ struct TodayView: View {
 enum Haptics {
     static func success() {
         #if canImport(UIKit)
-        let g = UINotificationFeedbackGenerator()
-        g.notificationOccurred(.success)
+            let g = UINotificationFeedbackGenerator()
+            g.notificationOccurred(.success)
         #endif
     }
+
     static func selection() {
         #if canImport(UIKit)
-        let g = UISelectionFeedbackGenerator()
-        g.selectionChanged()
+            let g = UISelectionFeedbackGenerator()
+            g.selectionChanged()
         #endif
     }
 }
 
 #if canImport(UIKit)
-import UIKit
+    import UIKit
 #endif

@@ -54,17 +54,17 @@ struct CitationsListView: View {
 
     private func zhTopic(_ t: CitationTopic) -> String {
         switch t {
-        case .appleWatchValidation: return "Apple Watch 测速验证"
-        case .repDetection:         return "Rep 识别"
-        case .velocityIntegration:  return "速度计算 / ZUPT"
-        case .velocityLoss:         return "VL% 速度损失"
-        case .v1RM:                 return "1RM 时参考速度"
-        case .lvpAndE1RM:           return "力速曲线 / e1RM 估算"
-        case .velocityVariant:      return "MV / MPV / PV 选择"
-        case .heartRate:            return "心率 / HRmax"
-        case .hrvReadiness:         return "HRV / 训练准备度"
-        case .sleep:                return "睡眠"
-        case .cmjNeuromuscular:     return "CMJ 神经肌肉评估"
+        case .appleWatchValidation: "Apple Watch 测速验证"
+        case .repDetection: "Rep 识别"
+        case .velocityIntegration: "速度计算 / ZUPT"
+        case .velocityLoss: "VL% 速度损失"
+        case .v1RM: "1RM 时参考速度"
+        case .lvpAndE1RM: "力速曲线 / e1RM 估算"
+        case .velocityVariant: "MV / MPV / PV 选择"
+        case .heartRate: "心率 / HRmax"
+        case .hrvReadiness: "HRV / 训练准备度"
+        case .sleep: "睡眠"
+        case .cmjNeuromuscular: "CMJ 神经肌肉评估"
         }
     }
 }

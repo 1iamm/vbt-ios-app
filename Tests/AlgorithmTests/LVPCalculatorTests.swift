@@ -4,9 +4,8 @@
 import XCTest
 
 final class LVPCalculatorTests: XCTestCase {
-
     func testInsufficientLoadsReturnsNil() {
-        let pts: [(Double, Double)] = [(60, 0.8), (70, 0.7), (80, 0.6), (90, 0.5)]   // 4 loads
+        let pts: [(Double, Double)] = [(60, 0.8), (70, 0.7), (80, 0.6), (90, 0.5)] // 4 loads
         XCTAssertNil(LVPCalculator.fit(points: pts.map { (load: $0.0, velocity: $0.1) }))
     }
 
@@ -24,22 +23,22 @@ final class LVPCalculatorTests: XCTestCase {
         }
     }
 
-    func testEstimate1RM() {
+    func testEstimate1RM() throws {
         let loads: [Double] = [60, 70, 80, 90, 100]
-        let velocities = loads.map { -0.005 * $0 + 1.1 }   // straight line
+        let velocities = loads.map { -0.005 * $0 + 1.1 } // straight line
         let pts = zip(loads, velocities).map { (load: $0.0, velocity: $0.1) }
-        let fit = LVPCalculator.fit(points: pts)!
+        let fit = try XCTUnwrap(LVPCalculator.fit(points: pts))
         // V1RM = 0.30 → 1RM = (0.30 - 1.1) / -0.005 = 160 kg (not reasonable
         // physically but math-correct for this synthetic line)
         let e1rm = LVPCalculator.estimate1RM(fit: fit, v1RM: 0.30)
         XCTAssertNotNil(e1rm)
-        XCTAssertEqual(e1rm!, 160.0, accuracy: 0.5)
+        XCTAssertEqual(try XCTUnwrap(e1rm), 160.0, accuracy: 0.5)
     }
 
-    func testNonNegativeSlopeReturnsNil() {
+    func testNonNegativeSlopeReturnsNil() throws {
         // Synthetic positive slope (impossible for real LVP) — should reject
         let pts: [(Double, Double)] = [(60, 0.1), (70, 0.2), (80, 0.3), (90, 0.4), (100, 0.5)]
-        let fit = LVPCalculator.fit(points: pts.map { (load: $0.0, velocity: $0.1) })!
+        let fit = try XCTUnwrap(LVPCalculator.fit(points: pts.map { (load: $0.0, velocity: $0.1) }))
         XCTAssertNil(LVPCalculator.estimate1RM(fit: fit, v1RM: 0.30))
     }
 }

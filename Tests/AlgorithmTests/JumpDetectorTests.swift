@@ -4,11 +4,12 @@
 import XCTest
 
 final class JumpDetectorTests: XCTestCase {
-
     func testSyntheticThirtyCmJump() {
         let detector = JumpDetector()
         let signal = SyntheticMotionGenerator.cmjJump(heightCm: 30, noise: 0.02)
-        for s in signal { detector.ingest(s) }
+        for s in signal {
+            detector.ingest(s)
+        }
 
         XCTAssertGreaterThanOrEqual(detector.attempts.count, 1)
         if let result = detector.attempts.first {
@@ -21,7 +22,9 @@ final class JumpDetectorTests: XCTestCase {
         let detector = JumpDetector()
         for height in [28.0, 31.0, 29.0] {
             let signal = SyntheticMotionGenerator.cmjJump(heightCm: height, noise: 0.02)
-            for s in signal { detector.ingest(s) }
+            for s in signal {
+                detector.ingest(s)
+            }
         }
         XCTAssertGreaterThanOrEqual(detector.attempts.count, 3)
         XCTAssertEqual(detector.bestHeightCm, detector.attempts.map(\.heightCm).max() ?? 0)
@@ -30,14 +33,18 @@ final class JumpDetectorTests: XCTestCase {
     func testStaticSignalProducesNoJump() {
         let detector = JumpDetector()
         let signal = SyntheticMotionGenerator.staticSignal(duration: 5, noise: 0.05)
-        for s in signal { detector.ingest(s) }
+        for s in signal {
+            detector.ingest(s)
+        }
         XCTAssertEqual(detector.attempts.count, 0)
     }
 
     func testReset() {
         let detector = JumpDetector()
         let signal = SyntheticMotionGenerator.cmjJump(heightCm: 25, noise: 0.02)
-        for s in signal { detector.ingest(s) }
+        for s in signal {
+            detector.ingest(s)
+        }
         detector.reset()
         XCTAssertEqual(detector.attempts.count, 0)
         XCTAssertEqual(detector.bestHeightCm, 0)

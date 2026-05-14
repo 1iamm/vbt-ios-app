@@ -36,7 +36,7 @@ public final class JumpTest {
         self.performedAt = performedAt
         self.attempts = attempts
         self.flightTimeSeconds = flightTimeSeconds
-        self.bestHeightCm = attempts.max() ?? 0
+        bestHeightCm = attempts.max() ?? 0
         self.linkedWorkoutId = linkedWorkoutId
     }
 

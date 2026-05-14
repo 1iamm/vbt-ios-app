@@ -3,8 +3,8 @@
 //
 // Wires CSVExporter / JSONExporter to UIActivityViewController for sharing.
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct ExportView: View {
     @Environment(\.modelContext) private var context
@@ -84,9 +84,9 @@ struct ShareableFile: Identifiable {
 struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 
-    func makeUIViewController(context: Context) -> UIActivityViewController {
+    func makeUIViewController(context _: Context) -> UIActivityViewController {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
 
-    func updateUIViewController(_ vc: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_: UIActivityViewController, context _: Context) {}
 }

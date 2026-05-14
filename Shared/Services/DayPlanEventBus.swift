@@ -19,18 +19,19 @@ public enum DayPlanEvent: Sendable {
 
 @available(iOS 17.0, watchOS 10.0, *)
 public final class DayPlanEventBus: @unchecked Sendable {
-
     public static let shared = DayPlanEventBus()
 
-    public var stream: AsyncStream<DayPlanEvent> { _stream }
+    public var stream: AsyncStream<DayPlanEvent> {
+        _stream
+    }
 
     private let _stream: AsyncStream<DayPlanEvent>
     private let continuation: AsyncStream<DayPlanEvent>.Continuation
 
     public init() {
         var c: AsyncStream<DayPlanEvent>.Continuation!
-        self._stream = AsyncStream(bufferingPolicy: .bufferingNewest(32)) { c = $0 }
-        self.continuation = c
+        _stream = AsyncStream(bufferingPolicy: .bufferingNewest(32)) { c = $0 }
+        continuation = c
     }
 
     public func publish(_ event: DayPlanEvent) {

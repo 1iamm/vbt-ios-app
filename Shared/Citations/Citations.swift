@@ -11,7 +11,6 @@
 import Foundation
 
 public enum Citations {
-
     // MARK: - Apple Watch validation
 
     public static let balshaw2023AppleWatch = PaperCitation(
@@ -251,7 +250,7 @@ public enum Citations {
         watson2017Sleep,
         claudino2017CMJ,
         watkins2017CMJReadiness,
-        linthorne2001Jump,
+        linthorne2001Jump
     ]
 
     public static func byTopic(_ topic: CitationTopic) -> [PaperCitation] {

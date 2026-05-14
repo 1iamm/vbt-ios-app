@@ -9,7 +9,6 @@ import XCTest
 
 @MainActor
 final class LiveWorkoutControllerVLTests: XCTestCase {
-
     func testVLCeilingExceededPostsNotification() async {
         let controller = LiveWorkoutController()
         let exp = expectation(description: "vbtVLCeilingExceeded posted")
@@ -32,7 +31,7 @@ final class LiveWorkoutControllerVLTests: XCTestCase {
         XCTAssertEqual(receivedThreshold, 0.30, accuracy: 0.001)
     }
 
-    func testRepCompletedDoesNotPostVLNotification() async throws {
+    func testRepCompletedDoesNotPostVLNotification() async {
         let controller = LiveWorkoutController()
         var fired = false
         let token = NotificationCenter.default.addObserver(

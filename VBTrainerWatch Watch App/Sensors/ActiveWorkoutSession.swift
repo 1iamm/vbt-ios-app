@@ -8,7 +8,6 @@ import Foundation
 
 @available(watchOS 10.0, *)
 public actor ActiveWorkoutSession {
-
     public enum SessionState: Sendable, Equatable {
         case idle
         case running(setIndex: Int)
@@ -28,7 +27,9 @@ public actor ActiveWorkoutSession {
 
     public private(set) var state: SessionState = .idle
 
-    public var events: AsyncStream<SessionEvent> { _events }
+    public var events: AsyncStream<SessionEvent> {
+        _events
+    }
 
     private let _events: AsyncStream<SessionEvent>
     private let eventCont: AsyncStream<SessionEvent>.Continuation
@@ -45,7 +46,7 @@ public actor ActiveWorkoutSession {
     private var currentSet: SetSnapshot?
     private var allSets: [SetSnapshot] = []
     private var heartRateSamples: [HeartRateSample] = []
-    private var sessionStart: Date = Date()
+    private var sessionStart: Date = .init()
 
     private var motionTask: Task<Void, Never>?
     private var heartRateTask: Task<Void, Never>?
@@ -53,8 +54,8 @@ public actor ActiveWorkoutSession {
 
     public init() {
         var c: AsyncStream<SessionEvent>.Continuation!
-        self._events = AsyncStream { c = $0 }
-        self.eventCont = c
+        _events = AsyncStream { c = $0 }
+        eventCont = c
     }
 
     // MARK: - Public API
@@ -71,9 +72,9 @@ public actor ActiveWorkoutSession {
         guard case .idle = state else { return }
         self.exerciseId = exerciseId
         self.defaultRestSeconds = defaultRestSeconds
-        self.sessionStart = Date()
-        self.allSets.removeAll()
-        self.currentSetIndex = 0
+        sessionStart = Date()
+        allSets.removeAll()
+        currentSetIndex = 0
 
         try await beginNextSet(
             weightKg: weightKg,
@@ -182,15 +183,14 @@ public actor ActiveWorkoutSession {
         target: ClosedRange<Double>?,
         vlCeiling: Double?
     ) async {
-        guard var set = currentSet, var vlCalc = vlCalc else { return }
+        guard var set = currentSet, var vlCalc else { return }
         let variant = set.velocityVariant
         let velocity = rep.velocity(for: variant)
 
-        let metStatus: MetStatus
-        if let target {
-            metStatus = MetStatusEvaluator.evaluate(velocity: velocity, target: target)
+        let metStatus: MetStatus = if let target {
+            MetStatusEvaluator.evaluate(velocity: velocity, target: target)
         } else {
-            metStatus = .met
+            .met
         }
 
         let snapshot = RepSnapshot(
@@ -220,14 +220,14 @@ public actor ActiveWorkoutSession {
     private func startConsumers() {
         motionTask = Task.detached { [weak self] in
             guard let self else { return }
-            for await sample in await self.motionManager.stream {
-                await self.repDetector.ingest(sample)
+            for await sample in await motionManager.stream {
+                await repDetector.ingest(sample)
             }
         }
         heartRateTask = Task.detached { [weak self] in
             guard let self else { return }
-            for await bpm in await self.heartRateManager.stream {
-                await self.appendHeartRate(bpm)
+            for await bpm in await heartRateManager.stream {
+                await appendHeartRate(bpm)
             }
         }
     }
@@ -244,7 +244,7 @@ public actor ActiveWorkoutSession {
             for remaining in stride(from: seconds, through: 0, by: -1) {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 if Task.isCancelled { return }
-                await self.tickRest(remaining)
+                await tickRest(remaining)
             }
         }
     }

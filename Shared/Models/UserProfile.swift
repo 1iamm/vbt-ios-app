@@ -56,15 +56,15 @@ public final class UserProfile {
     ) {
         self.id = id
         self.age = age
-        self.sexRaw = sex.rawValue
+        sexRaw = sex.rawValue
         self.heightCm = heightCm
         self.weightKg = weightKg
-        self.bodyTypeRaw = bodyType.rawValue
-        self.trainingExperienceRaw = trainingExperience.rawValue
-        self.trainingGoalRaw = trainingGoal.rawValue
+        bodyTypeRaw = bodyType.rawValue
+        trainingExperienceRaw = trainingExperience.rawValue
+        trainingGoalRaw = trainingGoal.rawValue
         self.measuredHRMax = measuredHRMax
         self.restingHR = restingHR
-        self.weightUnitRaw = weightUnit.rawValue
+        weightUnitRaw = weightUnit.rawValue
         self.crownStep = crownStep
         self.defaultRestSeconds = defaultRestSeconds
         self.vibrationEnabled = vibrationEnabled
@@ -79,18 +79,22 @@ public final class UserProfile {
         get { Sex(rawValue: sexRaw) ?? .other }
         set { sexRaw = newValue.rawValue }
     }
+
     public var bodyType: BodyType {
         get { BodyType(rawValue: bodyTypeRaw) ?? .standard }
         set { bodyTypeRaw = newValue.rawValue }
     }
+
     public var trainingExperience: TrainingExperience {
         get { TrainingExperience(rawValue: trainingExperienceRaw) ?? .oneToThree }
         set { trainingExperienceRaw = newValue.rawValue }
     }
+
     public var trainingGoal: TrainingGoal {
         get { TrainingGoal(rawValue: trainingGoalRaw) ?? .strength }
         set { trainingGoalRaw = newValue.rawValue }
     }
+
     public var weightUnit: WeightUnit {
         get { WeightUnit(rawValue: weightUnitRaw) ?? .kg }
         set { weightUnitRaw = newValue.rawValue }

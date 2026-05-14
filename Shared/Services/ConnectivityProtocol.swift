@@ -9,13 +9,13 @@ import Foundation
 public enum ConnectivityKind: String, Codable, Sendable {
     case workoutSnapshot
     case jumpTest
-    case template          // Proposal 9 fills in
-    case readiness         // Proposal 7 may push readiness from iPhone to Watch
-    case preferences       // iPhone Profile toggles → Watch (e.g. enableRepHaptic)
-    case startWorkout      // V2: iPhone activates a synced template on the Watch
-    case liveProgress      // V2.x: Watch → iPhone training-in-progress updates
-    case restAdjust        // V2.x: iPhone → Watch ±10s rest adjustment
-    case setControl        // V2.x: iPhone → Watch endSet / startNextSet / finishWorkout
+    case template // Proposal 9 fills in
+    case readiness // Proposal 7 may push readiness from iPhone to Watch
+    case preferences // iPhone Profile toggles → Watch (e.g. enableRepHaptic)
+    case startWorkout // V2: iPhone activates a synced template on the Watch
+    case liveProgress // V2.x: Watch → iPhone training-in-progress updates
+    case restAdjust // V2.x: iPhone → Watch ±10s rest adjustment
+    case setControl // V2.x: iPhone → Watch endSet / startNextSet / finishWorkout
 }
 
 /// V2.x dual-side workflow: iPhone sends a set-level command to the Watch
@@ -24,10 +24,11 @@ public enum ConnectivityKind: String, Codable, Sendable {
 /// (Hevy / Strong / 训记) where iPhone is the always-on control plane.
 public struct SetControlPayload: Codable, Sendable, Equatable {
     public enum Action: String, Codable, Sendable {
-        case endSet            // Equivalent of Watch's 「结束本组」
-        case startNextSet      // Skip rest and immediately start the next planned set
-        case finishWorkout     // Early-exit the whole workout
+        case endSet // Equivalent of Watch's 「结束本组」
+        case startNextSet // Skip rest and immediately start the next planned set
+        case finishWorkout // Early-exit the whole workout
     }
+
     public let action: Action
     public let workoutId: UUID?
 
@@ -41,9 +42,9 @@ public struct SetControlPayload: Codable, Sendable, Equatable {
 /// ±10s on the iPhone rest screen and have Watch's countdown reflect it.
 /// `skip == true` means "stop countdown immediately and advance to next set".
 public struct RestAdjustPayload: Codable, Sendable, Equatable {
-    public let deltaSeconds: Int   // +10 or -10 (or any signed value); ignored if skip
+    public let deltaSeconds: Int // +10 or -10 (or any signed value); ignored if skip
     public let skip: Bool
-    public let workoutId: UUID?    // optional sanity check
+    public let workoutId: UUID? // optional sanity check
 
     public init(deltaSeconds: Int = 0, skip: Bool = false, workoutId: UUID? = nil) {
         self.deltaSeconds = deltaSeconds
@@ -57,13 +58,12 @@ public struct RestAdjustPayload: Codable, Sendable, Equatable {
 /// 3-round PM discussion: no HR (HealthKit covers it post-workout), no
 /// e1RM / Readiness during training.
 public struct LiveProgressPayload: Codable, Sendable, Equatable {
-
     public enum Phase: String, Codable, Sendable {
-        case ready          // User tapped「本组开始」, training-ready
-        case repDetected    // A rep was detected during the set
-        case setEnded       // Set ended (manual / planned / inactivity 5s)
-        case restCountdown  // Inter-set rest countdown ticking
-        case workoutEnded   // Whole workout complete
+        case ready // User tapped「本组开始」, training-ready
+        case repDetected // A rep was detected during the set
+        case setEnded // Set ended (manual / planned / inactivity 5s)
+        case restCountdown // Inter-set rest countdown ticking
+        case workoutEnded // Whole workout complete
     }
 
     public let phase: Phase
@@ -73,13 +73,13 @@ public struct LiveProgressPayload: Codable, Sendable, Equatable {
     public let targetReps: Int
     public let targetWeightKg: Double
     public let currentRep: Int
-    public let lastRepVelocity: Double?     // m/s
-    public let setBestVelocity: Double?     // 本组 PV，用于 VL% 染色基准
-    public let vlPercent: Double?           // Watch-computed 0..100
-    public let repVelocities: [Double]      // .setEnded 时填，画柱状图
-    public let restRemainingSec: Int?       // .restCountdown 时填
-    public let restTotalSec: Int?           // .restCountdown 时填，进度环用
-    public let heartRate: Int?              // 实时心率（最近一次 HR 样本），所有 phase 都可带
+    public let lastRepVelocity: Double? // m/s
+    public let setBestVelocity: Double? // 本组 PV，用于 VL% 染色基准
+    public let vlPercent: Double? // Watch-computed 0..100
+    public let repVelocities: [Double] // .setEnded 时填，画柱状图
+    public let restRemainingSec: Int? // .restCountdown 时填
+    public let restTotalSec: Int? // .restCountdown 时填，进度环用
+    public let heartRate: Int? // 实时心率（最近一次 HR 样本），所有 phase 都可带
     /// V2.x: target velocity band (m/s) the user is training within. iPhone
     /// renders it as a tick + band under the velocity readout so user knows
     /// where they should be hitting. Optional for back-compat.
@@ -189,7 +189,7 @@ public struct JumpTestSnapshot: Codable, Sendable, Equatable {
 public struct TemplateSetSpecSnapshot: Codable, Sendable, Equatable {
     public let id: UUID
     public let index: Int
-    public let kindRaw: String      // "warmUp" | "work"
+    public let kindRaw: String // "warmUp" | "work"
     public let weightKg: Double
     public let reps: Int
     public let restSeconds: Int
@@ -283,7 +283,7 @@ public struct TemplateItemSnapshot: Codable, Sendable, Equatable, Identifiable {
 public struct TemplateSnapshot: Codable, Sendable, Equatable {
     public let id: UUID
     public let name: String
-    public let scheduledDate: Date    // start-of-day
+    public let scheduledDate: Date // start-of-day
     public let items: [TemplateItemSnapshot]
 
     public init(id: UUID = UUID(), name: String, scheduledDate: Date, items: [TemplateItemSnapshot]) {
@@ -306,14 +306,14 @@ public enum ConnectivityMessage: Codable, Sendable, Equatable {
 
     public var kind: ConnectivityKind {
         switch self {
-        case .workoutSnapshot: return .workoutSnapshot
-        case .jumpTest:        return .jumpTest
-        case .template:        return .template
-        case .preferences:     return .preferences
-        case .startWorkout:    return .startWorkout
-        case .liveProgress:    return .liveProgress
-        case .restAdjust:      return .restAdjust
-        case .setControl:      return .setControl
+        case .workoutSnapshot: .workoutSnapshot
+        case .jumpTest: .jumpTest
+        case .template: .template
+        case .preferences: .preferences
+        case .startWorkout: .startWorkout
+        case .liveProgress: .liveProgress
+        case .restAdjust: .restAdjust
+        case .setControl: .setControl
         }
     }
 }
@@ -350,15 +350,13 @@ public enum ConnectivityCodec {
         let data = try JSONEncoder().encode(message)
         return [
             userInfoKindKey: message.kind.rawValue,
-            userInfoPayloadKey: data,
+            userInfoPayloadKey: data
         ]
     }
 
     public static func decode(_ userInfo: [String: Any]) throws -> ConnectivityMessage? {
-        guard
-            let _ = userInfo[userInfoKindKey] as? String,
-            let data = userInfo[userInfoPayloadKey] as? Data
-        else { return nil }
+        guard let _ = userInfo[userInfoKindKey] as? String,
+              let data = userInfo[userInfoPayloadKey] as? Data else { return nil }
         return try JSONDecoder().decode(ConnectivityMessage.self, from: data)
     }
 }

@@ -95,8 +95,9 @@ private struct SetActiveView: View {
         // back to drop-from-set-best.
         if let v = payload.lastRepVelocity,
            let lo = payload.targetVelocityMin,
-           let hi = payload.targetVelocityMax {
-            if v >= lo && v <= hi { return .green }
+           let hi = payload.targetVelocityMax
+        {
+            if v >= lo, v <= hi { return .green }
             if v < lo {
                 let dropPct = (lo - v) / lo * 100
                 return dropPct >= 15 ? .red : .yellow
@@ -295,7 +296,9 @@ private struct SetEndedView: View {
         return payload.repVelocities.reduce(0, +) / Double(payload.repVelocities.count)
     }
 
-    private var best: Double { payload.repVelocities.max() ?? 0 }
+    private var best: Double {
+        payload.repVelocities.max() ?? 0
+    }
 
     private func barColor(for v: Double) -> Color {
         guard best > 0 else { return .white }
@@ -353,10 +356,14 @@ private struct RestView: View {
     let payload: LiveProgressPayload
     @State private var showingDetails = false
 
-    private var isFinal10s: Bool { (payload.restRemainingSec ?? 999) <= 10 }
+    private var isFinal10s: Bool {
+        (payload.restRemainingSec ?? 999) <= 10
+    }
+
     private var avg: Double {
         payload.repVelocities.isEmpty ? 0 : payload.repVelocities.reduce(0, +) / Double(payload.repVelocities.count)
     }
+
     /// 0..1 — fraction of rest elapsed.
     private var ringProgress: CGFloat {
         guard let total = payload.restTotalSec, total > 0,
@@ -525,7 +532,10 @@ private struct DetailsSheet: View {
     private var avg: Double {
         payload.repVelocities.isEmpty ? 0 : payload.repVelocities.reduce(0, +) / Double(payload.repVelocities.count)
     }
-    private var best: Double { payload.repVelocities.max() ?? 0 }
+
+    private var best: Double {
+        payload.repVelocities.max() ?? 0
+    }
 
     var body: some View {
         NavigationStack {

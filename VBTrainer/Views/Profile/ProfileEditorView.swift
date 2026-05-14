@@ -77,22 +77,26 @@ struct ProfileEditorView: View {
                 HStack {
                     Text("最大心率（实测）")
                     Spacer()
-                    TextField("bpm（不填用 Tanaka 公式）",
-                              value: $profile.measuredHRMax,
-                              format: .number)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 140)
+                    TextField(
+                        "bpm（不填用 Tanaka 公式）",
+                        value: $profile.measuredHRMax,
+                        format: .number
+                    )
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 140)
                 }
                 HStack {
                     Text("静息心率")
                     Spacer()
-                    TextField("bpm（不填从 HealthKit 读）",
-                              value: $profile.restingHR,
-                              format: .number)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 160)
+                    TextField(
+                        "bpm（不填从 HealthKit 读）",
+                        value: $profile.restingHR,
+                        format: .number
+                    )
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 160)
                 }
             }
         }

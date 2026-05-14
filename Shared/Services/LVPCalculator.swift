@@ -10,9 +10,9 @@
 import Foundation
 
 public struct LVPFit: Sendable, Equatable {
-    public let slope: Double      // a in v = a·load + b
-    public let intercept: Double  // b
-    public let r2: Double         // coefficient of determination
+    public let slope: Double // a in v = a·load + b
+    public let intercept: Double // b
+    public let r2: Double // coefficient of determination
     public let pointCount: Int
 
     public init(slope: Double, intercept: Double, r2: Double, pointCount: Int) {
@@ -24,7 +24,6 @@ public struct LVPFit: Sendable, Equatable {
 }
 
 public enum LVPCalculator {
-
     /// Minimum number of distinct loads required to compute a meaningful LVP.
     /// Reference: Citations.jidovtseff2011LVP — 4-5 points typical; we use 5
     /// as a more conservative threshold.

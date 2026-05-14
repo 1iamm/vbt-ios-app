@@ -28,14 +28,14 @@ public struct MotionSample: Sendable, Equatable {
     }
 }
 
-extension MotionSample {
+public extension MotionSample {
     /// Returns the gravity-aligned (world-frame) vertical acceleration in m/s².
     /// V1 simplification: assume the watch face is roughly horizontal during
     /// concentric/eccentric phases of vertical lifts (squat/bench/deadlift),
     /// so device-z aligns with world-vertical to first order. For lifts with
     /// significant wrist rotation we'd need full attitude rotation — flagged
     /// for V2 calibration pass.
-    public var verticalAccel: Double {
+    var verticalAccel: Double {
         userAccel.z
     }
 }

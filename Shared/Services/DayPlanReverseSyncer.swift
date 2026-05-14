@@ -20,13 +20,12 @@ import Foundation
 import SwiftData
 
 #if canImport(EventKit) && os(iOS)
-import EventKit
+    import EventKit
 #endif
 
 @available(iOS 17.0, *)
 @MainActor
 public final class DayPlanReverseSyncer {
-
     public static let shared = DayPlanReverseSyncer()
 
     private var subscriptionToken: Any?
@@ -35,7 +34,7 @@ public final class DayPlanReverseSyncer {
     public init() {}
 
     public func bind(container: ModelContainer) {
-        self.modelContainer = container
+        modelContainer = container
         // Subscribe once.
         if subscriptionToken == nil {
             subscriptionToken = EventKitService.shared.subscribeToChanges { [weak self] in
@@ -92,8 +91,9 @@ public final class DayPlanReverseSyncer {
         //    machine (so the event bus fires; preserve the row so history
         //    can show the user cancelled, not pretend it never existed).
         for plan in plans where plan.eventKitIdentifier != nil
-                              && plan.status != .completed
-                              && plan.status != .skipped {
+            && plan.status != .completed
+            && plan.status != .skipped
+        {
             if !presentIdents.contains(plan.eventKitIdentifier!) {
                 DayPlanStateMachine.markSkipped(planId: plan.id, in: context)
             }

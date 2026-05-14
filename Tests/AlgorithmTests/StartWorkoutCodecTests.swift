@@ -8,11 +8,10 @@
 import XCTest
 
 final class StartWorkoutCodecTests: XCTestCase {
-
     func testStartWorkoutMessageRoundTrips() throws {
-        let original = ConnectivityMessage.startWorkout(
+        let original = try ConnectivityMessage.startWorkout(
             StartWorkoutSnapshot(
-                templateId: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
+                templateId: XCTUnwrap(UUID(uuidString: "11111111-2222-3333-4444-555555555555")),
                 startItemIndex: 2
             )
         )
@@ -27,7 +26,7 @@ final class StartWorkoutCodecTests: XCTestCase {
         )
         let userInfo = try ConnectivityCodec.encode(original)
         let decoded = try ConnectivityCodec.decode(userInfo)
-        if case .startWorkout(let snap) = decoded {
+        if case let .startWorkout(snap) = decoded {
             XCTAssertEqual(snap.startItemIndex, 0)
             XCTAssertNil(snap.template)
         } else {
@@ -67,7 +66,7 @@ final class StartWorkoutCodecTests: XCTestCase {
         let userInfo = try ConnectivityCodec.encode(original)
         let decoded = try ConnectivityCodec.decode(userInfo)
         XCTAssertEqual(decoded, original)
-        if case .startWorkout(let snap) = decoded {
+        if case let .startWorkout(snap) = decoded {
             XCTAssertEqual(snap.template?.items.count, 1)
             XCTAssertEqual(snap.template?.items.first?.exerciseId, "back-squat")
         } else {

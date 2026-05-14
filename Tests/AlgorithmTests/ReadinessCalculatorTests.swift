@@ -4,7 +4,6 @@
 import XCTest
 
 final class ReadinessCalculatorTests: XCTestCase {
-
     func testInsufficientWhenNoBaseline() {
         let input = ReadinessInput(hrv: 50, hrvBaselineMean: nil)
         let output = ReadinessCalculator.compute(input: input)
@@ -12,7 +11,7 @@ final class ReadinessCalculatorTests: XCTestCase {
         XCTAssertEqual(output.tier, .insufficient)
     }
 
-    func testGreenWhenAtBaselineWithGoodSleep() {
+    func testGreenWhenAtBaselineWithGoodSleep() throws {
         let input = ReadinessInput(
             hrv: 50, hrvBaselineMean: 50, hrvBaselineStd: 5,
             rhr: 58, rhrBaselineMean: 58, rhrBaselineStd: 2,
@@ -21,20 +20,20 @@ final class ReadinessCalculatorTests: XCTestCase {
         )
         let output = ReadinessCalculator.compute(input: input)
         XCTAssertNotNil(output.score)
-        XCTAssertGreaterThanOrEqual(output.score!, 80)
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(output.score), 80)
         XCTAssertEqual(output.tier, .green)
     }
 
-    func testRedWhenSeverelyBelowBaseline() {
+    func testRedWhenSeverelyBelowBaseline() throws {
         let input = ReadinessInput(
-            hrv: 30, hrvBaselineMean: 50, hrvBaselineStd: 5,         // -4σ HRV
-            rhr: 70, rhrBaselineMean: 58, rhrBaselineStd: 2,         // +6σ RHR
+            hrv: 30, hrvBaselineMean: 50, hrvBaselineStd: 5, // -4σ HRV
+            rhr: 70, rhrBaselineMean: 58, rhrBaselineStd: 2, // +6σ RHR
             sleepTotalHours: 4.0, sleepDeepHours: 0.5,
             wristTempDelta: 1.5
         )
         let output = ReadinessCalculator.compute(input: input)
         XCTAssertNotNil(output.score)
-        XCTAssertLessThan(output.score!, 60)
+        XCTAssertLessThan(try XCTUnwrap(output.score), 60)
         XCTAssertEqual(output.tier, .red)
     }
 

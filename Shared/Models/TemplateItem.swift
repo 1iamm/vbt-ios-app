@@ -44,11 +44,11 @@ public final class TemplateItem {
         self.targetSets = targetSets
         self.targetReps = targetReps
         self.targetWeightKg = targetWeightKg
-        self.targetVelocityMin = targetVelocityRange?.lowerBound
-        self.targetVelocityMax = targetVelocityRange?.upperBound
+        targetVelocityMin = targetVelocityRange?.lowerBound
+        targetVelocityMax = targetVelocityRange?.upperBound
         self.vlCeiling = vlCeiling
         self.restSeconds = restSeconds
-        self.sideRaw = side.rawValue
+        sideRaw = side.rawValue
     }
 
     public var side: Side {
@@ -63,7 +63,9 @@ public final class TemplateItem {
 
     /// True iff the user has planned individual sets (otherwise the legacy
     /// `targetSets × targetReps @ targetWeightKg` is used).
-    public var hasPerSetSpecs: Bool { !setSpecs.isEmpty }
+    public var hasPerSetSpecs: Bool {
+        !setSpecs.isEmpty
+    }
 
     public var orderedSetSpecs: [TemplateSetSpec] {
         setSpecs.sorted { $0.index < $1.index }

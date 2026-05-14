@@ -7,7 +7,6 @@
 import Foundation
 
 public enum MetStatusEvaluator {
-
     /// Borderline window: 5% under target.lowerBound is "borderline", below
     /// that is "failed".
     public static let borderlineMargin: Double = 0.05
@@ -17,13 +16,13 @@ public enum MetStatusEvaluator {
         target: ClosedRange<Double>
     ) -> MetStatus {
         if velocity >= target.upperBound {
-            return .excellent
+            .excellent
         } else if velocity >= target.lowerBound {
-            return .met
+            .met
         } else if velocity >= target.lowerBound * (1 - borderlineMargin) {
-            return .borderline
+            .borderline
         } else {
-            return .failed
+            .failed
         }
     }
 }

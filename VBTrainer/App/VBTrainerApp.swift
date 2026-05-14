@@ -1,12 +1,11 @@
 // VBTrainerApp.swift
 // VBTrainer · iPhone App entry · 2026-05
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @main
 struct VBTrainerApp: App {
-
     let container: ModelContainer = {
         do {
             let schema = Schema(VBTSchemaV1.allModels)

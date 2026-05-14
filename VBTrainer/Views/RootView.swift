@@ -11,11 +11,10 @@
 // Watch is the "open it" tab in the design. iPhone never participates in the
 // during-workout moment; it shows replay + complete history afterwards.
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct RootView: View {
-
     @Query private var profiles: [UserProfile]
 
     var body: some View {
@@ -28,7 +27,6 @@ struct RootView: View {
 }
 
 struct MainTabsView: View {
-
     enum Tab: Hashable { case today, plan, history, stats, profile }
 
     @State private var selection: Tab = .today
@@ -63,10 +61,10 @@ struct MainTabsView: View {
         // 全局右下角悬浮窗 —— 训练中切到任何 tab 都能看到当前 phase 摘要，
         // 点击展开 cover。仅 isLive && isMinimized 时显示。
         .overlay(alignment: .bottomTrailing) {
-            if liveStore.isLive && liveStore.isMinimized, let p = liveStore.payload {
+            if liveStore.isLive, liveStore.isMinimized, let p = liveStore.payload {
                 LiveWorkoutPiPBubble(payload: p, onTap: { liveStore.expand() })
                     .padding(.trailing, 14)
-                    .padding(.bottom, 70)  // 在 TabBar 上方
+                    .padding(.bottom, 70) // 在 TabBar 上方
                     .transition(.scale.combined(with: .opacity))
             }
         }

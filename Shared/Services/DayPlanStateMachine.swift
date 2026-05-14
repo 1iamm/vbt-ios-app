@@ -10,7 +10,6 @@ import SwiftData
 
 @available(iOS 17.0, watchOS 10.0, *)
 public enum DayPlanStateMachine {
-
     // MARK: - Forward transitions (driven by training events)
 
     /// Called by iPhoneConnectivityService after a WorkoutSnapshot has been

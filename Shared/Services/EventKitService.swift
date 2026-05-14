@@ -13,12 +13,11 @@
 import Foundation
 
 #if canImport(EventKit) && os(iOS)
-import EventKit
+    import EventKit
 #endif
 
 @available(iOS 17.0, *)
 public final class EventKitService {
-
     public static let shared = EventKitService()
 
     public enum SyncError: Error {
@@ -30,7 +29,7 @@ public final class EventKitService {
     public static let calendarName = "训练"
 
     #if canImport(EventKit) && os(iOS)
-    private let store = EKEventStore()
+        private let store = EKEventStore()
     #endif
 
     public init() {}
@@ -41,30 +40,30 @@ public final class EventKitService {
     @discardableResult
     public func requestWriteAccess() async -> Bool {
         #if canImport(EventKit) && os(iOS)
-        do {
-            if #available(iOS 17.0, *) {
-                return try await store.requestWriteOnlyAccessToEvents()
-            } else {
-                return try await store.requestAccess(to: .event)
+            do {
+                if #available(iOS 17.0, *) {
+                    return try await store.requestWriteOnlyAccessToEvents()
+                } else {
+                    return try await store.requestAccess(to: .event)
+                }
+            } catch {
+                return false
             }
-        } catch {
-            return false
-        }
         #else
-        return false
+            return false
         #endif
     }
 
     public var isAuthorized: Bool {
         #if canImport(EventKit) && os(iOS)
-        if #available(iOS 17.0, *) {
-            return EKEventStore.authorizationStatus(for: .event) == .writeOnly
-                || EKEventStore.authorizationStatus(for: .event) == .fullAccess
-        } else {
-            return EKEventStore.authorizationStatus(for: .event) == .authorized
-        }
+            if #available(iOS 17.0, *) {
+                return EKEventStore.authorizationStatus(for: .event) == .writeOnly
+                    || EKEventStore.authorizationStatus(for: .event) == .fullAccess
+            } else {
+                return EKEventStore.authorizationStatus(for: .event) == .authorized
+            }
         #else
-        return false
+            return false
         #endif
     }
 
@@ -72,13 +71,13 @@ public final class EventKitService {
     /// reading back user-edited events in pullChanges(...).
     public var hasReadAccess: Bool {
         #if canImport(EventKit) && os(iOS)
-        if #available(iOS 17.0, *) {
-            return EKEventStore.authorizationStatus(for: .event) == .fullAccess
-        } else {
-            return EKEventStore.authorizationStatus(for: .event) == .authorized
-        }
+            if #available(iOS 17.0, *) {
+                return EKEventStore.authorizationStatus(for: .event) == .fullAccess
+            } else {
+                return EKEventStore.authorizationStatus(for: .event) == .authorized
+            }
         #else
-        return false
+            return false
         #endif
     }
 
@@ -87,17 +86,17 @@ public final class EventKitService {
     @discardableResult
     public func requestFullAccess() async -> Bool {
         #if canImport(EventKit) && os(iOS)
-        do {
-            if #available(iOS 17.0, *) {
-                return try await store.requestFullAccessToEvents()
-            } else {
-                return try await store.requestAccess(to: .event)
+            do {
+                if #available(iOS 17.0, *) {
+                    return try await store.requestFullAccessToEvents()
+                } else {
+                    return try await store.requestAccess(to: .event)
+                }
+            } catch {
+                return false
             }
-        } catch {
-            return false
-        }
         #else
-        return false
+            return false
         #endif
     }
 
@@ -115,39 +114,38 @@ public final class EventKitService {
         existingIdentifier: String?
     ) throws -> String {
         #if canImport(EventKit) && os(iOS)
-        guard isAuthorized else { throw SyncError.accessDenied }
-        // Prefer the user's default calendar (write-only access works there).
-        // Falls back to creating a dedicated「训练」calendar only when full
-        // access is granted (writeOnly cannot create calendars).
-        let calendar = try preferredCalendar()
-        let event: EKEvent
-        if let id = existingIdentifier, let existing = store.event(withIdentifier: id) {
-            event = existing
-        } else {
-            event = EKEvent(eventStore: store)
-        }
-        event.calendar = calendar
-        event.title = title
-        let dayStart = Calendar.current.startOfDay(for: date)
-        let start = Calendar.current.date(byAdding: .minute, value: timeMinutes, to: dayStart) ?? date
-        event.startDate = start
-        event.endDate = Calendar.current.date(byAdding: .minute, value: durationMinutes, to: start) ?? start
-        event.notes = notes
-        event.alarms = [EKAlarm(relativeOffset: -30 * 60)]
-        try store.save(event, span: .thisEvent)
-        return event.eventIdentifier
+            guard isAuthorized else { throw SyncError.accessDenied }
+            // Prefer the user's default calendar (write-only access works there).
+            // Falls back to creating a dedicated「训练」calendar only when full
+            // access is granted (writeOnly cannot create calendars).
+            let calendar = try preferredCalendar()
+            let event: EKEvent = if let id = existingIdentifier, let existing = store.event(withIdentifier: id) {
+                existing
+            } else {
+                EKEvent(eventStore: store)
+            }
+            event.calendar = calendar
+            event.title = title
+            let dayStart = Calendar.current.startOfDay(for: date)
+            let start = Calendar.current.date(byAdding: .minute, value: timeMinutes, to: dayStart) ?? date
+            event.startDate = start
+            event.endDate = Calendar.current.date(byAdding: .minute, value: durationMinutes, to: start) ?? start
+            event.notes = notes
+            event.alarms = [EKAlarm(relativeOffset: -30 * 60)]
+            try store.save(event, span: .thisEvent)
+            return event.eventIdentifier
         #else
-        throw SyncError.accessDenied
+            throw SyncError.accessDenied
         #endif
     }
 
     public func delete(identifier: String) throws {
         #if canImport(EventKit) && os(iOS)
-        guard isAuthorized else { throw SyncError.accessDenied }
-        guard let event = store.event(withIdentifier: identifier) else {
-            throw SyncError.eventNotFound
-        }
-        try store.remove(event, span: .thisEvent)
+            guard isAuthorized else { throw SyncError.accessDenied }
+            guard let event = store.event(withIdentifier: identifier) else {
+                throw SyncError.eventNotFound
+            }
+            try store.remove(event, span: .thisEvent)
         #endif
     }
 
@@ -167,25 +165,25 @@ public final class EventKitService {
     /// reconciles against the local DayPlan store. Requires full access.
     public func pullChanges(in range: ClosedRange<Date>) -> [EventChange] {
         #if canImport(EventKit) && os(iOS)
-        guard hasReadAccess else { return [] }
-        guard let calendar = store.calendars(for: .event)
-            .first(where: { $0.title == Self.calendarName }) else { return [] }
-        let predicate = store.predicateForEvents(
-            withStart: range.lowerBound,
-            end: range.upperBound,
-            calendars: [calendar]
-        )
-        let events = store.events(matching: predicate)
-        return events.map { ev in
-            EventChange(
-                identifier: ev.eventIdentifier,
-                title: ev.title ?? "",
-                start: ev.startDate,
-                isDeleted: false
+            guard hasReadAccess else { return [] }
+            guard let calendar = store.calendars(for: .event)
+                .first(where: { $0.title == Self.calendarName }) else { return [] }
+            let predicate = store.predicateForEvents(
+                withStart: range.lowerBound,
+                end: range.upperBound,
+                calendars: [calendar]
             )
-        }
+            let events = store.events(matching: predicate)
+            return events.map { ev in
+                EventChange(
+                    identifier: ev.eventIdentifier,
+                    title: ev.title ?? "",
+                    start: ev.startDate,
+                    isDeleted: false
+                )
+            }
         #else
-        return []
+            return []
         #endif
     }
 
@@ -196,54 +194,56 @@ public final class EventKitService {
     @MainActor
     public func subscribeToChanges(_ handler: @escaping () -> Void) -> Any? {
         #if canImport(EventKit) && os(iOS)
-        return NotificationCenter.default.addObserver(
-            forName: .EKEventStoreChanged,
-            object: store,
-            queue: .main
-        ) { _ in handler() }
+            return NotificationCenter.default.addObserver(
+                forName: .EKEventStoreChanged,
+                object: store,
+                queue: .main
+            ) { _ in handler() }
         #else
-        return nil
+            return nil
         #endif
     }
 
     // MARK: - Helpers
 
     #if canImport(EventKit) && os(iOS)
-    private func ensureCalendar() throws -> EKCalendar {
-        if let existing = store.calendars(for: .event)
-            .first(where: { $0.title == Self.calendarName }) {
-            return existing
-        }
-        let cal = EKCalendar(for: .event, eventStore: store)
-        cal.title = Self.calendarName
-        cal.cgColor = CGColor(red: 1.0, green: 0.584, blue: 0.0, alpha: 1.0) // accent
-        guard let source = store.defaultCalendarForNewEvents?.source
+        private func ensureCalendar() throws -> EKCalendar {
+            if let existing = store.calendars(for: .event)
+                .first(where: { $0.title == Self.calendarName })
+            {
+                return existing
+            }
+            let cal = EKCalendar(for: .event, eventStore: store)
+            cal.title = Self.calendarName
+            cal.cgColor = CGColor(red: 1.0, green: 0.584, blue: 0.0, alpha: 1.0) // accent
+            guard let source = store.defaultCalendarForNewEvents?.source
                 ?? store.sources.first(where: { $0.sourceType == .local })
-                ?? store.sources.first
-        else { throw SyncError.calendarUnavailable }
-        cal.source = source
-        try store.saveCalendar(cal, commit: true)
-        return cal
-    }
+                ?? store.sources.first else { throw SyncError.calendarUnavailable }
+            cal.source = source
+            try store.saveCalendar(cal, commit: true)
+            return cal
+        }
 
-    /// Pick the best calendar to write to:
-    /// 1. Existing「训练」calendar from a previous full-access run
-    /// 2. User's default calendar (write-only access can write here)
-    /// 3. Any writable iCloud / CalDAV calendar
-    /// 4. As a last resort, try ensureCalendar() (requires full access)
-    private func preferredCalendar() throws -> EKCalendar {
-        if let existing = store.calendars(for: .event)
-            .first(where: { $0.title == Self.calendarName && $0.allowsContentModifications }) {
-            return existing
+        /// Pick the best calendar to write to:
+        /// 1. Existing「训练」calendar from a previous full-access run
+        /// 2. User's default calendar (write-only access can write here)
+        /// 3. Any writable iCloud / CalDAV calendar
+        /// 4. As a last resort, try ensureCalendar() (requires full access)
+        private func preferredCalendar() throws -> EKCalendar {
+            if let existing = store.calendars(for: .event)
+                .first(where: { $0.title == Self.calendarName && $0.allowsContentModifications })
+            {
+                return existing
+            }
+            if let def = store.defaultCalendarForNewEvents, def.allowsContentModifications {
+                return def
+            }
+            if let writable = store.calendars(for: .event)
+                .first(where: { $0.allowsContentModifications })
+            {
+                return writable
+            }
+            return try ensureCalendar()
         }
-        if let def = store.defaultCalendarForNewEvents, def.allowsContentModifications {
-            return def
-        }
-        if let writable = store.calendars(for: .event)
-            .first(where: { $0.allowsContentModifications }) {
-            return writable
-        }
-        return try ensureCalendar()
-    }
     #endif
 }

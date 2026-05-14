@@ -7,9 +7,9 @@
 //   - Readiness 趋势：最近 14 天 readiness score 折线
 //   - PR 列表入口
 
-import SwiftUI
-import SwiftData
 import Charts
+import SwiftData
+import SwiftUI
 
 struct StatsView: View {
     @Environment(\.modelContext) private var context
@@ -19,8 +19,13 @@ struct StatsView: View {
     @Query(sort: \ReadinessSnapshot.date, order: .reverse) private var readiness: [ReadinessSnapshot]
     @Query(sort: \PersonalRecord.achievedAt, order: .reverse) private var prs: [PersonalRecord]
 
-    private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
-    private var accent: Color { GoalTheme.accent(for: goal) }
+    private var goal: TrainingGoal {
+        profiles.first?.trainingGoal ?? .strength
+    }
+
+    private var accent: Color {
+        GoalTheme.accent(for: goal)
+    }
 
     var body: some View {
         NavigationStack {
@@ -60,24 +65,32 @@ struct StatsView: View {
                 .foregroundStyle(Tokens.Color.label)
                 .lineSpacing(2)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 2), spacing: 8) {
-                deltaTile(label: "训练量",
-                          value: h.thisWeekVolume >= 1000 ?
-                            String(format: "%.1ft", h.thisWeekVolume / 1000) :
-                            String(format: "%.0fkg", h.thisWeekVolume),
-                          delta: h.deltaPercent(h.thisWeekVolume, h.lastWeekVolume),
-                          higherIsBetter: true)
-                deltaTile(label: "训练次数",
-                          value: "\(h.thisWeekCount)",
-                          delta: pct(h.thisWeekCount, h.lastWeekCount),
-                          higherIsBetter: true)
-                deltaTile(label: "平均速度",
-                          value: String(format: "%.2f", h.thisWeekAvgVelocity),
-                          delta: h.deltaPercent(h.thisWeekAvgVelocity, h.lastWeekAvgVelocity),
-                          higherIsBetter: true)
-                deltaTile(label: "平均 VL%",
-                          value: String(format: "%.0f%%", h.thisWeekAvgVL),
-                          delta: h.deltaPercent(h.thisWeekAvgVL, h.lastWeekAvgVL),
-                          higherIsBetter: false)
+                deltaTile(
+                    label: "训练量",
+                    value: h.thisWeekVolume >= 1000 ?
+                        String(format: "%.1ft", h.thisWeekVolume / 1000) :
+                        String(format: "%.0fkg", h.thisWeekVolume),
+                    delta: h.deltaPercent(h.thisWeekVolume, h.lastWeekVolume),
+                    higherIsBetter: true
+                )
+                deltaTile(
+                    label: "训练次数",
+                    value: "\(h.thisWeekCount)",
+                    delta: pct(h.thisWeekCount, h.lastWeekCount),
+                    higherIsBetter: true
+                )
+                deltaTile(
+                    label: "平均速度",
+                    value: String(format: "%.2f", h.thisWeekAvgVelocity),
+                    delta: h.deltaPercent(h.thisWeekAvgVelocity, h.lastWeekAvgVelocity),
+                    higherIsBetter: true
+                )
+                deltaTile(
+                    label: "平均 VL%",
+                    value: String(format: "%.0f%%", h.thisWeekAvgVL),
+                    delta: h.deltaPercent(h.thisWeekAvgVL, h.lastWeekAvgVL),
+                    higherIsBetter: false
+                )
             }
         }
         .padding(14)
@@ -107,7 +120,7 @@ struct StatsView: View {
                 parts.append("训练量与上周持平")
             }
         }
-        if h.thisWeekAvgVelocity > 0 && h.lastWeekAvgVelocity > 0 {
+        if h.thisWeekAvgVelocity > 0, h.lastWeekAvgVelocity > 0 {
             let delta = h.deltaPercent(h.thisWeekAvgVelocity, h.lastWeekAvgVelocity)
             if abs(delta) >= 3 {
                 let direction = delta > 0 ? "更快" : "略慢"
@@ -124,7 +137,8 @@ struct StatsView: View {
         var cal = Calendar.current
         cal.firstWeekday = 2
         guard let weekStart = cal.dateInterval(of: .weekOfYear, for: Date())?.start,
-              let weekEnd = cal.date(byAdding: .day, value: 6, to: weekStart) else {
+              let weekEnd = cal.date(byAdding: .day, value: 6, to: weekStart) else
+        {
             return ""
         }
         let f = DateFormatter()
@@ -170,7 +184,7 @@ struct StatsView: View {
     @ViewBuilder
     private var e1rmList: some View {
         let groups = Dictionary(grouping: workouts) { $0.exerciseId }
-            .map { (id, ws) in
+            .map { id, ws in
                 (id, ws.sorted(by: { $0.startedAt > $1.startedAt }))
             }
             .filter { !$0.1.isEmpty }
@@ -330,15 +344,13 @@ struct StatsView: View {
 
     private func prRow(_ pr: PersonalRecord) -> some View {
         let name = ExerciseLookup.exercise(byId: pr.exerciseId)?.nameZH ?? pr.exerciseId
-        let kindLabel: String = {
-            switch pr.kind {
-            case .maxWeight:            return "最大重量"
-            case .e1RM:                 return "e1RM"
-            case .maxVolume:            return "最大训练量"
-            case .maxSingleRepVelocity: return "最快单 rep"
-            case .maxCMJ:               return "最高 CMJ"
-            }
-        }()
+        let kindLabel = switch pr.kind {
+        case .maxWeight: "最大重量"
+        case .e1RM: "e1RM"
+        case .maxVolume: "最大训练量"
+        case .maxSingleRepVelocity: "最快单 rep"
+        case .maxCMJ: "最高 CMJ"
+        }
         return HStack(spacing: 10) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8).fill(Tokens.Color.success.opacity(0.18))
@@ -367,11 +379,11 @@ struct StatsView: View {
     private func formatPRValue(_ pr: PersonalRecord) -> String {
         switch pr.kind {
         case .maxWeight, .e1RM, .maxVolume:
-            return "\(Int(pr.value))kg"
+            "\(Int(pr.value))kg"
         case .maxSingleRepVelocity:
-            return String(format: "%.2f m/s", pr.value)
+            String(format: "%.2f m/s", pr.value)
         case .maxCMJ:
-            return "\(Int(pr.value))cm"
+            "\(Int(pr.value))cm"
         }
     }
 }

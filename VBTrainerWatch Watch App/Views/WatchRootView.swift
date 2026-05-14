@@ -44,11 +44,11 @@ struct WatchRootView: View {
             PlanSyncedView()
         case .setReady:
             SetReadyView()
-        case .liveWorkout(let id, let w):
+        case let .liveWorkout(id, w):
             WatchLiveWorkoutView(exerciseId: id, weightKg: w)
         case .setResult:
             SetResultView()
-        case .rest(let s):
+        case let .rest(s):
             WatchRestView(secondsRemaining: s)
         case .workoutDone:
             WorkoutDoneView()
@@ -56,9 +56,9 @@ struct WatchRootView: View {
             WatchReadinessView()
         case .summary:
             WatchSummaryView()
-        case .prCelebration(let t, let v):
+        case let .prCelebration(t, v):
             WatchPRCelebrationView(title: t, value: v)
-        case .vlStopWarning(let vl, let th):
+        case let .vlStopWarning(vl, th):
             WatchVLStopWarningView(vl: vl, threshold: th)
         case .rpeInput:
             WatchRPEInputView()

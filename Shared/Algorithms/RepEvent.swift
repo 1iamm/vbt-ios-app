@@ -7,13 +7,13 @@
 import Foundation
 
 public struct RepEvent: Sendable, Equatable {
-    public let index: Int                    // 1-based, within the current set
-    public let startTimestamp: TimeInterval  // when concentric began
-    public let endTimestamp: TimeInterval    // when concentric ended (top reached)
-    public let meanVelocity: Double          // m/s, MV (concentric only)
-    public let peakVelocity: Double          // m/s, PV
+    public let index: Int // 1-based, within the current set
+    public let startTimestamp: TimeInterval // when concentric began
+    public let endTimestamp: TimeInterval // when concentric ended (top reached)
+    public let meanVelocity: Double // m/s, MV (concentric only)
+    public let peakVelocity: Double // m/s, PV
     public let meanPropulsiveVelocity: Double // m/s, MPV (propulsive sub-phase)
-    public let concentricDuration: Double    // s
+    public let concentricDuration: Double // s
 
     public init(
         index: Int,
@@ -35,9 +35,9 @@ public struct RepEvent: Sendable, Equatable {
 
     public func velocity(for variant: VelocityVariant) -> Double {
         switch variant {
-        case .mv:  return meanVelocity
-        case .mpv: return meanPropulsiveVelocity
-        case .pv:  return peakVelocity
+        case .mv: meanVelocity
+        case .mpv: meanPropulsiveVelocity
+        case .pv: peakVelocity
         }
     }
 }

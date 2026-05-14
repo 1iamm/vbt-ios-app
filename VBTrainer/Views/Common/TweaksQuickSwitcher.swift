@@ -9,8 +9,8 @@
 // 数据密度 / Readiness 风格 are locked per project decisions (标准 / 圆环) so
 // they're displayed read-only here for transparency.
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct TweaksQuickSwitcher: View {
     @Environment(\.modelContext) private var context
@@ -18,11 +18,11 @@ struct TweaksQuickSwitcher: View {
     @Bindable var profile: UserProfile
 
     private let goals: [(TrainingGoal, String, String)] = [
-        (.power,    "爆发", "速度第一 · 神经募集 · VL 警戒 10%"),
+        (.power, "爆发", "速度第一 · 神经募集 · VL 警戒 10%"),
         (.strength, "力量", "重量优先 · 维持高速 · VL 警戒 20%"),
-        (.muscle,   "增肌", "代谢压力 · 较高 reps · VL 警戒 30%"),
-        (.fatLoss,  "减脂", "心率维持 · 短间歇 · VL 警戒 40%"),
-        (.general,  "综合", "平衡训练 · 速度+次数 · VL 警戒 25%"),
+        (.muscle, "增肌", "代谢压力 · 较高 reps · VL 警戒 30%"),
+        (.fatLoss, "减脂", "心率维持 · 短间歇 · VL 警戒 40%"),
+        (.general, "综合", "平衡训练 · 速度+次数 · VL 警戒 25%")
     ]
 
     var body: some View {
@@ -70,7 +70,7 @@ struct TweaksQuickSwitcher: View {
 
     private var goalGrid: some View {
         VStack(spacing: 0) {
-            ForEach(goals, id: \.0) { (g, label, body) in
+            ForEach(goals, id: \.0) { g, label, body in
                 Button {
                     profile.trainingGoal = g
                     try? context.save()

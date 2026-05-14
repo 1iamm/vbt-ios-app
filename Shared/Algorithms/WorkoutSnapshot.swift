@@ -71,11 +71,11 @@ public struct SetSnapshot: Sendable, Codable, Equatable {
         self.id = id
         self.index = index
         self.weightKg = weightKg
-        self.velocityVariantRaw = velocityVariant.rawValue
-        self.targetVelocityMin = targetRange?.lowerBound
-        self.targetVelocityMax = targetRange?.upperBound
+        velocityVariantRaw = velocityVariant.rawValue
+        targetVelocityMin = targetRange?.lowerBound
+        targetVelocityMax = targetRange?.upperBound
         self.vlCeiling = vlCeiling
-        self.sideRaw = side.rawValue
+        sideRaw = side.rawValue
         self.restAfterSeconds = restAfterSeconds
         self.reps = reps
     }
@@ -83,11 +83,15 @@ public struct SetSnapshot: Sendable, Codable, Equatable {
     public var velocityVariant: VelocityVariant {
         VelocityVariant(rawValue: velocityVariantRaw) ?? .mv
     }
+
     public var targetRange: ClosedRange<Double>? {
         guard let lo = targetVelocityMin, let hi = targetVelocityMax, lo <= hi else { return nil }
         return lo...hi
     }
-    public var side: Side { Side(rawValue: sideRaw) ?? .both }
+
+    public var side: Side {
+        Side(rawValue: sideRaw) ?? .both
+    }
 }
 
 public struct RepSnapshot: Sendable, Codable, Equatable {
@@ -114,10 +118,12 @@ public struct RepSnapshot: Sendable, Codable, Equatable {
         self.peakVelocity = peakVelocity
         self.meanPropulsiveVelocity = meanPropulsiveVelocity
         self.timestamp = timestamp
-        self.metStatusRaw = metStatus.rawValue
+        metStatusRaw = metStatus.rawValue
     }
 
-    public var metStatus: MetStatus { MetStatus(rawValue: metStatusRaw) ?? .met }
+    public var metStatus: MetStatus {
+        MetStatus(rawValue: metStatusRaw) ?? .met
+    }
 }
 
 public struct HeartRateSample: Sendable, Codable, Equatable {

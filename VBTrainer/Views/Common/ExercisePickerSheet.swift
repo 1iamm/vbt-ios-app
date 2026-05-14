@@ -34,11 +34,11 @@ struct ExercisePickerSheet: View {
 
     private func categoryName(_ c: ExerciseCategory) -> String {
         switch c {
-        case .barbell:    return "杠铃"
-        case .dumbbell:   return "哑铃"
-        case .bodyweight: return "自重"
-        case .machine:    return "器械"
-        case .jump:       return "跳跃"
+        case .barbell: "杠铃"
+        case .dumbbell: "哑铃"
+        case .bodyweight: "自重"
+        case .machine: "器械"
+        case .jump: "跳跃"
         }
     }
 }

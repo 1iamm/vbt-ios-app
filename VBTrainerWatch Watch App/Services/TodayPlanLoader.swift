@@ -9,7 +9,6 @@ import SwiftUI
 
 @MainActor
 public final class TodayPlanStore: ObservableObject {
-
     public static let shared = TodayPlanStore()
 
     @Published public private(set) var todayPlan: TemplateSnapshot?
@@ -22,8 +21,8 @@ public final class TodayPlanStore: ObservableObject {
 
     public func load() {
         guard let data = UserDefaults.standard.data(forKey: key),
-              let snap = try? JSONDecoder().decode(TemplateSnapshot.self, from: data)
-        else {
+              let snap = try? JSONDecoder().decode(TemplateSnapshot.self, from: data) else
+        {
             todayPlan = nil
             return
         }

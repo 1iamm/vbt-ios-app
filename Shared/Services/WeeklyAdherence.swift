@@ -14,12 +14,12 @@ import SwiftData
 public struct WeeklyAdherence: Sendable, Equatable {
     public var weekStart: Date
     public var weekEnd: Date
-    public var planned: Int      // total scheduled (any status)
+    public var planned: Int // total scheduled (any status)
     public var completed: Int
     public var skipped: Int
     public var missed: Int
     public var inProgress: Int
-    public var current: Int      // still scheduled & today/future
+    public var current: Int // still scheduled & today/future
 
     public var completionRate: Double {
         guard planned > 0 else { return 0 }
@@ -35,7 +35,6 @@ public struct WeeklyAdherence: Sendable, Equatable {
 
 @available(iOS 17.0, watchOS 10.0, *)
 public enum WeeklyAdherenceCalculator {
-
     @MainActor
     public static func compute(
         for reference: Date = Date(),
@@ -45,10 +44,18 @@ public enum WeeklyAdherenceCalculator {
         cal.firstWeekday = 2 // Monday
 
         guard let weekStart = cal.dateInterval(of: .weekOfYear, for: reference)?.start,
-              let weekEnd = cal.date(byAdding: .day, value: 7, to: weekStart) else {
-            return .init(weekStart: reference, weekEnd: reference,
-                         planned: 0, completed: 0, skipped: 0, missed: 0,
-                         inProgress: 0, current: 0)
+              let weekEnd = cal.date(byAdding: .day, value: 7, to: weekStart) else
+        {
+            return .init(
+                weekStart: reference,
+                weekEnd: reference,
+                planned: 0,
+                completed: 0,
+                skipped: 0,
+                missed: 0,
+                inProgress: 0,
+                current: 0
+            )
         }
 
         var fd = FetchDescriptor<DayPlan>(
@@ -57,16 +64,23 @@ public enum WeeklyAdherenceCalculator {
         fd.fetchLimit = 14
         let plans = (try? context.fetch(fd)) ?? []
 
-        var c = WeeklyAdherence(weekStart: weekStart, weekEnd: weekEnd,
-                                planned: plans.count, completed: 0, skipped: 0,
-                                missed: 0, inProgress: 0, current: 0)
+        var c = WeeklyAdherence(
+            weekStart: weekStart,
+            weekEnd: weekEnd,
+            planned: plans.count,
+            completed: 0,
+            skipped: 0,
+            missed: 0,
+            inProgress: 0,
+            current: 0
+        )
         for p in plans {
             switch p.status {
-            case .completed:  c.completed += 1
-            case .skipped:    c.skipped += 1
-            case .missed:     c.missed += 1
+            case .completed: c.completed += 1
+            case .skipped: c.skipped += 1
+            case .missed: c.missed += 1
             case .inProgress: c.inProgress += 1
-            case .scheduled:  c.current += 1
+            case .scheduled: c.current += 1
             }
         }
         return c

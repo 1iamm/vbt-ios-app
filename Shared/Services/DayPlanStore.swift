@@ -8,7 +8,6 @@ import SwiftData
 
 @available(iOS 17.0, watchOS 10.0, *)
 public enum DayPlanStore {
-
     /// All DayPlans within a date range (inclusive of from, exclusive of to).
     @MainActor
     public static func plans(in range: Range<Date>, context: ModelContext) -> [DayPlan] {

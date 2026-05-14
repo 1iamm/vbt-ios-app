@@ -4,7 +4,6 @@
 import XCTest
 
 final class MetStatusEvaluatorTests: XCTestCase {
-
     let target: ClosedRange<Double> = 0.55...0.70
 
     func testExcellentAtUpperBound() {

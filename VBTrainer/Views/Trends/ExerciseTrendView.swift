@@ -1,21 +1,24 @@
 // ExerciseTrendView.swift
 // VBTrainer · iPhone · 2026-05
 
-import SwiftUI
-import SwiftData
 import Charts
+import SwiftData
+import SwiftUI
 
 struct ExerciseTrendView: View {
     let exerciseId: String
 
     enum Range: String, CaseIterable, Identifiable {
         case d30 = "30天", d90 = "90天", all = "全部"
-        var id: String { rawValue }
+        var id: String {
+            rawValue
+        }
+
         var days: Int? {
             switch self {
-            case .d30: return 30
-            case .d90: return 90
-            case .all: return nil
+            case .d30: 30
+            case .d90: 90
+            case .all: nil
             }
         }
     }
@@ -36,7 +39,9 @@ struct ExerciseTrendView: View {
         return workouts.filter { $0.startedAt >= cutoff }
     }
 
-    private var exercise: Exercise? { ExerciseLookup.exercise(byId: exerciseId) }
+    private var exercise: Exercise? {
+        ExerciseLookup.exercise(byId: exerciseId)
+    }
 
     var body: some View {
         ScrollView {
@@ -128,7 +133,8 @@ struct ExerciseTrendView: View {
             )
             if let fit = LVPCalculator.fit(points: pts),
                let v1 = exercise?.referenceV1RM,
-               let e1 = LVPCalculator.estimate1RM(fit: fit, v1RM: v1) {
+               let e1 = LVPCalculator.estimate1RM(fit: fit, v1RM: v1)
+            {
                 LineMark(
                     x: .value("日期", w.startedAt),
                     y: .value("e1RM", e1)
@@ -197,8 +203,7 @@ struct ExerciseTrendView: View {
 
     // MARK: - Helpers
 
-    @ViewBuilder
-    private func chartCard<Content: View>(_ title: String, color: Color, @ViewBuilder content: () -> Content) -> some View {
+    private func chartCard(_ title: String, color _: Color, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: Tokens.Space.md) {
             Text(title).font(Tokens.Font.headline)
             content()

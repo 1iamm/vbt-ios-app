@@ -50,16 +50,17 @@ struct WatchReadinessView: View {
 
     private var ringColor: Color {
         switch score {
-        case 80...:    return Tokens.Color.success
-        case 60..<80:  return Tokens.Color.warning
-        default:       return Tokens.Color.danger
+        case 80...: Tokens.Color.success
+        case 60..<80: Tokens.Color.warning
+        default: Tokens.Color.danger
         }
     }
+
     private var tierLabel: String {
         switch score {
-        case 80...:    return "状态良好"
-        case 60..<80:  return "保守训练"
-        default:       return "建议休息"
+        case 80...: "状态良好"
+        case 60..<80: "保守训练"
+        default: "建议休息"
         }
     }
 
@@ -67,7 +68,7 @@ struct WatchReadinessView: View {
         WatchScreenChrome(title: "今日准备度") {
             ScrollView {
                 VStack(spacing: 8) {
-                    Spacer().frame(height: 22)   // clears chrome title (~17pt)
+                    Spacer().frame(height: 22) // clears chrome title (~17pt)
                     ZStack {
                         Circle()
                             .stroke(Color.white.opacity(0.1), lineWidth: 7)
@@ -127,13 +128,16 @@ struct WatchLiveWorkoutView: View {
     /// pushed-from view too).
     @State private var didPushToChild = false
 
-    private var exercise: Exercise? { ExerciseLookup.exercise(byId: exerciseId) }
+    private var exercise: Exercise? {
+        ExerciseLookup.exercise(byId: exerciseId)
+    }
+
     private var velocityColor: Color {
         switch controller.metStatus {
-        case .excellent:  return Tokens.Color.success
-        case .met:        return fg
-        case .borderline: return Tokens.Color.warning
-        case .failed:     return Tokens.Color.danger
+        case .excellent: Tokens.Color.success
+        case .met: fg
+        case .borderline: Tokens.Color.warning
+        case .failed: Tokens.Color.danger
         }
     }
 
@@ -141,14 +145,15 @@ struct WatchLiveWorkoutView: View {
     private enum DisplayMode: Int, CaseIterable {
         case velocity, vl, hr
     }
+
     @State private var mode: DisplayMode = .velocity
 
     private var stateLabel: String {
         switch controller.metStatus {
-        case .excellent:  return "优秀"
-        case .met:        return "达标"
-        case .borderline: return "偏慢"
-        case .failed:     return "未达标"
+        case .excellent: "优秀"
+        case .met: "达标"
+        case .borderline: "偏慢"
+        case .failed: "未达标"
         }
     }
 
@@ -602,9 +607,9 @@ struct WatchSummaryView: View {
 
         var emoji: String {
             switch self {
-            case .strong: return "💪"
-            case .normal: return "·"
-            case .bad:    return "😩"
+            case .strong: "💪"
+            case .normal: "·"
+            case .bad: "😩"
             }
         }
     }
@@ -661,8 +666,10 @@ struct WatchSummaryView: View {
                 .foregroundStyle(rpeColor)
                 .focusable()
                 .digitalCrownRotation(
-                    Binding(get: { Double(rpe) },
-                            set: { rpe = max(1, min(10, Int($0.rounded()))) }),
+                    Binding(
+                        get: { Double(rpe) },
+                        set: { rpe = max(1, min(10, Int($0.rounded()))) }
+                    ),
                     from: 1, through: 10, by: 1, sensitivity: .medium,
                     isContinuous: false, isHapticFeedbackEnabled: true
                 )
@@ -675,25 +682,25 @@ struct WatchSummaryView: View {
 
     private var rpeColor: Color {
         switch rpe {
-        case 1...4:  return Tokens.Color.success
-        case 5...7:  return fg
-        case 8...9:  return Tokens.Color.warning
-        default:     return Tokens.Color.danger
+        case 1...4: Tokens.Color.success
+        case 5...7: fg
+        case 8...9: Tokens.Color.warning
+        default: Tokens.Color.danger
         }
     }
 
     private var rpeLabel: String {
         switch rpe {
-        case 1: return "极轻"
-        case 2: return "很轻"
-        case 3: return "轻"
-        case 4: return "略轻"
-        case 5: return "中"
-        case 6: return "略重"
-        case 7: return "重"
-        case 8: return "很重"
-        case 9: return "极重"
-        default: return "极限"
+        case 1: "极轻"
+        case 2: "很轻"
+        case 3: "轻"
+        case 4: "略轻"
+        case 5: "中"
+        case 6: "略重"
+        case 7: "重"
+        case 8: "很重"
+        case 9: "极重"
+        default: "极限"
         }
     }
 
@@ -842,7 +849,15 @@ struct WatchRPEInputView: View {
                     .font(.system(size: 90, weight: .heavy, design: .rounded))
                     .foregroundStyle(fg)
                     .focusable(true)
-                    .digitalCrownRotation($rpe, from: 1, through: 10, by: 1, sensitivity: .high, isContinuous: false, isHapticFeedbackEnabled: true)
+                    .digitalCrownRotation(
+                        $rpe,
+                        from: 1,
+                        through: 10,
+                        by: 1,
+                        sensitivity: .high,
+                        isContinuous: false,
+                        isHapticFeedbackEnabled: true
+                    )
                 Text("Crown 调 · 1-10")
                     .font(.system(size: 10))
                     .foregroundStyle(sub.opacity(0.7))
@@ -987,7 +1002,7 @@ struct PlanSyncedView: View {
                     .monospacedDigit()
             }
             .padding(.top, 4)
-            ForEach(Array(specs.enumerated()), id: \.element.id) { (idx, spec) in
+            ForEach(Array(specs.enumerated()), id: \.element.id) { idx, spec in
                 let isCurrentSet = isCurrentItem && idx == controller.plannedSetCursor
                 let isDoneSet = isCurrentItem && idx < controller.plannedSetCursor
                 Button {
@@ -1015,9 +1030,13 @@ struct PlanSyncedView: View {
         .padding(.bottom, 4)
     }
 
-    @ViewBuilder
-    private func setRow(idx: Int, of: Int, spec: TemplateSetSpecSnapshot,
-                        isCurrent: Bool, isDone: Bool) -> some View {
+    private func setRow(
+        idx: Int,
+        of: Int,
+        spec: TemplateSetSpecSnapshot,
+        isCurrent: Bool,
+        isDone: Bool
+    ) -> some View {
         HStack(spacing: 6) {
             ZStack {
                 if isCurrent {
@@ -1066,7 +1085,7 @@ struct PlanSyncedView: View {
         .padding(.horizontal, 6)
         .background(
             isCurrent ? accent.opacity(0.20) :
-            (isDone ? Color.clear : Color.white.opacity(0.04)),
+                (isDone ? Color.clear : Color.white.opacity(0.04)),
             in: RoundedRectangle(cornerRadius: 7)
         )
         .overlay(
@@ -1099,8 +1118,13 @@ struct SetReadyView: View {
         return "第 \(idx) / \(total) 组"
     }
 
-    private var mvLow: Double { controller.currentTargetRange?.lowerBound ?? 0.45 }
-    private var mvHigh: Double { controller.currentTargetRange?.upperBound ?? 0.65 }
+    private var mvLow: Double {
+        controller.currentTargetRange?.lowerBound ?? 0.45
+    }
+
+    private var mvHigh: Double {
+        controller.currentTargetRange?.upperBound ?? 0.65
+    }
 
     @ViewBuilder
     private var sideChip: some View {
@@ -1243,22 +1267,22 @@ struct SetReadyView: View {
     private func crownBinding(for field: Field) -> Binding<Double> {
         switch field {
         case .weight:
-            return Binding(
+            Binding(
                 get: { controller.currentWeightKg },
                 set: { controller.currentWeightKg = max(0, min(500, $0)) }
             )
         case .reps:
-            return Binding(
+            Binding(
                 get: { Double(controller.currentReps) },
                 set: { controller.currentReps = max(1, min(99, Int($0.rounded()))) }
             )
         case .mvLow:
-            return Binding(
+            Binding(
                 get: { mvLow },
                 set: { controller.setTargetMVLow($0) }
             )
         case .mvHigh:
-            return Binding(
+            Binding(
                 get: { mvHigh },
                 set: { controller.setTargetMVHigh($0) }
             )
@@ -1267,17 +1291,17 @@ struct SetReadyView: View {
 
     private func crownRange(for field: Field) -> ClosedRange<Double> {
         switch field {
-        case .weight: return 0...500
-        case .reps:   return 1...99
-        case .mvLow, .mvHigh: return 0.05...2.0
+        case .weight: 0...500
+        case .reps: 1...99
+        case .mvLow, .mvHigh: 0.05...2.0
         }
     }
 
     private func crownStep(for field: Field) -> Double {
         switch field {
-        case .weight: return weightStep
-        case .reps:   return 1
-        case .mvLow, .mvHigh: return 0.01
+        case .weight: weightStep
+        case .reps: 1
+        case .mvLow, .mvHigh: 0.01
         }
     }
 }
@@ -1300,41 +1324,41 @@ struct SetResultView: View {
 
     private var color: Color {
         switch outcome {
-        case .over: return Tokens.Color.success
-        case .on:   return fg
-        case .fail: return Tokens.Color.danger
+        case .over: Tokens.Color.success
+        case .on: fg
+        case .fail: Tokens.Color.danger
         }
     }
 
     private var label: String {
         switch outcome {
-        case .over: return "超过"
-        case .on:   return "达标"
-        case .fail: return "不达标"
+        case .over: "超过"
+        case .on: "达标"
+        case .fail: "不达标"
         }
     }
 
     private var hint: String {
         switch outcome {
-        case .over: return "速度高于目标区间"
-        case .on:   return "速度落在目标区间"
-        case .fail: return "速度低于目标区间"
+        case .over: "速度高于目标区间"
+        case .on: "速度落在目标区间"
+        case .fail: "速度低于目标区间"
         }
     }
 
     private var iconName: String {
         switch outcome {
-        case .over: return "arrow.up"
-        case .on:   return "checkmark"
-        case .fail: return "arrow.down"
+        case .over: "arrow.up"
+        case .on: "checkmark"
+        case .fail: "arrow.down"
         }
     }
 
     private var bgColor: Color {
         switch outcome {
-        case .over: return Tokens.Color.success.opacity(0.18)
-        case .on:   return Color.white.opacity(0.12)
-        case .fail: return Tokens.Color.danger.opacity(0.18)
+        case .over: Tokens.Color.success.opacity(0.18)
+        case .on: Color.white.opacity(0.12)
+        case .fail: Tokens.Color.danger.opacity(0.18)
         }
     }
 
@@ -1415,11 +1439,18 @@ struct WorkoutDoneView: View {
     /// All sets across all exercises (buffered ones + the current session's
     /// completedSets which haven't been flushed yet).
     private var allSetsAcrossExercises: [SetSnapshot] {
-        let buffered = controller.pendingExerciseSnapshots.flatMap { $0.sets }
+        let buffered = controller.pendingExerciseSnapshots.flatMap(\.sets)
         return buffered + controller.completedSets
     }
-    private var totalSets: Int { allSetsAcrossExercises.count }
-    private var totalReps: Int { allSetsAcrossExercises.reduce(0) { $0 + $1.reps.count } }
+
+    private var totalSets: Int {
+        allSetsAcrossExercises.count
+    }
+
+    private var totalReps: Int {
+        allSetsAcrossExercises.reduce(0) { $0 + $1.reps.count }
+    }
+
     private var totalVolumeT: String {
         let kg = allSetsAcrossExercises.reduce(0.0) { acc, set in
             acc + (set.weightKg * Double(set.reps.count))
@@ -1427,6 +1458,7 @@ struct WorkoutDoneView: View {
         if kg >= 1000 { return String(format: "%.1f t", kg / 1000) }
         return "\(Int(kg)) kg"
     }
+
     private var durationStr: String {
         // Use whole-workout start time when available (multi-exercise),
         // otherwise fall back to first rep timestamp of the current session.
@@ -1453,9 +1485,13 @@ struct WorkoutDoneView: View {
                         .font(.system(size: 14, weight: .heavy))
                         .foregroundStyle(Tokens.Color.success)
                 }
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 6),
-                                    GridItem(.flexible(), spacing: 6)],
-                          spacing: 6) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), spacing: 6),
+                        GridItem(.flexible(), spacing: 6)
+                    ],
+                    spacing: 6
+                ) {
                     statCell(label: "总组数", value: "\(totalSets)")
                     statCell(label: "总 reps", value: "\(totalReps)")
                     statCell(label: "训练量", value: totalVolumeT)

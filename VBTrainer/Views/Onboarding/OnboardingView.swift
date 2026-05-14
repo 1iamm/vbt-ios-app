@@ -13,8 +13,8 @@
 //   - Capsule accent CTA, monospaced numerics
 //   - Tap card / segmented controls
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct OnboardingView: View {
     @Environment(\.modelContext) private var context
@@ -31,10 +31,15 @@ struct OnboardingView: View {
 
     var onCompleted: () -> Void
 
-    // Under UI test we collapse the HealthKit step (index 2) so the
-    // total is 3 (welcome / valueProp / profile). See `content`.
-    private var totalSteps: Int { ProcessInfo.isUITestMode ? 3 : 4 }
-    private var accent: Color { GoalTheme.accent(for: goal) }
+    /// Under UI test we collapse the HealthKit step (index 2) so the
+    /// total is 3 (welcome / valueProp / profile). See `content`.
+    private var totalSteps: Int {
+        ProcessInfo.isUITestMode ? 3 : 4
+    }
+
+    private var accent: Color {
+        GoalTheme.accent(for: goal)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -117,7 +122,8 @@ struct OnboardingView: View {
                 Circle()
                     .fill(LinearGradient(
                         colors: [accent.opacity(0.7), accent.opacity(0.0)],
-                        startPoint: .top, endPoint: .bottom))
+                        startPoint: .top, endPoint: .bottom
+                    ))
                     .frame(width: 200, height: 200)
                     .blur(radius: 30)
                 Image(systemName: "bolt.fill")
@@ -145,15 +151,21 @@ struct OnboardingView: View {
                 .padding(.bottom, 24)
 
             VStack(spacing: 14) {
-                valueRow(icon: "waveform.path.ecg",
-                         title: "速度衰减不会骗人",
-                         body: "VL% 反映你今天真正能用的力量，比 RPE 客观。")
-                valueRow(icon: "applewatch",
-                         title: "手腕自动识别",
-                         body: "不用绑设备到杠铃 — Apple Watch 100Hz IMU 直接采集。")
-                valueRow(icon: "calendar.badge.clock",
-                         title: "复盘从计划开始",
-                         body: "训练前规划 ≤ 2 屏；训完看综合时间轴；周计划同步 iPhone 日历。")
+                valueRow(
+                    icon: "waveform.path.ecg",
+                    title: "速度衰减不会骗人",
+                    body: "VL% 反映你今天真正能用的力量，比 RPE 客观。"
+                )
+                valueRow(
+                    icon: "applewatch",
+                    title: "手腕自动识别",
+                    body: "不用绑设备到杠铃 — Apple Watch 100Hz IMU 直接采集。"
+                )
+                valueRow(
+                    icon: "calendar.badge.clock",
+                    title: "复盘从计划开始",
+                    body: "训练前规划 ≤ 2 屏；训完看综合时间轴；周计划同步 iPhone 日历。"
+                )
             }
             Spacer()
         }
@@ -229,9 +241,9 @@ struct OnboardingView: View {
         }
     }
 
-    private func fieldGroup<Content: View>(
+    private func fieldGroup(
         title: String,
-        @ViewBuilder content: () -> Content
+        @ViewBuilder content: () -> some View
     ) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(title)

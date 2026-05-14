@@ -16,7 +16,7 @@ public final class Workout {
     public var endedAt: Date?
     public var exerciseId: String
     public var notes: String?
-    public var rpe: Int?                       // 1-10, subjective rating
+    public var rpe: Int? // 1-10, subjective rating
     public var linkedTemplateId: UUID?
     public var readinessSnapshotId: UUID?
 
@@ -51,7 +51,7 @@ public final class Workout {
         self.rpe = rpe
         self.linkedTemplateId = linkedTemplateId
         self.readinessSnapshotId = readinessSnapshotId
-        self.sourceRaw = source.rawValue
+        sourceRaw = source.rawValue
     }
 
     public var source: WorkoutSource {

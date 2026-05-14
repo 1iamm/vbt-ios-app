@@ -6,14 +6,15 @@
 import XCTest
 
 final class RepDetectorTests: XCTestCase {
-
     func testStaticSignalEmitsNoReps() {
         let det = RepDetector()
         var reps: [RepEvent] = []
         det.onRepCompleted = { reps.append($0) }
 
         let signal = SyntheticMotionGenerator.staticSignal(duration: 10, noise: 0.05)
-        for s in signal { det.ingest(s) }
+        for s in signal {
+            det.ingest(s)
+        }
 
         XCTAssertEqual(reps.count, 0)
         XCTAssertEqual(det.state, .rest)
@@ -32,7 +33,9 @@ final class RepDetectorTests: XCTestCase {
             restBetween: 1.0,
             noise: 0.02
         )
-        for s in signal { det.ingest(s) }
+        for s in signal {
+            det.ingest(s)
+        }
 
         // Allow ±1 rep tolerance — the synthetic signal isn't perfectly
         // matched to the detector's heuristics; we want robustness.
@@ -46,7 +49,9 @@ final class RepDetectorTests: XCTestCase {
         det.onRepCompleted = { reps.append($0) }
 
         let signal = SyntheticMotionGenerator.cleanSet(reps: 3, noise: 0.02)
-        for s in signal { det.ingest(s) }
+        for s in signal {
+            det.ingest(s)
+        }
 
         for (i, rep) in reps.enumerated() {
             XCTAssertEqual(rep.index, i + 1)
@@ -64,7 +69,9 @@ final class RepDetectorTests: XCTestCase {
             peakVelocity: target,
             noise: 0.01
         )
-        for s in signal { det.ingest(s) }
+        for s in signal {
+            det.ingest(s)
+        }
 
         if let firstRep = reps.first {
             // Synthetic profile is half-sine; peak velocity should be close
