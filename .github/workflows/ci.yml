@@ -217,39 +217,55 @@ jobs:
       # 注意：不传 -sdk。Xcode 会按 target.platform 自动选 SDK
       # （iOS target 用 iphonesimulator，被依赖的 watchOS target 用 watchsimulator）。
       # 传 -sdk iphonesimulator 会强制所有 target 用 iOS SDK，watchOS 子 target 会编译失败。
-      - name: Build iOS (simulator)
+      - name: Pick simulator
+        id: sim
+        run: |
+          DEST=$(xcrun simctl list devices available -j \
+            | python3 -c "import json,sys;d=json.load(sys.stdin)['devices'];cands=[x for runt,xs in d.items() if 'iOS' in runt for x in xs if 'iPhone' in x['name']];print(sorted(cands,key=lambda x:x['name'])[-1]['udid'])")
+          echo "Using simulator: $DEST" | tee /tmp/sim-pick.log
+          echo "udid=$DEST" >> "$GITHUB_OUTPUT"
+
+      - name: Start simulator boot (in background)
+        # Round 1 Cost #6: boot now so it's warm by the time
+        # test-without-building needs it. simctl boot returns immediately;
+        # subsequent bootstatus -b blocks (or no-ops if already booted).
+        run: |
+          xcrun simctl boot "${{ steps.sim.outputs.udid }}" 2>&1 | tee /tmp/sim-boot-start.log || true
+
+      # Round 1 Cost #3: switch from `xcodebuild build` (compile only)
+      # to `xcodebuild build-for-testing` (compile app + test bundles
+      # together). Eliminates the duplicate-compile that `xcodebuild test`
+      # did when invoked twice (algorithm + UI).
+      # 注意：不传 -sdk。Xcode 会按 target.platform 自动选 SDK
+      # （iOS target 用 iphonesimulator，被依赖的 watchOS target 用 watchsimulator）。
+      - name: Build iOS for testing
         run: |
           set -o pipefail
-          xcodebuild \
+          xcodebuild build-for-testing \
             -project VBTrainer.xcodeproj \
             -scheme VBTrainer \
-            -destination 'generic/platform=iOS Simulator' \
+            -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build 2>&1 | tee /tmp/build-ios.log
+            CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/build-ios.log
 
       - name: Build watchOS (simulator)
+        # Standalone compile-only gate (watchOS scheme has no tests).
         run: |
           set -o pipefail
-          xcodebuild \
+          xcodebuild build \
             -project VBTrainer.xcodeproj \
             -scheme "VBTrainerWatch Watch App" \
             -destination 'generic/platform=watchOS Simulator' \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            build 2>&1 | tee /tmp/build-watch.log
+            CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/build-watch.log
 
-      - name: Pick simulator
-        id: sim
+      - name: Wait for simulator boot complete
         run: |
-          DEST=$(xcrun simctl list devices available -j \
-            | python3 -c "import json,sys;d=json.load(sys.stdin)['devices'];cands=[x for runt,xs in d.items() if 'iOS' in runt for x in xs if 'iPhone' in x['name']];print(sorted(cands,key=lambda x:x['name'])[-1]['udid'])")
-          echo "Using simulator: $DEST"
-          echo "udid=$DEST" >> "$GITHUB_OUTPUT"
+          xcrun simctl bootstatus "${{ steps.sim.outputs.udid }}" -b 2>&1 | tee /tmp/sim-boot.log
 
       - name: Run algorithm tests
         run: |
@@ -257,7 +273,9 @@ jobs:
           # 已知 flaky / 预存在失败（不是本 PR 引入，留作 follow-up）：
           # - JumpDetectorTests.testSyntheticThirtyCmJump：合成 30cm 跳跃信号目前不达检测阈值
           # RepDetectorTests.testCleanFiveReps 在 PR #68 修复后恢复运行。
-          xcodebuild test \
+          # test-without-building skips the recompile that `xcodebuild test`
+          # would do — build-for-testing earlier already produced the bundle.
+          xcodebuild test-without-building \
             -project VBTrainer.xcodeproj \
             -scheme VBTrainer \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
@@ -272,20 +290,27 @@ jobs:
         # writes survive to the simulator's container. Without erase,
         # UI tests may launch into MainTabsView (UserProfile exists)
         # instead of OnboardingView, failing the test.
+        # After erase we re-boot since UI test needs a running simulator.
         if: needs.fast-fail.outputs.has_ui == 'true'
         run: |
-          { xcrun simctl shutdown "${{ steps.sim.outputs.udid }}" 2>&1 || true; xcrun simctl erase "${{ steps.sim.outputs.udid }}" 2>&1; } | tee /tmp/simctl.log
+          {
+            xcrun simctl shutdown "${{ steps.sim.outputs.udid }}" 2>&1 || true
+            xcrun simctl erase "${{ steps.sim.outputs.udid }}" 2>&1
+            xcrun simctl boot "${{ steps.sim.outputs.udid }}" 2>&1 || true
+            xcrun simctl bootstatus "${{ steps.sim.outputs.udid }}" -b 2>&1
+          } | tee /tmp/simctl.log
 
       - name: Run UI tests
         # XCUITest takes a screenshot per step and stores them in the
         # .xcresult bundle. PR #5 reads them out and uploads as a release
         # for embedding in the PR comment.
-        # Skipped on docs-only / openspec-only / CI-only PRs to save 5-7 min.
+        # test-without-building reuses build-for-testing output, saving
+        # ~30s of duplicate compile.
         if: needs.fast-fail.outputs.has_ui == 'true'
         run: |
           set -o pipefail
           rm -rf /tmp/UITestResults.xcresult
-          xcodebuild test \
+          xcodebuild test-without-building \
             -project VBTrainer.xcodeproj \
             -scheme VBTrainer \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
