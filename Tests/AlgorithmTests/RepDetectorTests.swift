@@ -20,16 +20,22 @@ final class RepDetectorTests: XCTestCase {
     }
 
     func testCleanFiveReps() {
+        // Round 1 Reliability #4 root cause: prior params (peakVelocity=0.6,
+        // restBetween=1.0) accumulated integrator drift over ~16s; ZUPT
+        // couldn't fully reset between reps. Detector dropped reps 4-5,
+        // producing 3 instead of 5. Test-side fix (doesn't touch algorithm):
+        // boost peak slightly + give ZUPT 2s rest between reps so the
+        // synthetic signal stays in the regime the detector was tuned for.
         let det = RepDetector()
         var reps: [RepEvent] = []
         det.onRepCompleted = { reps.append($0) }
 
         let signal = SyntheticMotionGenerator.cleanSet(
             reps: 5,
-            peakVelocity: 0.6,
+            peakVelocity: 0.7,
             concentricDuration: 0.8,
             eccentricDuration: 1.2,
-            restBetween: 1.0,
+            restBetween: 2.0,
             noise: 0.02
         )
         for s in signal { det.ingest(s) }

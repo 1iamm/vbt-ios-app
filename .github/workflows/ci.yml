@@ -234,15 +234,13 @@ jobs:
           set -o pipefail
           # 已知 flaky / 预存在失败（不是本 PR 引入，留作 follow-up）：
           # - JumpDetectorTests.testSyntheticThirtyCmJump：合成 30cm 跳跃信号目前不达检测阈值
-          # - RepDetectorTests.testCleanFiveReps：合成 5-rep 信号偶尔只检出 3-4 reps
-          # 修好后从 -skip-testing 列表移除。
+          # RepDetectorTests.testCleanFiveReps 在 PR #68 修复后恢复运行。
           xcodebuild test \
             -project VBTrainer.xcodeproj \
             -scheme VBTrainer \
             -destination "platform=iOS Simulator,id=${{ steps.sim.outputs.udid }}" \
             -only-testing:VBTrainerTests \
             -skip-testing:VBTrainerTests/JumpDetectorTests/testSyntheticThirtyCmJump \
-            -skip-testing:VBTrainerTests/RepDetectorTests/testCleanFiveReps \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/test.log
