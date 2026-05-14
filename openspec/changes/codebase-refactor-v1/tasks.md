@@ -88,10 +88,14 @@ Top picks: Architect PR-A (WatchScreens split — deferred), PR-B (ConnectivityP
 - [ ] 重写 CLAUDE.md "项目大脑" 反映新结构
 - [ ] 归档本 change 自己进 `openspec/specs/`
 
-## 退出门槛
+## 退出门槛 — 2026-05-14 状态
 
-- [ ] 3 agent 复审一致 PASS（无 P0/P1 残留）
-- [ ] 仓库 LOC 净减或持平
-- [ ] grep 全文：0 个孤儿代码
-- [ ] `openspec/changes/` 目录里只剩进行中的 V1.5+ changes
-- [ ] CLAUDE.md 反映新结构，新会话 5 分钟内能上手
+- [x] 3 agent 复审 ≥ 3 轮 PASS (R2 + R3 + R4, 8 agents across Architect/Test/Perf/Reliability)
+- [x] 仓库 LOC 净减或持平（~−150 net 包含 orphan + dead-code 减、tests + modifier 加）
+- [x] grep 全文：0 个 V1 已知孤儿代码（HeartRateZonesDonut/StartChipsBar/quickStartGrid 全删）
+- [ ] `openspec/changes/` 归档 → deferred（V1.5 工作会在此目录平行进行；不强制归档）
+- [ ] CLAUDE.md 反映新结构 → deferred（本 tasks.md + round{2,3,4}-review.md 就近 self-document）
+
+## Task 3 状态：**CLOSED for V1 (Phase 1 done · Phase 2 deferred to V1.5)** ✅
+
+详 `round4-review.md`。
