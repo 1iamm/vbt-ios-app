@@ -8,7 +8,6 @@
 //   - TemplateRowItem        my-templates list row (left color bar + meta)
 //   - AIRecommendationCard   purple AI card
 //   - QuickStartTile         3-up "昨日重做 / 上周同日 / 空白" tile
-//   - StartChipsBar          horizontal scroll start-point chips
 //   - FoldableExerciseCard   collapsible per-set editor (Plan / Workout detail)
 //   - MiniSparkline          tiny inline velocity curve
 //   - IOSCalendarMonth       month grid in iOS native calendar visual language
@@ -812,42 +811,3 @@ struct WeekProgressStrip: View {
     }
 }
 
-// MARK: - 10. Start chips bar (horizontal scroll)
-
-struct StartChipsBar<T: Hashable>: View {
-    struct Chip: Identifiable {
-        let id: T
-        let icon: String
-        let label: String
-    }
-
-    let chips: [Chip]
-    @Binding var selected: T
-    var accent: Color = Tokens.Color.accent
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 6) {
-                ForEach(chips) { c in
-                    Button { selected = c.id } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: c.icon)
-                                .font(.system(size: 11, weight: .bold))
-                            Text(c.label)
-                                .font(.system(size: 12, weight: .semibold))
-                                .tracking(0.2)
-                        }
-                        .foregroundStyle(selected == c.id ? accent : Tokens.Color.label)
-                        .padding(.horizontal, 11).padding(.vertical, 7)
-                        .background(
-                            selected == c.id ? accent.opacity(0.12) : Tokens.Color.fill,
-                            in: Capsule()
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, Tokens.Space.lg)
-        }
-    }
-}
