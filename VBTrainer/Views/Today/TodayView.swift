@@ -245,7 +245,7 @@ struct TodayView: View {
         } label: {
             HStack(spacing: 12) {
                 Circle()
-                    .fill(Color.orange)
+                    .fill(Tokens.Color.training)
                     .frame(width: 8, height: 8)
                     .opacity(0.9)
                     .modifier(PulseAnimation())
@@ -268,7 +268,7 @@ struct TodayView: View {
             .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.orange.opacity(0.45), lineWidth: 1)
+                    .stroke(Tokens.Color.training.opacity(0.45), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)

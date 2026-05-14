@@ -50,6 +50,17 @@ public enum Tokens {
         /// SectionHeader. Single source per Round 1 UI-§3-P2.
         public static let ai = SwiftUI.Color(hex: "7C5CFF")
 
+        /// "Training is currently active" semantic colour. Used by the
+        /// minimised training banner, live-workout pulse dot, "完成本组"
+        /// CTA. Single source per Round 1 UI-§3-P0 — was 9× hard-coded
+        /// `Color.orange` across LiveWorkoutView / RootView / TodayView.
+        ///
+        /// Distinct from `accent` (GoalTheme) on purpose: Apple Watch /
+        /// Strava / Apple Fitness all use a uniform orange-red for the
+        /// "in progress" state regardless of the user's other theming.
+        /// Keeping this colour token-managed but NOT goal-themed.
+        public static let training = SwiftUI.Color(hex: "FF9500")
+
         // Status (rep met/borderline/failed)
         public static let success = SwiftUI.Color(hex: "30D158")
         public static let warning = SwiftUI.Color(hex: "FF9F0A")
