@@ -154,12 +154,12 @@ jobs:
 
       - name: Select Xcode
         # macos-26 ships multiple Xcodes; project.yml targets 16.0.
-        run: sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+        run: sudo xcode-select -s /Applications/Xcode_16.0.app/Contents/Developer 2>&1 | tee /tmp/xcode-select.log || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer 2>&1 | tee -a /tmp/xcode-select.log
 
       - name: Print toolchain
         run: |
-          xcodebuild -version
-          swift --version
+          xcodebuild -version 2>&1 | tee /tmp/toolchain.log
+          swift --version 2>&1 | tee -a /tmp/toolchain.log
 
       - name: Cache Homebrew downloads
         # Caches bottle downloads so brew install reuses them. Doesn't cache
@@ -175,7 +175,7 @@ jobs:
             brew-${{ runner.os }}-
 
       - name: Install xcodegen + linters
-        run: brew install xcodegen swiftlint swiftformat
+        run: brew install xcodegen swiftlint swiftformat 2>&1 | tee /tmp/brew-install.log
 
       # Phase A rollout: lint steps run but do NOT block CI yet.
       # After this PR merges, trigger `Format Baseline` workflow on main to
@@ -254,8 +254,7 @@ jobs:
         # instead of OnboardingView, failing the test.
         if: needs.fast-fail.outputs.has_ui == 'true'
         run: |
-          xcrun simctl shutdown "${{ steps.sim.outputs.udid }}" 2>/dev/null || true
-          xcrun simctl erase "${{ steps.sim.outputs.udid }}"
+          { xcrun simctl shutdown "${{ steps.sim.outputs.udid }}" 2>&1 || true; xcrun simctl erase "${{ steps.sim.outputs.udid }}" 2>&1; } | tee /tmp/simctl.log
 
       - name: Run UI tests
         # XCUITest takes a screenshot per step and stores them in the
@@ -283,24 +282,19 @@ jobs:
         # Skipped on non-UI PRs (matching "Run UI tests" gate).
         if: always() && needs.fast-fail.outputs.has_ui == 'true'
         run: |
-          brew install chargepoint/xcparse/xcparse
-          mkdir -p /tmp/screenshots
-          if [ -d /tmp/UITestResults.xcresult ]; then
-            # xcparse without --test puts all attachments flat in the
-            # output dir. Previous version used --test which nests them
-            # under <bundle>/<class>/<method>/ — that broke the downstream
-            # `(/tmp/screenshots/*.png)` glob and silently produced 0 PNGs
-            # (no screenshot comment ever posted). Drop --test.
-            xcparse screenshots /tmp/UITestResults.xcresult /tmp/screenshots/
-            # Defense in depth: if a future xcparse version still nests,
-            # flatten with find + mv so the glob always works.
-            find /tmp/screenshots -mindepth 2 -type f -name "*.png" -exec mv -n {} /tmp/screenshots/ \; 2>/dev/null || true
-            find /tmp/screenshots -mindepth 1 -type d -empty -delete 2>/dev/null || true
-            echo "Extracted:"
-            ls -la /tmp/screenshots/ || true
-          else
-            echo "No xcresult bundle (UI test step probably did not run)."
-          fi
+          {
+            brew install chargepoint/xcparse/xcparse 2>&1
+            mkdir -p /tmp/screenshots
+            if [ -d /tmp/UITestResults.xcresult ]; then
+              xcparse screenshots /tmp/UITestResults.xcresult /tmp/screenshots/ 2>&1
+              find /tmp/screenshots -mindepth 2 -type f -name "*.png" -exec mv -n {} /tmp/screenshots/ \; 2>/dev/null || true
+              find /tmp/screenshots -mindepth 1 -type d -empty -delete 2>/dev/null || true
+              echo "Extracted:"
+              ls -la /tmp/screenshots/ 2>&1 || true
+            else
+              echo "No xcresult bundle (UI test step probably did not run)."
+            fi
+          } | tee /tmp/extract.log
 
       - name: Publish screenshots as GitHub release asset
         # Per-PR release tagged `screenshots-pr-N`. On each push we
@@ -432,16 +426,31 @@ jobs:
           script: |
             const fs = require('fs');
 
+            // Round 1 DX F1-F4: extended to cover ALL steps that previously
+            // had silent failure modes. brew install / xcode-select / simctl
+            // failures used to leave no trace in the dump; now they're
+            // surfaced just like build/test logs.
             const sections = [
+              { name: 'Select Xcode', file: '/tmp/xcode-select.log' },
+              { name: 'Print toolchain', file: '/tmp/toolchain.log' },
+              { name: 'Install xcodegen + linters', file: '/tmp/brew-install.log' },
+              { name: 'SwiftFormat lint', file: '/tmp/swiftformat.log' },
+              { name: 'SwiftLint', file: '/tmp/swiftlint.log' },
               { name: 'Generate Xcode project', file: '/tmp/xcodegen.log' },
               { name: 'Build iOS (simulator)',  file: '/tmp/build-ios.log' },
               { name: 'Build watchOS (simulator)', file: '/tmp/build-watch.log' },
               { name: 'Run algorithm tests', file: '/tmp/test.log' },
+              { name: 'Reset simulator', file: '/tmp/simctl.log' },
               { name: 'Run UI tests', file: '/tmp/uitest.log' },
+              { name: 'Extract screenshots', file: '/tmp/extract.log' },
             ];
 
             const sha = context.sha.slice(0, 7);
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            // Round 1 DX F5: sticky failure comment. Re-uses the same
+            // comment across pushes so PR doesn't pile up "❌ CI failed on
+            // <sha>" entries — only the latest one is visible.
+            const tagMarker = '<!-- ci-failure -->';
 
             // A section "succeeded" if its log ends with BUILD/TEST SUCCEEDED and
             // contains no actual error lines (excluding CoreData noise). We skip
@@ -461,7 +470,7 @@ jobs:
               return { lines, succeeded, realErrors };
             }
 
-            let body = `## ❌ CI failed on \`${sha}\`\n\n`;
+            let body = `${tagMarker}\n## ❌ CI failed on \`${sha}\`\n\n`;
             body += `Run: ${runUrl}\n\n`;
 
             // First pass: figure out which sections actually failed.
@@ -514,9 +523,27 @@ jobs:
               body = body.slice(0, MAX) + '\n\n_…truncated. See the run page for full output._';
             }
 
-            await github.rest.issues.createComment({
+            // Sticky comment — update existing failure comment if present,
+            // otherwise create a new one. Prevents pile-up across pushes.
+            const { data: existing } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: body,
+              per_page: 100,
             });
+            const prior = existing.find(c => c.body && c.body.startsWith(tagMarker));
+            if (prior) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: prior.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
