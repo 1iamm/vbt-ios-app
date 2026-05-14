@@ -293,39 +293,65 @@ jobs:
             CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/build-watch.log
 
       - name: Capture watchOS screenshots
-        # Boot the Watch sim, install the app, launch, and take a few
-        # `xcrun simctl io ... screenshot` shots. Bypasses watchOS
+        # Boot the Watch sim, install the app, launch, and take one
+        # `xcrun simctl io ... screenshot` shot. Bypasses watchOS
         # XCUITest (historically flaky on simulators). Pure shell.
+        #
+        # Hardening (after first run hung past the 25-min job timeout):
+        #   - every external command wrapped in `timeout N` so a stuck
+        #     simctl doesn't waste the whole CI budget
+        #   - extensive logging so failures are diagnosable
+        #   - non-fatal at every step — Watch capture is best-effort,
+        #     iOS pipeline must not block on it
         if: needs.fast-fail.outputs.has_ui == 'true'
         env:
           WATCH_UDID: ${{ env.WATCH_UDID }}
+        timeout-minutes: 5
         run: |
-          set -e
+          set +e  # never fail the whole step
           mkdir -p /tmp/screenshots
+          echo "=== Watch screenshot capture ==="
           if [ -z "$WATCH_UDID" ]; then
-            echo "No Watch sim available; skipping Watch screenshots."
+            echo "No Watch sim UDID — skipping."
             exit 0
           fi
-          # Locate the .app bundle from the watch-only DerivedData.
-          APP_PATH=$(find /tmp/watch-dd/Build/Products -type d -name "VBTrainerWatch Watch App.app" -path "*watchsimulator*" | head -1)
+          echo "Using Watch sim UDID: $WATCH_UDID"
+
+          echo "--- Locate built app ---"
+          APP_PATH=$(find /tmp/watch-dd/Build/Products -type d -name "VBTrainerWatch Watch App.app" -path "*watchsimulator*" 2>/dev/null | head -1)
           if [ -z "$APP_PATH" ]; then
-            echo "Watch .app not found in derived data; listing for diagnostics:"
-            find /tmp/watch-dd/Build/Products -type d -name "*.app" || true
+            echo "Watch .app not found; listing /tmp/watch-dd/Build/Products:"
+            find /tmp/watch-dd/Build/Products -maxdepth 4 2>&1 | head -50 || true
             exit 0
           fi
-          echo "Found Watch app at: $APP_PATH"
+          echo "App: $APP_PATH"
 
-          xcrun simctl boot "$WATCH_UDID" 2>&1 || true
-          xcrun simctl bootstatus "$WATCH_UDID" -b 2>&1 || true
+          echo "--- Boot Watch sim (60s timeout) ---"
+          timeout 60 xcrun simctl boot "$WATCH_UDID" 2>&1 || echo "(boot returned $?; may already be booted)"
+          timeout 90 xcrun simctl bootstatus "$WATCH_UDID" -b 2>&1 || echo "(bootstatus timed out)"
 
-          # Install + launch
-          xcrun simctl install "$WATCH_UDID" "$APP_PATH" 2>&1
-          xcrun simctl launch "$WATCH_UDID" com.vbtrainer.app.watchkitapp 2>&1 || true
+          echo "--- Install (60s timeout) ---"
+          timeout 60 xcrun simctl install "$WATCH_UDID" "$APP_PATH" 2>&1
+          INSTALL_RC=$?
+          echo "install exit: $INSTALL_RC"
+          if [ "$INSTALL_RC" -ne 0 ]; then
+            echo "Install failed; skipping launch."
+            exit 0
+          fi
 
-          # Give it time to fully render
-          sleep 6
-          xcrun simctl io "$WATCH_UDID" screenshot /tmp/screenshots/20-watch-root.png 2>&1 || true
-          ls -la /tmp/screenshots/20-watch-root.png 2>&1 || echo "Watch screenshot capture failed (non-fatal)"
+          echo "--- Launch (30s timeout) ---"
+          timeout 30 xcrun simctl launch "$WATCH_UDID" com.vbtrainer.app.watchkitapp 2>&1 || echo "(launch returned $?)"
+
+          echo "--- Wait for first paint (10s) + screenshot ---"
+          sleep 10
+          timeout 30 xcrun simctl io "$WATCH_UDID" screenshot /tmp/screenshots/20-watch-root.png 2>&1
+          if [ -f /tmp/screenshots/20-watch-root.png ]; then
+            ls -la /tmp/screenshots/20-watch-root.png
+            echo "✅ Watch screenshot captured."
+          else
+            echo "❌ Watch screenshot file not created (non-fatal)."
+          fi
+          exit 0
 
       - name: Wait for simulator boot complete
         run: |
