@@ -1,13 +1,17 @@
 name: Format Baseline
 
-# One-shot helper: runs SwiftFormat across the entire repo and commits any
-# diff back to the branch that triggered it. Use this:
+# Runs SwiftFormat across the entire repo and commits any diff back
+# to the triggering branch. Use this:
 #   1. After merging the SwiftLint/SwiftFormat tooling PR to apply the
 #      first wave of formatting fixes to existing files.
 #   2. Any time the .swiftformat config changes and existing files need
 #      re-normalization.
 #
-# Manual trigger only (workflow_dispatch). Won't run on push to main.
+# Two triggers:
+#   - workflow_dispatch: manual run from the Actions tab (legacy path).
+#   - push to `format-baseline/*` branches: lets the cloud Claude session
+#     bootstrap a baseline by just pushing such a branch. The bot's own
+#     auto-commit carries `[skip ci]` so it won't re-trigger anything.
 
 on:
   workflow_dispatch:
@@ -16,19 +20,27 @@ on:
         description: "Branch to format (will commit back to it)"
         required: true
         default: "main"
+  push:
+    branches:
+      - 'format-baseline/*'
 
 permissions:
   contents: write
 
 jobs:
   format:
+    # Skip if the head commit was authored by the bot itself — defensive
+    # against any case where [skip ci] isn't honored by GitHub.
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.author.email != 'format-bot@vbtrainer.local'
     runs-on: macos-26
     timeout-minutes: 15
     steps:
       - name: Checkout target branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.branch }}
+          # workflow_dispatch path uses the `branch` input; push path uses
+          # the branch that received the push.
+          ref: ${{ inputs.branch || github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
@@ -50,5 +62,8 @@ jobs:
           git config user.email "format-bot@vbtrainer.local"
           git config user.name "SwiftFormat Bot"
           git add -A
-          git commit -m "chore: apply swiftformat baseline"
-          git push origin "HEAD:${{ inputs.branch }}"
+          # [skip ci] tells GitHub Actions to skip every workflow on this
+          # commit — prevents the push-trigger above from re-triggering
+          # this same workflow in an infinite loop.
+          git commit -m "chore: apply swiftformat baseline [skip ci]"
+          git push origin "HEAD:${{ inputs.branch || github.ref_name }}"
