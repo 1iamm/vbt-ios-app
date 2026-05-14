@@ -478,6 +478,121 @@ jobs:
           if-no-files-found: warn
 
       # ──────────────────────────────────────────────────────────────────
+      # On success, post a sticky test-summary comment so users see what
+      # actually ran, not just "✅ checks passed". Parses the standard
+      # xcodebuild output already in /tmp/test.log + /tmp/uitest.log.
+      # Marker: <!-- pr-test-summary -->
+      # ──────────────────────────────────────────────────────────────────
+      - name: Post test summary comment to PR
+        if: success() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HAS_UI: ${{ needs.fast-fail.outputs.has_ui }}
+        with:
+          script: |
+            const fs = require('fs');
+
+            // ── Parse a "Selected tests" / top-level aggregate line ───────
+            // "Test Suite 'Selected tests' passed at YYYY-...
+            //    Executed N tests, with M failures (K unexpected) in T (TT) seconds"
+            const parseTopLevel = (path) => {
+              if (!fs.existsSync(path)) return null;
+              const txt = fs.readFileSync(path, 'utf8');
+              // Find the LAST occurrence of "'Selected tests' (passed|failed)"
+              const headerRe = /Test Suite 'Selected tests' (passed|failed) at .+/g;
+              let lastIdx = -1;
+              let m;
+              while ((m = headerRe.exec(txt)) !== null) {
+                lastIdx = m.index;
+              }
+              if (lastIdx === -1) return null;
+              const tail = txt.slice(lastIdx, lastIdx + 600);
+              const exec = tail.match(
+                /Executed (\d+) tests?, with (\d+) failures? \(\d+ unexpected\) in [\d.]+ \(([\d.]+)\) seconds/
+              );
+              if (!exec) return null;
+              return {
+                passed: tail.includes("'Selected tests' passed"),
+                total: parseInt(exec[1], 10),
+                failures: parseInt(exec[2], 10),
+                wallSeconds: parseFloat(exec[3]),
+              };
+            };
+
+            const algo = parseTopLevel('/tmp/test.log');
+            const ui = process.env.HAS_UI === 'true' ? parseTopLevel('/tmp/uitest.log') : null;
+
+            // List failing-test names for any non-empty failures.
+            const failingTests = (path) => {
+              if (!fs.existsSync(path)) return [];
+              const txt = fs.readFileSync(path, 'utf8');
+              // "Test Case '-[Module.Class testFoo]' failed (T seconds)"
+              const re = /Test Case '-\[([^.\]]+\.)?([^.\]]+\s+\w+)\]' failed/g;
+              const out = new Set();
+              let m;
+              while ((m = re.exec(txt)) !== null) {
+                out.add(m[2]);
+              }
+              return [...out].sort();
+            };
+
+            const prNum = parseInt(process.env.PR_NUMBER, 10);
+            const sha = context.sha.slice(0, 7);
+            const tag_marker = '<!-- pr-test-summary -->';
+
+            const fmtSection = (label, r, logPath) => {
+              if (!r) return `### ${label}\n\n— 跳过（无相关代码改动）\n`;
+              const okEmoji = r.failures === 0 ? '✅' : '❌';
+              const lines = [`### ${label}\n`];
+              lines.push(`${okEmoji} **${r.total - r.failures} / ${r.total}** 通过 · ${r.wallSeconds.toFixed(1)}s wall\n`);
+              if (r.failures > 0) {
+                const names = failingTests(logPath);
+                if (names.length > 0) {
+                  lines.push('\n**失败：**');
+                  for (const n of names.slice(0, 10)) lines.push(`- \`${n}\``);
+                  if (names.length > 10) lines.push(`- _（还有 ${names.length - 10} 个，详见上面失败 dump 评论）_`);
+                  lines.push('');
+                }
+              }
+              return lines.join('\n');
+            };
+
+            let body = `${tag_marker}\n## ✅ 测试通过 · \`${sha}\`\n\n`;
+            body += fmtSection('AlgorithmTests (单元 + 算法)', algo, '/tmp/test.log');
+            body += '\n';
+            body += fmtSection('UITests (XCUITest + 截图)', ui, '/tmp/uitest.log');
+            body += '\n<details><summary>说明</summary>\n\n';
+            body += '- 来源：xcodebuild test 直接输出，每次 push 覆盖\n';
+            body += '- 失败时此评论隐藏，由 `<!-- ci-failure -->` 评论替代\n';
+            body += '- 想看具体哪些 case 跑了：点 Actions 页查看 raw 日志\n\n';
+            body += '</details>\n';
+
+            // Sticky: update existing if present.
+            const { data: existing } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNum,
+              per_page: 100,
+            });
+            const prior = existing.find(c => c.body && c.body.startsWith(tag_marker));
+            if (prior) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: prior.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNum,
+                body,
+              });
+            }
+
+      # ──────────────────────────────────────────────────────────────────
       # Always-on diagnostic: on any failure above, post a triage comment
       # to the PR with the real errors. This closes the loop so AI agents
       # iterating in the cloud can read CI failures via the PR comments
