@@ -1,38 +1,94 @@
 name: Cleanup Screenshot Releases
 
-# Auto-delete the per-PR `screenshots-pr-N` prerelease when its PR is
-# closed (merged or rejected). Round 2 Reliability #19: without this,
-# tags accumulate indefinitely (already 70+ as of 2026-05-14).
+# Two-mode cleanup:
 #
-# The screenshot itself is no longer useful once the PR is closed
-# — the PR comment still has the URL but the comment is historical
-# context; users / future Claude won't expect a 404.
-# We delete the release + tag together.
+#   1. PR-close mode (legacy): when a PR closes, mark its release tag in
+#      the body with `<!-- closed-at: ISO8601 -->` but do NOT delete yet.
+#      That keeps the PR's "自动验收 · 截图" comment images browsable for
+#      a grace period.
+#
+#   2. Scheduled GC mode: daily 03:00 UTC, delete any `screenshots-pr-*`
+#      prerelease whose tagged commit is > 14 days old. Long enough that
+#      a recently merged PR shows screenshots when you click back to
+#      review the merged diff; short enough that tags don't accumulate
+#      indefinitely (the original Round 2 #19 concern).
+#
+# Rationale (user feedback 2026-05-14): immediate-on-close deletion
+# rendered every merged PR's auto-comment as broken-image icons, which
+# defeats the historical-record value of those comments.
 
 on:
   pull_request:
     types: [closed]
+  schedule:
+    # Daily at 03:00 UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
 
 permissions:
   contents: write
 
 jobs:
-  cleanup:
+  mark-closed:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Delete screenshot release + tag
+      - name: Mark release with close timestamp
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           TAG="screenshots-pr-$PR_NUMBER"
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release delete "$TAG" --yes --cleanup-tag
-            echo "Deleted release $TAG."
-          else
-            echo "No release $TAG to delete (UI PR may never have run; OK)."
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "No release $TAG to annotate (UI PR may never have run; OK)."
+            exit 0
           fi
+          NOW=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          # Pull current body and append marker if missing.
+          CUR_BODY=$(gh release view "$TAG" --json body --jq .body)
+          if echo "$CUR_BODY" | grep -q '<!-- closed-at:'; then
+            echo "$TAG already marked."
+            exit 0
+          fi
+          NEW_BODY="$CUR_BODY"$'\n\n<!-- closed-at: '"$NOW"' -->'
+          printf '%s' "$NEW_BODY" | gh release edit "$TAG" --notes-file -
+          echo "Marked $TAG with closed-at $NOW (will be GC'd ≥14 days later)."
+
+  scheduled-gc:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Delete screenshot releases older than 14 days
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          NOW_EPOCH=$(date -u +%s)
+          GRACE_DAYS=14
+          GRACE_SECONDS=$((GRACE_DAYS * 86400))
+          DELETED=0
+          KEPT=0
+          # Paginate all releases tagged screenshots-pr-*
+          gh release list --limit 500 --json tagName,createdAt,name \
+            | jq -r '.[] | select(.tagName | startswith("screenshots-pr-")) | "\(.tagName)\t\(.createdAt)"' \
+            | while IFS=$'\t' read -r TAG CREATED; do
+                # Parse ISO 8601 to epoch
+                CREATED_EPOCH=$(date -u -d "$CREATED" +%s 2>/dev/null || gdate -u -d "$CREATED" +%s 2>/dev/null || echo 0)
+                AGE=$((NOW_EPOCH - CREATED_EPOCH))
+                if [ "$AGE" -gt "$GRACE_SECONDS" ]; then
+                  gh release delete "$TAG" --yes --cleanup-tag >/dev/null 2>&1 || true
+                  echo "Deleted $TAG (age $((AGE / 86400))d)"
+                  DELETED=$((DELETED + 1))
+                else
+                  KEPT=$((KEPT + 1))
+                fi
+              done
+          echo "Scheduled GC done."
