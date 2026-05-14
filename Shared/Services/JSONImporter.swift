@@ -114,13 +114,32 @@ public enum JSONImporter {
             readinessInserted += 1
         }
 
+        // PR de-dup by (exerciseId, kind, value, achievedAt) tuple. Backup
+        // doesn't carry the PR's UUID (PersonalRecord uses generated IDs).
+        // Round 3 Reliability C2: previously this loop unconditionally
+        // inserted; re-importing the same backup doubled PR counts and
+        // skewed AIRecommendationEngine's "PR cadence" rule. Now we skip
+        // any row whose 4-tuple already exists.
         var personalRecordsInserted = 0
+        var personalRecordsSkipped = 0
         for dto in backup.personalRecords {
-            // PR de-dup by (exerciseId, kind, value, achievedAt) tuple —
-            // backup doesn't carry the PR's UUID since model uses
-            // generated IDs; we accept potential duplicates as the
-            // lesser evil vs. throwing away real data.
             let kind = PRKind(rawValue: dto.kind) ?? .maxWeight
+            let exId = dto.exerciseId
+            let kindRaw = kind.rawValue
+            let val = dto.value
+            let at = dto.achievedAt
+            let existsDescriptor = FetchDescriptor<PersonalRecord>(
+                predicate: #Predicate<PersonalRecord> {
+                    $0.exerciseId == exId
+                        && $0.kindRaw == kindRaw
+                        && $0.value == val
+                        && $0.achievedAt == at
+                }
+            )
+            if (try? context.fetch(existsDescriptor))?.isEmpty == false {
+                personalRecordsSkipped += 1
+                continue
+            }
             let pr = PersonalRecord(
                 exerciseId: dto.exerciseId,
                 kind: kind,
