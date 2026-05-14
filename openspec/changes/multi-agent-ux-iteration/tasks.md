@@ -37,23 +37,13 @@
 - [x] **IX-F7** [P1] iPhone「跳过」双击防抖（PR #86 2026-05-14）— Watch 端 `advanced` flag 已有，iPhone 端 dedup 已补齐
   - File: `LiveWorkoutView.swift:380-396`, `WatchScreens.swift:418-424`
 
-### B2 · 关键 UX（需用户确认设计）
+### B2 · 关键 UX（用户决策已收齐 2026-05-14；5 个实现 PR 已 dispatch）
 
-- [ ] **USR-F4 / IX-F8 / USR-F14** [P0 三 agent 印证] 「在 Watch / iPhone 上练」每次都问 → 记住默认
-  - File: `TodayView.swift:177-200`, `482-494`
-  - 用户决策：默认改成 "上次用的" 还是加个 settings toggle
-- [ ] **IX-F1 / IX-F2 / USR-F8** [P0 多 agent 印证] 「结束本组」按钮重设计
-  - File: `WatchScreens.swift:243-260`, `LiveWorkoutView.swift:187-202`
-  - 用户决策：accent 色 vs 视觉方案；长按 vs 长按确认 vs 单击+撤销 buffer
-- [ ] **IX-F11 / USR-F6** [P0 双 agent 印证] SetResult 屏 → 叠加在 RestView 上 / 自动 advance
-  - File: `WatchScreens.swift:1371-1380`
-  - 用户决策：保留独立屏 + 自动 advance 3s 还是合并到 Rest 顶部
-- [ ] **PM-F7 / USR-F5** [P0 双 agent 印证] "AI 推荐" Section 处理
-  - File: `TodayView.swift:84-101`, `AIRecommendationEngine.swift`
-  - 用户决策：删 / 改名"训练建议" / 保留但 V1 标注
-- [ ] **USR-F12** [P0] PR 庆祝路径接线
-  - File: `WatchScreens.swift:739`（孤儿 view） + `WatchNavigation.swift:24`（路由存在） + `iPhoneConnectivityService.swift:101`（detector 调用）
-  - 用户决策：触发时机（举完最后一组 / Watch 同步成功 / iPhone push）+ 通知方式
+- [x] **USR-F4 / IX-F8 / USR-F14** [P0 三 agent 印证] 「在 Watch / iPhone 上练」每次都问 → **只在 Watch 不可达时弹** (PR #91)
+- [x] **IX-F1 / IX-F2 / USR-F8** [P0 多 agent 印证] 「结束本组」按钮 → **保持单击但放大 + accent 色** (PR #92, 30→44pt + accent 色)
+- [x] **IX-F11 / USR-F6** [P0 双 agent 印证] SetResult 屏 → **保留独立屏 + 3s 自动 advance + 点击跳过** (PR #93)
+- [x] **PM-F7 / USR-F5** [P0 双 agent 印证] "AI 推荐" Section → **改名"训练建议"** (PR #90)
+- [x] **USR-F12** [P0] PR 庆祝路径接线 → **Watch 同步成功后 iPhone Today 弹**（NotificationCenter 兜底 ad-hoc workout，PR #94）
 
 ### B3 · 视觉一致性（视觉 token / 颜色 / 字号）
 
