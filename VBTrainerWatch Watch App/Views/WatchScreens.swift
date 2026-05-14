@@ -244,7 +244,11 @@ struct WatchLiveWorkoutView: View {
                         .padding(.top, 2)
                 }
 
-                // Bottom red end-set button
+                // Bottom end-set button — single tap, accent-coloured, ≥44pt
+                // tap target per Round 1 audit IX-F1 / IX-F2 / USR-F8 (P0):
+                // the small red 30pt button was both error-prone and visually
+                // demoted vs the real CTA. Now uses goal accent + Capsule + 44pt
+                // height so it reads as the primary action of the set screen.
                 Button {
                     Task {
                         await controller.endSet()
@@ -253,16 +257,16 @@ struct WatchLiveWorkoutView: View {
                     }
                 } label: {
                     Text("结束本组")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 16, weight: .bold))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 30)
-                        .background(Tokens.Color.danger.opacity(0.18), in: Capsule())
-                        .foregroundStyle(Tokens.Color.danger)
+                        .frame(height: 44)
+                        .background(accent, in: Capsule())
+                        .foregroundStyle(.white)
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, 14)
-                .padding(.top, 6)
-                .padding(.bottom, 6)
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .padding(.bottom, 8)
             }
         }
         .navigationBarBackButtonHidden(true)
