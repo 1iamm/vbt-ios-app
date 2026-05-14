@@ -351,11 +351,17 @@ jobs:
             const repo = `${context.repo.owner}/${context.repo.repo}`;
             const baseUrl = `https://github.com/${repo}/releases/download/${tag}`;
 
-            // Map filename → caption. Names follow `NN-some-label.png` from
-            // our XCTAttachment naming convention.
+            // Map filename → caption. xcparse emits files like
+            //   01-welcome_0_<UUID>.png
+            //   02-value-prop_0_<UUID>.png
+            // where `_0_<UUID>` is xcparse's disambiguator when several
+            // attachments share a name. Strip everything after the
+            // human-readable label.
             const friendlyName = (filename) => {
-              const stem = filename.replace(/\.png$/, '');
-              return stem.replace(/^\d+-/, '').replace(/-/g, ' ');
+              let s = filename.replace(/\.png$/, '');           // strip .png
+              s = s.replace(/_\d+_[0-9A-F-]{8,}$/i, '');         // strip _N_<UUID>
+              s = s.replace(/^\d+-/, '');                        // strip NN- ordering prefix
+              return s.replace(/-/g, ' ');                       // dashes → spaces
             };
 
             const sha = context.sha.slice(0, 7);
