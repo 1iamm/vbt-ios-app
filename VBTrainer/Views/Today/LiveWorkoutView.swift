@@ -266,7 +266,7 @@ private struct TargetVelocityBand: View {
                     .frame(height: 6)
                 // Target band
                 Capsule()
-                    .fill(Color.green.opacity(0.55))
+                    .fill(Tokens.Color.success.opacity(0.55))
                     .frame(width: max(2, hiX - loX), height: 6)
                     .offset(x: loX)
                 // Current tick
