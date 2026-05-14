@@ -6,12 +6,23 @@
 - [x] **PR #50** Linux fast-fail (structure + PR size) — merged `db5f0d6`
 - [x] **PR #51** PR template + CODEOWNERS + Claude prompt upgrade — merged `ffd7306`
 - [x] **PR #52** UITest target + Onboarding e2e + UI_TEST_MODE bypass — merged `9f42fd8`
-- [ ] **PR #53** Auto-extract UI test screenshots → per-PR release → comment — CI 跑中
-- [ ] **PR #5.5** Persist mandate into CLAUDE.md + OpenSpec ← **本 change**
-- [ ] **PR #6** CI 加速：DerivedData + brew 缓存 + 条件 UI test
-- [ ] **PR #7** Watch 端静态截图 + visual diff baseline
-- [ ] **PR #8** format-baseline trigger 改 push + lint 升 blocking + warnings as errors
-- [ ] **PR #9** 3-agent 终审（DX / 可靠性 / 成本）确认 Task 1 完成
+- [x] **PR #53** Auto-extract UI test screenshots → per-PR release → comment — merged `fe73715`
+- [x] **PR #54** (=PR #5.5) Persist mandate into CLAUDE.md + OpenSpec — merged `aaa51f4`
+- [x] **PR #56** (=PR #6) CI 加速：brew 缓存 + 条件 UI test — merged `ae5ce1b`
+- [ ] **PR #57** format-baseline trigger 改 push（in flight）
+- [ ] **PR #58** 触发 format-baseline 全仓格式化（pending; needs #57 merged）
+- [ ] **PR #59** lint 升 blocking + warnings as errors（pending; needs #58）
+- [ ] **PR #7** Watch 端静态截图 + visual diff baseline（pending）
+- [x] **PR #9 Round 1** 3-agent 终审 — completed 2026-05-13，**NO PASS**，findings 归 `round1-review.md`
+- [ ] **PR #60-#66** Round 1 findings 修复批次：
+  - [ ] #61 docs-only skip build (DX F8 + Cost #2)
+  - [ ] #62 DerivedData cache (Cost #1)
+  - [ ] #63 失败 dump 完整化 + sticky failure comment (DX F1-F5)
+  - [ ] #64 build-for-testing 拆分 + sim boot 并行 (Cost #3)
+  - [ ] #60 SwiftData migration 测试 (Reliability #1)
+  - [ ] #65 WatchConnectivity 契约测试 (Reliability #3)
+  - [ ] #66 修 RepDetector testCleanFiveReps 根因 (Reliability #4)
+- [ ] **PR #9 Round 2** 重审，目标 PASS
 
 ## 验收标准
 

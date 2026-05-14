@@ -100,7 +100,7 @@ public final class LiveWorkoutController: ObservableObject {
     /// posts ticks to iPhone at 1Hz. Cancelled on next start / cancel.
     private var restCountdownTask: Task<Void, Never>?
 
-    /// 5-second inactivity timer per trainer痛点：做完想做的最后一 rep 停
+    /// 12-second inactivity timer per trainer痛点：做完想做的最后一 rep 停
     /// 5s 不动 → 自动结组。Reset on every rep, cancelled on manual endSet.
     private var inactivityTask: Task<Void, Never>?
 
@@ -591,24 +591,46 @@ public final class LiveWorkoutController: ObservableObject {
         pushLiveProgress(phase: .restCountdown, restRemaining: remaining, restTotal: total)
     }
 
-    /// Reset the 5s inactivity timer. Called after every rep. If 5s elapses
-    /// without a new rep, treat as user-decided-end-of-set (AMRAP / VBT
-    /// auto-regulation) and trigger endSet via `inactivityAutoEnd()`.
+    /// Inactivity timer constants. PR #55 (Round 1 fix IX-F3): bumped from
+    /// 5s → 12s because heavy compound lifts (1-5RM Squat/DL) routinely
+    /// rack the bar 5-7s between reps within the same set. 5s was closing
+    /// the set mid-effort and pushing the next rep into the next set's
+    /// data — a data-correctness bug, not just UX.
+    ///
+    /// 8s pre-warning gives the user a haptic cue 4s before the auto-end
+    /// so they can raise their wrist and decide to keep lifting. The warning
+    /// only fires if `enableRepHaptic` is on (consistent with rep haptics).
+    private static let inactivityWarnNanos: UInt64 = 8_000_000_000
+    private static let inactivityEndNanos: UInt64 = 12_000_000_000
+
+    /// Reset the inactivity timer. Called after every rep. Schedules a
+    /// pre-warning haptic at 8s and an auto-end at 12s. Both are cancelled
+    /// if a new rep arrives or the user manually ends the set.
     private func resetInactivityTimer() {
         inactivityTask?.cancel()
         inactivityTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            // 8s pre-warning
+            try? await Task.sleep(nanoseconds: Self.inactivityWarnNanos)
             guard !Task.isCancelled, let self else { return }
+            if self.isRunning {
+                HapticFeedback.inactivityWarning()
+            }
+            // 4 more seconds → 12s total → auto-end. `self` is already
+            // non-Optional from the guard above (a second `let self` would
+            // be a compile error against the bound non-Optional binding);
+            // only re-check cancellation.
+            try? await Task.sleep(nanoseconds: Self.inactivityEndNanos - Self.inactivityWarnNanos)
+            guard !Task.isCancelled else { return }
             await self.inactivityAutoEnd()
         }
     }
 
-    /// Called by the inactivity timer after 5s of no new reps. If the
+    /// Called by the inactivity timer after 12s of no new reps. If the
     /// session is still running and a plan is loaded, auto-end this set.
     public func inactivityAutoEnd() async {
         guard isRunning else { return }
         #if DEBUG
-        print("[LiveCtrl] inactivity 5s → auto endSet()")
+        print("[LiveCtrl] inactivity 12s → auto endSet()")
         #endif
         await endSet()
     }
