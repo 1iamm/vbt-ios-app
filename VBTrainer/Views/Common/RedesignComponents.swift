@@ -132,9 +132,10 @@ struct TodayHeader: View {
                     delta: snapshot?.restingHR != nil ? "bpm" : nil
                 )
                 Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Tokens.Color.tertiaryLabel)
+                // Round 1 PM-F10 (P1): chevron used to live here as pure
+                // decoration — users tapped expecting a detail view, got
+                // nothing. Removed until we have a real Readiness detail
+                // destination (tracked separately in PM-F14).
             }
             .padding(.vertical, 12)
             .padding(.horizontal, 14)
