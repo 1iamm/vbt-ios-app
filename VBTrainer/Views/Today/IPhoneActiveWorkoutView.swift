@@ -646,10 +646,26 @@ struct IPhoneActiveWorkoutView: View {
         )
     }
 
-    private func lastSetReference(for _: Int) -> String {
-        // V1: just show "—". V2 will load per-set history from last Workout.
-        // Caller is fast since we display once per row regardless.
-        "—"
+    /// "上次" column for the active workout's set table.
+    ///
+    /// Round 2 USR-F16: was hardcoded "—" — the single biggest VBT
+    /// credibility hit. Now looks up the last prior session of the
+    /// same exercise (within 5 sessions back) and shows
+    /// `<weight>kg × <reps>` for the matching set index, optionally
+    /// followed by `· <mv> m/s` when a velocity reading exists.
+    private func lastSetReference(for setIndex: Int) -> String {
+        guard !controller.exerciseId.isEmpty,
+              let ref = IPhoneWorkoutController.lastSetReference(
+                  exerciseId: controller.exerciseId,
+                  setIndex: setIndex,
+                  in: context
+              )
+        else { return "—" }
+        let base = "\(Int(ref.weightKg))kg × \(ref.reps)"
+        if let mv = ref.meanVelocity, mv > 0 {
+            return base + String(format: " · %.2f", mv)
+        }
+        return base
     }
 
     private func exerciseName(_ id: String) -> String {
