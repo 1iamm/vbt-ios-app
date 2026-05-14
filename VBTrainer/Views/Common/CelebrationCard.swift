@@ -18,6 +18,11 @@ import SwiftUI
 struct CelebrationCard: View {
     let kind: Kind
     let onDismiss: () -> Void
+    /// Optional "查看复盘 →" CTA. When non-nil, the card shows a small
+    /// secondary button beside the dismiss X that opens the workout
+    /// detail screen. Per Round 1 PM-F9 (P1): celebration without a
+    /// path to "what actually happened" felt like a dead-end.
+    var onViewDetail: (() -> Void)? = nil
     var accent: Color = Tokens.Color.accent
 
     enum Kind: Equatable {
@@ -85,6 +90,18 @@ struct CelebrationCard: View {
                     .lineLimit(2)
             }
             Spacer(minLength: 0)
+            if let onViewDetail {
+                Button(action: onViewDetail) {
+                    Text("查看 →")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.white.opacity(0.22), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("celebration.viewDetail")
+            }
             Button(action: onDismiss) {
                 Image(systemName: "xmark")
                     .font(.system(size: 11, weight: .bold))
@@ -93,6 +110,7 @@ struct CelebrationCard: View {
                     .background(Color.white.opacity(0.18), in: Circle())
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("celebration.dismiss")
         }
         .padding(14)
         .background(
