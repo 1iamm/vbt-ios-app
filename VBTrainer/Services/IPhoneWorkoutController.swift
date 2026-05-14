@@ -448,6 +448,51 @@ public final class IPhoneWorkoutController: ObservableObject {
         public let topReps: Int
     }
 
+    /// Per-set reference for the active iPhone workout's "上次" column.
+    /// Round 2 USR-F16: was hardcoded "—" — the VBT value prop demands
+    /// seeing your last numbers right next to the current set.
+    ///
+    /// Returns the weight × reps that the same set index lifted in the
+    /// most recent prior session of this exercise. Returns nil if no
+    /// prior session exists OR the prior session had fewer sets.
+    public struct LastSetRef: Equatable {
+        public let weightKg: Double
+        public let reps: Int
+        public let meanVelocity: Double? // m/s, nil if Watch wasn't paired
+    }
+
+    public static func lastSetReference(
+        exerciseId: String,
+        setIndex: Int,
+        in context: ModelContext,
+        excluding workoutId: UUID? = nil
+    ) -> LastSetRef? {
+        var descriptor = FetchDescriptor<Workout>(
+            predicate: #Predicate { $0.exerciseId == exerciseId },
+            sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
+        )
+        descriptor.fetchLimit = 5
+        guard let results = try? context.fetch(descriptor) else { return nil }
+        let prior = results.first { $0.id != workoutId }
+        guard let w = prior else { return nil }
+        let sets = w.sets.sorted { $0.index < $1.index }
+        guard setIndex >= 1, setIndex <= sets.count else { return nil }
+        let s = sets[setIndex - 1] // setIndex is 1-based, array is 0-based
+        let reps = s.reps.sorted { $0.index < $1.index }
+        let mv: Double?
+        if !reps.isEmpty {
+            let total = reps.reduce(0.0) { $0 + $1.meanVelocity }
+            mv = total / Double(reps.count)
+        } else {
+            mv = nil
+        }
+        return LastSetRef(
+            weightKg: s.weightKg,
+            reps: reps.count,
+            meanVelocity: mv
+        )
+    }
+
     // MARK: - Persistence
 
     private func saveToSwiftData(context: ModelContext, endedAt: Date, rpe: Int?, notes: String?) {
