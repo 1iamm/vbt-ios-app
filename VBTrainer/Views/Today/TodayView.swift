@@ -141,7 +141,7 @@ struct TodayView: View {
             .task {
                 // Subscribe to DayPlan event bus (scheduled-plan completed path).
                 for await event in DayPlanEventBus.shared.stream {
-                    if case let .completed(_, workoutId) = event {
+                    if case let .completed(_, workoutId) = event, let workoutId {
                         await MainActor.run { surfaceCelebration(for: workoutId) }
                     }
                 }
