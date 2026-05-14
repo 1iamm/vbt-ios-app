@@ -46,6 +46,23 @@ public enum WorkoutModeResolver {
         #endif
     }
 
+    /// Whether the Watch app is *right now* reachable for an instant
+    /// `sendMessage(...)` activation. False when the Watch is asleep / off
+    /// the wrist / Bluetooth lost — even though the Watch is paired and
+    /// VBTrainer is installed (i.e. `hasWatch == true`).
+    ///
+    /// Used by Today to decide whether to silently route auto-mode to Watch
+    /// (reachable) or pop the iPhone-vs-Watch dialog (unreachable).
+    public static var isWatchReachable: Bool {
+        #if canImport(WatchConnectivity) && os(iOS)
+            guard WCSession.isSupported() else { return false }
+            let session = WCSession.default
+            return session.isReachable
+        #else
+            return false
+        #endif
+    }
+
     /// The effective source the next workout will use.
     public static var effectiveSource: WorkoutSource {
         switch preference {
