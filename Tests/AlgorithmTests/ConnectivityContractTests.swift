@@ -181,7 +181,7 @@ final class ConnectivityContractTests: XCTestCase {
                 exerciseId: "x", startedAt: Date(), endedAt: Date()
             )), .workoutSnapshot),
             (.jumpTest(JumpTestSnapshot(attempts: [1.0])), .jumpTest),
-            (.template(TemplateSnapshot(id: UUID(), name: "x", scheduledDate: nil, items: [])), .template),
+            (.template(TemplateSnapshot(id: UUID(), name: "x", scheduledDate: Date(timeIntervalSince1970: 0), items: [])), .template),
             (.preferences(WatchPreferencesSnapshot(enableRepHaptic: true)), .preferences),
             (.startWorkout(StartWorkoutSnapshot(templateId: UUID())), .startWorkout),
             (.liveProgress(LiveProgressPayload(
