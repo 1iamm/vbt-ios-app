@@ -286,7 +286,16 @@ jobs:
           brew install chargepoint/xcparse/xcparse
           mkdir -p /tmp/screenshots
           if [ -d /tmp/UITestResults.xcresult ]; then
-            xcparse screenshots --test /tmp/UITestResults.xcresult /tmp/screenshots/
+            # xcparse without --test puts all attachments flat in the
+            # output dir. Previous version used --test which nests them
+            # under <bundle>/<class>/<method>/ — that broke the downstream
+            # `(/tmp/screenshots/*.png)` glob and silently produced 0 PNGs
+            # (no screenshot comment ever posted). Drop --test.
+            xcparse screenshots /tmp/UITestResults.xcresult /tmp/screenshots/
+            # Defense in depth: if a future xcparse version still nests,
+            # flatten with find + mv so the glob always works.
+            find /tmp/screenshots -mindepth 2 -type f -name "*.png" -exec mv -n {} /tmp/screenshots/ \; 2>/dev/null || true
+            find /tmp/screenshots -mindepth 1 -type d -empty -delete 2>/dev/null || true
             echo "Extracted:"
             ls -la /tmp/screenshots/ || true
           else
