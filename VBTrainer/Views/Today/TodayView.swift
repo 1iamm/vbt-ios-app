@@ -89,7 +89,7 @@ struct TodayView: View {
 
                     let recs = AIRecommendationEngine.recommendations(context: context)
                     if !recs.isEmpty {
-                        SectionHeader(title: "AI 推荐", accent: Color(hex: "7C5CFF"))
+                        SectionHeader(title: "AI 推荐", accent: Tokens.Color.ai)
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 10) {
                                 ForEach(recs) { rec in

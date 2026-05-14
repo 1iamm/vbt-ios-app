@@ -46,6 +46,10 @@ public enum Tokens {
         /// Accent (training)
         public static let accent = SwiftUI.Color(hex: "FF9500")
 
+        /// AI accent — purple. Used by AIRecommendationCard + "AI 推荐"
+        /// SectionHeader. Single source per Round 1 UI-§3-P2.
+        public static let ai = SwiftUI.Color(hex: "7C5CFF")
+
         // Status (rep met/borderline/failed)
         public static let success = SwiftUI.Color(hex: "30D158")
         public static let warning = SwiftUI.Color(hex: "FF9F0A")
