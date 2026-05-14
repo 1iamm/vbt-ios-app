@@ -206,7 +206,7 @@ struct HistoryView: View {
             }
         }
         .padding(14)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
     }
 
@@ -225,7 +225,7 @@ struct HistoryView: View {
             Spacer(minLength: 0)
         }
         .padding(14)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
     }
 
@@ -274,7 +274,7 @@ struct HistoryView: View {
                     }
                 }
             }
-            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+            .cardStyle()
             .padding(.horizontal, Tokens.Space.lg)
         }
     }
@@ -335,7 +335,7 @@ struct HistoryView: View {
                     }
                 }
             }
-            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+            .cardStyle()
             .padding(.horizontal, Tokens.Space.lg)
             .padding(.top, 8)
         }
@@ -375,7 +375,7 @@ struct HistoryView: View {
                 }
             }
         }
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
         .padding(.top, 8)
     }

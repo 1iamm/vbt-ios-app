@@ -37,7 +37,7 @@ struct EmptyStateCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(Tokens.Space.xxl)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
+        .cardStyle()
     }
 }
 

@@ -253,7 +253,7 @@ struct OnboardingView: View {
                 .textCase(.uppercase)
                 .padding(.bottom, 8)
             VStack(spacing: 0) { content() }
-                .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+                .cardStyle()
         }
     }
 

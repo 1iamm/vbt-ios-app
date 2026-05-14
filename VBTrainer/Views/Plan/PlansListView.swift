@@ -55,7 +55,7 @@ struct PlansListView: View {
                                 }
                             }
                         }
-                        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+                        .cardStyle()
                         .padding(.horizontal, Tokens.Space.lg)
                     }
 
@@ -166,7 +166,7 @@ struct PlansListView: View {
                 .foregroundStyle(Tokens.Color.tertiaryLabel)
         }
         .padding(14)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
     }
 
     private var emptyView: some View {
@@ -183,7 +183,7 @@ struct PlansListView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(20)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
     }
 

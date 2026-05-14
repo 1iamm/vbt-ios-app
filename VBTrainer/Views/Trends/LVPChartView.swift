@@ -60,6 +60,6 @@ struct LVPChartView: View {
             .foregroundStyle(Tokens.Color.secondaryLabel)
         }
         .padding(Tokens.Space.lg)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
+        .cardStyle()
     }
 }

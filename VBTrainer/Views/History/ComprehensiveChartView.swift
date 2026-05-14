@@ -95,7 +95,7 @@ struct ComprehensiveChartView: View {
             xAxisDualLabels
         }
         .padding(Tokens.Space.lg)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
+        .cardStyle()
     }
 
     // MARK: - Legend

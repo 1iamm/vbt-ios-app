@@ -202,7 +202,7 @@ struct WeeklyPlanView: View {
                 }
             }
         }
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
     }
 
@@ -313,7 +313,7 @@ struct WeeklyPlanView: View {
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
         }
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
         .onAppear {
             reverseSyncEnabled = EventKitService.shared.hasReadAccess

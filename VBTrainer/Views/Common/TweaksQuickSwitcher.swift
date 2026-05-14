@@ -104,7 +104,7 @@ struct TweaksQuickSwitcher: View {
                 }
             }
         }
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
     }
 
@@ -124,7 +124,7 @@ struct TweaksQuickSwitcher: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 14).padding(.vertical, 12)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
     }
 }
