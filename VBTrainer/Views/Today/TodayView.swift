@@ -30,6 +30,10 @@ struct TodayView: View {
     @State private var showingTweaks = false
     @State private var cmjPromptShown = false
     @State private var pendingCelebration: CelebrationCard.Kind?
+    /// De-dup celebration triggers: the same workout id can arrive via both
+    /// `.vbtWorkoutImported` (Watch sync) and `DayPlanEventBus.completed`
+    /// (scheduled-plan path) — we only want to celebrate once per workout.
+    @State private var celebratedWorkoutIds: Set<UUID> = []
 
     struct WorkoutDetailRoute: Identifiable, Hashable {
         let id: UUID
@@ -135,23 +139,23 @@ struct TodayView: View {
                 await ReadinessRefresher.refresh(in: context.container)
             }
             .task {
-                // Subscribe to DayPlan event bus and surface celebrations.
+                // Subscribe to DayPlan event bus (scheduled-plan completed path).
                 for await event in DayPlanEventBus.shared.stream {
                     if case let .completed(_, workoutId) = event {
-                        await MainActor.run {
-                            if let kind = CelebrationResolver.resolve(
-                                completedWorkoutId: workoutId, context: context
-                            ) {
-                                withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
-                                    pendingCelebration = kind
-                                }
-                                Task {
-                                    try? await Task.sleep(nanoseconds: 6_000_000_000)
-                                    await MainActor.run { dismissCelebration() }
-                                }
-                            }
-                        }
+                        await MainActor.run { surfaceCelebration(for: workoutId) }
                     }
+                }
+            }
+            // Watch-sync path (Task 2 USR-F12 P0). Ad-hoc unscheduled workouts
+            // never publish a DayPlan .completed event because markCompleted
+            // no-ops without a plan — so we also listen for the connectivity
+            // notification, which fires on EVERY Watch→iPhone sync (after
+            // PR detector has run). De-dup is handled by celebratedWorkoutIds.
+            .onReceive(
+                NotificationCenter.default.publisher(for: .vbtWorkoutImported)
+            ) { note in
+                if let id = note.object as? UUID {
+                    surfaceCelebration(for: id)
                 }
             }
             .navigationDestination(item: $pendingPlanTemplate) { tpl in
@@ -520,6 +524,25 @@ struct TodayView: View {
         case .missed:
             // Re-attempt or reschedule — fastest path is opening Plan
             pendingPlanTemplate = template
+        }
+    }
+
+    /// Single entry point used by both the DayPlanEventBus.completed path
+    /// (scheduled workouts) and the .vbtWorkoutImported notification (Watch
+    /// sync). De-dups by workoutId so a workout that hits both paths only
+    /// celebrates once.
+    private func surfaceCelebration(for workoutId: UUID) {
+        guard !celebratedWorkoutIds.contains(workoutId) else { return }
+        celebratedWorkoutIds.insert(workoutId)
+        guard let kind = CelebrationResolver.resolve(
+            completedWorkoutId: workoutId, context: context
+        ) else { return }
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
+            pendingCelebration = kind
+        }
+        Task {
+            try? await Task.sleep(nanoseconds: 6_000_000_000)
+            await MainActor.run { dismissCelebration() }
         }
     }
 
