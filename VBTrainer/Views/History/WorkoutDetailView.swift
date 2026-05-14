@@ -97,12 +97,28 @@ struct WorkoutDetailView: View {
 
     // MARK: - Hero
 
+    /// Round 3 USR-F13 (P1): e1RM was hidden 4 levels deep in Stats trend.
+    /// Bring the headline number to the WorkoutDetail hero — serious lifters
+    /// want "今天 e1RM 推算 = X kg" right on review.
+    ///
+    /// Epley formula: e1RM = topSet.weight × (1 + topSet.reps / 30).
+    /// Picks the heaviest set in the workout; returns 0 if no sets / no reps.
+    private func e1RMEpley(_ workout: Workout) -> Double {
+        workout.sets
+            .map { set -> Double in
+                let reps = set.reps.count
+                guard reps > 0 else { return 0 }
+                return set.weightKg * (1 + Double(reps) / 30.0)
+            }
+            .max() ?? 0
+    }
+
     private func hero(workout: Workout) -> some View {
         let allReps = workout.sets.flatMap(\.reps)
         let avgVel = allReps.isEmpty ? 0 : allReps.map(\.meanVelocity).reduce(0, +) / Double(allReps.count)
         let dur = Int(workout.durationSeconds / 60)
         let vol = workout.totalVolumeKg
-        let setCount = workout.sets.count
+        let e1rm = e1RMEpley(workout)
         let exerciseName = ExerciseLookup.exercise(byId: workout.exerciseId)?.nameZH ?? workout.exerciseId
         let dayOfWeek: String = {
             let f = DateFormatter()
@@ -138,7 +154,11 @@ struct WorkoutDetailView: View {
                     unit: vol >= 1000 ? "t" : "kg",
                     label: "训练量"
                 )
-                heroStat(value: "\(setCount)", unit: "组", label: "总组数")
+                heroStat(
+                    value: e1rm > 0 ? "\(Int(e1rm.rounded()))" : "—",
+                    unit: "kg",
+                    label: "e1RM"
+                )
                 heroStat(value: String(format: "%.2f", avgVel), unit: "m/s", label: "均速")
             }
         }
