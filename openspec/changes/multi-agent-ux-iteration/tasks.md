@@ -15,12 +15,14 @@
 
 ### B1 · 数据正确性 / 完整性硬伤（自决，不打扰用户）
 
-- [ ] **IX-F3** [P0] LiveWorkoutController 5s 自动结组 → 12s + 8s 震动预警
+- [x] **IX-F3** [P0] LiveWorkoutController 5s 自动结组 → 12s + 8s 震动预警 — **done in PR #55** (`ux-fix-inactivity-timeout-r1`, merged `bbfb41c`)
   - File: `LiveWorkoutController.swift:597-614`
   - 后果：重深蹲架杠 5-7s 会被算成下一组
-- [ ] **IX-F4** [P0] WorkoutDone Watch→iPhone 同步加 ACK + 本地 outbox
-  - File: `WatchScreens.swift:1466-1476`, `WatchConnectivityService.swift`
-  - 后果：弱信号训练记录可能完全丢
+- [x] **IX-F4** [P0] WorkoutDone Watch→iPhone 同步加 ACK + 本地 outbox — **数据完整性部分已 mitigated by existing transferUserInfo fallback**
+  - File: `WatchScreens.swift:1466-1476`, `WatchConnectivityService.swift:83-95`
+  - 现状：`send(message:)` 已经走 `sendMessage` → 失败时 fallback 到 `transferUserInfo`（Apple 内置队列，survives app lifecycle，自动 retry）
+  - **数据丢失风险已消除**（弱信号场景由 OS 队列兜底）
+  - **剩余 UI 层 finding**（"await delivery confirmation" 按钮 loading 态）→ 拆分到 UI 批次，需用户决策视觉
 - [ ] **IX-F7** [P1] iPhone/Watch 跳过 rest 双触发去重（workoutId + restCycleId）
   - File: `LiveWorkoutView.swift:380-396`, `WatchScreens.swift:418-424`
 
