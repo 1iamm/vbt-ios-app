@@ -170,13 +170,20 @@ struct WatchLiveWorkoutView: View {
             bg.ignoresSafeArea()
             VStack(spacing: 0) {
                 // Top: exercise · weight  | state label
+                //
+                // Round 2 IX-F5: was 9pt — Apple watchOS legibility floor
+                // is ~11pt for non-bracketed body text. On 40mm it
+                // truncated fast and felt squinty mid-set. 11pt fits the
+                // same row at 40mm + 44mm with `minimumScaleFactor(0.85)`.
                 HStack {
                     Text("\(exercise?.nameZH ?? "训练") · \(Int(weightKg))kg")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(sub)
+                        .minimumScaleFactor(0.85)
+                        .lineLimit(1)
                     Spacer()
                     Text(stateLabel)
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(velocityColor)
                         .tracking(0.4)
                 }
@@ -413,12 +420,14 @@ struct WatchRestView: View {
                     advanceNow()
                 } label: {
                     Text("跳过")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(sub)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
                         .background(Color.white.opacity(0.10), in: Capsule())
                 }
+                // Round 2 IX-F17: 24pt pill was below HIG floor; wrist-shake
+                // mid-rest could skip the timer unintentionally. ~30pt now.
                 .buttonStyle(.plain)
                 .padding(.top, 2)
                 .padding(.trailing, 8)
@@ -474,13 +483,17 @@ struct WatchRestView: View {
         } label: {
             VStack(spacing: 1) {
                 Text(symbol)
-                    .font(.system(size: 14, weight: .heavy))
+                    .font(.system(size: 16, weight: .heavy))
                     .foregroundStyle(fg)
                 Text("10s")
-                    .font(.system(size: 7, weight: .semibold))
+                    .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(sub)
             }
-            .frame(width: 28, height: 28)
+            // Round 2 USR-F9 / IX-F17: 28pt was half of Apple HIG 44pt
+            // minimum — easy mis-tap on a moving wrist during rest. 40pt
+            // is the largest disc that still fits 3-up alongside countdown
+            // ring on 40mm screens; sits very close to HIG 44pt floor.
+            .frame(width: 40, height: 40)
             .background(Color.white.opacity(0.08), in: Circle())
             .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
         }
@@ -1498,12 +1511,14 @@ struct WorkoutDoneView: View {
                     }
                 } label: {
                     Text("同步到 iPhone")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 14, weight: .bold))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 28)
+                        .frame(height: 44)
                         .background(Tokens.Color.success.opacity(0.18), in: Capsule())
                         .foregroundStyle(Tokens.Color.success)
                 }
+                // Round 2 IX-F18: 28pt was sub-HIG; final workout action
+                // deserves the 44pt floor.
                 .buttonStyle(.plain)
                 .padding(.horizontal, 12)
                 .padding(.bottom, 6)
