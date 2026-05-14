@@ -493,14 +493,18 @@ jobs:
           script: |
             const fs = require('fs');
 
-            // ── Parse a "Selected tests" / top-level aggregate line ───────
-            // "Test Suite 'Selected tests' passed at YYYY-...
-            //    Executed N tests, with M failures (K unexpected) in T (TT) seconds"
+            // ── Parse the top-level aggregate line ────────────────────────
+            // xcodebuild emits two flavours:
+            //   "Test Suite 'Selected tests' passed at ..."  (when -skip-testing
+            //     filter active — used by our algorithm tests)
+            //   "Test Suite 'All tests' passed at ..."        (no filter — used
+            //     by our UI tests, hence the regex must accept both)
+            // followed by:
+            //   "Executed N tests, with M failures (K unexpected) in T (TT) seconds"
             const parseTopLevel = (path) => {
               if (!fs.existsSync(path)) return null;
               const txt = fs.readFileSync(path, 'utf8');
-              // Find the LAST occurrence of "'Selected tests' (passed|failed)"
-              const headerRe = /Test Suite 'Selected tests' (passed|failed) at .+/g;
+              const headerRe = /Test Suite '(Selected tests|All tests)' (passed|failed) at .+/g;
               let lastIdx = -1;
               let m;
               while ((m = headerRe.exec(txt)) !== null) {
@@ -513,7 +517,7 @@ jobs:
               );
               if (!exec) return null;
               return {
-                passed: tail.includes("'Selected tests' passed"),
+                passed: /'(Selected tests|All tests)' passed/.test(tail),
                 total: parseInt(exec[1], 10),
                 failures: parseInt(exec[2], 10),
                 wallSeconds: parseFloat(exec[3]),
