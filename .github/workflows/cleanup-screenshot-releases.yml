@@ -1,0 +1,38 @@
+name: Cleanup Screenshot Releases
+
+# Auto-delete the per-PR `screenshots-pr-N` prerelease when its PR is
+# closed (merged or rejected). Round 2 Reliability #19: without this,
+# tags accumulate indefinitely (already 70+ as of 2026-05-14).
+#
+# The screenshot itself is no longer useful once the PR is closed
+# — the PR comment still has the URL but the comment is historical
+# context; users / future Claude won't expect a 404.
+# We delete the release + tag together.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Delete screenshot release + tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          TAG="screenshots-pr-$PR_NUMBER"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release delete "$TAG" --yes --cleanup-tag
+            echo "Deleted release $TAG."
+          else
+            echo "No release $TAG to delete (UI PR may never have run; OK)."
+          fi
