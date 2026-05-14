@@ -22,6 +22,14 @@ jobs:
     name: Static checks (Linux)
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      # Whether build/test/UI-test should run. true if any native code,
+      # build config, or test file changed; false for pure docs/openspec
+      # PRs. Reduces docs-only PR CI time from ~6min → ~30s.
+      has_native_code: ${{ steps.scope.outputs.has_native_code }}
+      # Subset of has_native_code — whether UI / View / schema changed
+      # specifically (warrants the full UI test + screenshot pipeline).
+      has_ui: ${{ steps.scope.outputs.has_ui }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,6 +39,60 @@ jobs:
         # no WatchKit in iOS target, no UIKit in Watch target, Views live
         # under Views/. See scripts/check-structure.sh for rules.
         run: bash scripts/check-structure.sh
+
+      # Moved from build-test (where it ran after macOS spinup) — running
+      # here on Linux means we know early whether to spawn build-test at
+      # all. Docs-only PR skips the entire macOS job.
+      - name: Detect change scope
+        id: scope
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 300,
+            });
+            const paths = files.map(f => f.filename);
+
+            // Native-code / build-affecting paths. If any match, we run
+            // the macOS build-test job at all.
+            const nativeRE = new RegExp([
+              '\\.swift$',
+              '^project\\.yml$',
+              '^Signing\\.xcconfig$',
+              '^\\.swiftlint\\.yml$',
+              '^\\.swiftformat$',
+              '^VBTrainer/.+\\.entitlements$',
+              '^VBTrainerWatch Watch App/.+\\.entitlements$',
+              '^\\.github/workflows/ci\\.yml$',
+            ].join('|'));
+            const hasNative = paths.some(p => nativeRE.test(p));
+
+            // UI / View / schema subset — when true, also run UI test +
+            // screenshot pipeline.
+            const uiRE = new RegExp([
+              '^VBTrainer/Views/',
+              '^VBTrainerWatch Watch App/Views/',
+              '^VBTrainerWatch Watch App/Sensors/',
+              '^Shared/Theme/',
+              '^Shared/Models/',
+              '^VBTrainer/App/',
+              '^VBTrainerWatch Watch App/App/',
+              '^Tests/UITests/',
+              '^Shared/Extensions/.+UITestMode',
+              '^project\\.yml$',
+            ].join('|'));
+            const hasUI = paths.some(p => uiRE.test(p));
+
+            core.setOutput('has_native_code', hasNative ? 'true' : 'false');
+            core.setOutput('has_ui', hasUI ? 'true' : 'false');
+            console.log(`Changed files: ${paths.length}`);
+            console.log(`  has_native_code: ${hasNative}`);
+            console.log(`  has_ui: ${hasUI}`);
+            console.log(paths.slice(0, 30).map(p => `  ${p}`).join('\n'));
 
       - name: PR diff size warning
         # Advisory only — does NOT fail CI. Posts a comment if the PR is
@@ -79,6 +141,10 @@ jobs:
 
   build-test:
     needs: fast-fail
+    # PR #61 (Round 1 fix · Cost #2 / DX F8): skip the whole macOS job
+    # on docs-only / openspec-only / scripts-only / .github-only PRs.
+    # Saves ~6 min per docs PR (the bulk of recent PRs).
+    if: needs.fast-fail.outputs.has_native_code == 'true'
     name: Build + AlgorithmTests
     runs-on: macos-26
     timeout-minutes: 25
@@ -94,41 +160,6 @@ jobs:
         run: |
           xcodebuild -version
           swift --version
-
-      # PR #6 (CI 加速): detect whether this PR has UI / build-relevant
-      # changes. Docs-only PRs (openspec/, .claude/, *.md, no project.yml)
-      # skip the macOS UI test entirely — saves 5-7 min for paperwork PRs.
-      - name: Detect change scope
-        id: changes
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { data: files } = await github.rest.pulls.listFiles({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-              per_page: 300,
-            });
-            const paths = files.map(f => f.filename);
-            // UI / build-affecting paths. If any match, we run the full UI
-            // test + screenshot pipeline. Otherwise we skip those steps.
-            const uiOrBuildRE = new RegExp([
-              '^VBTrainer/Views/',
-              '^VBTrainerWatch Watch App/Views/',
-              '^VBTrainerWatch Watch App/Sensors/',
-              '^Shared/Theme/',
-              '^Shared/Models/',
-              '^VBTrainer/App/',
-              '^VBTrainerWatch Watch App/App/',
-              '^Tests/UITests/',
-              '^Shared/Extensions/.+UITestMode',
-              '^project\\.yml$',
-            ].join('|'));
-            const hasUI = paths.some(p => uiOrBuildRE.test(p));
-            core.setOutput('has_ui', hasUI ? 'true' : 'false');
-            console.log(`Changed files: ${paths.length}, UI-relevant: ${hasUI}`);
-            console.log(paths.slice(0, 30).map(p => `  ${p}`).join('\n'));
 
       - name: Cache Homebrew downloads
         # Caches bottle downloads so brew install reuses them. Doesn't cache
@@ -221,7 +252,7 @@ jobs:
         # writes survive to the simulator's container. Without erase,
         # UI tests may launch into MainTabsView (UserProfile exists)
         # instead of OnboardingView, failing the test.
-        if: steps.changes.outputs.has_ui == 'true'
+        if: needs.fast-fail.outputs.has_ui == 'true'
         run: |
           xcrun simctl shutdown "${{ steps.sim.outputs.udid }}" 2>/dev/null || true
           xcrun simctl erase "${{ steps.sim.outputs.udid }}"
@@ -231,7 +262,7 @@ jobs:
         # .xcresult bundle. PR #5 reads them out and uploads as a release
         # for embedding in the PR comment.
         # Skipped on docs-only / openspec-only / CI-only PRs to save 5-7 min.
-        if: steps.changes.outputs.has_ui == 'true'
+        if: needs.fast-fail.outputs.has_ui == 'true'
         run: |
           set -o pipefail
           rm -rf /tmp/UITestResults.xcresult
@@ -250,7 +281,7 @@ jobs:
         # Our test names attachments like 01-welcome, 02-value-prop, etc.,
         # so the output is already human-sortable.
         # Skipped on non-UI PRs (matching "Run UI tests" gate).
-        if: always() && steps.changes.outputs.has_ui == 'true'
+        if: always() && needs.fast-fail.outputs.has_ui == 'true'
         run: |
           brew install chargepoint/xcparse/xcparse
           mkdir -p /tmp/screenshots
@@ -268,7 +299,7 @@ jobs:
         # image URLs stay stable for the *latest* commit. The release
         # lives forever after PR close — kept as a draft so it doesn't
         # pollute the public Releases page.
-        if: always() && steps.changes.outputs.has_ui == 'true'
+        if: always() && needs.fast-fail.outputs.has_ui == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -292,7 +323,7 @@ jobs:
           echo "Uploaded ${#shots[@]} screenshots to release $TAG."
 
       - name: Post screenshot summary comment to PR
-        if: success() && steps.changes.outputs.has_ui == 'true'
+        if: success() && needs.fast-fail.outputs.has_ui == 'true'
         uses: actions/github-script@v7
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -371,7 +402,7 @@ jobs:
       - name: Upload xcresult bundle (raw)
         # Still keep the raw .xcresult around for debugging.
         # Skipped on non-UI PRs (nothing to upload).
-        if: always() && steps.changes.outputs.has_ui == 'true'
+        if: always() && needs.fast-fail.outputs.has_ui == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: UITestResults-${{ github.sha }}
