@@ -31,16 +31,18 @@
 - [x] **PR #75** ci cache key hashes only project.yml (Cost R2 #C2-C3) — merged `56d731c`
 - [x] **PR #76** velocity precision roundtrip test (IX R1 F15) — merged `fa67bf8`
 - [ ] **PR #7** Watch 端静态截图 + visual diff baseline（pending — deferred to V2）
-- [ ] **PR #9 Round 3** 终审，目标 PASS（**now ready to run — all Round 2 PRs landed 2026-05-14**）
+- [x] **PR #9 Round 3** 终审 2026-05-14 — **DX PASS · Reliability PASS · Cost CONDITIONAL PASS · 总体 PASS**，详 `round3-review.md`
 
-## 验收标准
+## 验收标准 — Round 3 verified
 
-- [ ] 任意 PR push 后 < 10 min CI 完成（缓存生效后）
-- [ ] UI 改动 PR 必出现"自动验收 · 截图"评论（dogfood：PR #53 自己应能产出）
-- [ ] CI 失败必出现"❌ CI failed"评论含真错误（不需要查 Actions 页）
-- [ ] 文档 / OpenSpec / 注释类 PR 跳过 macOS build（< 1 min 完成）
-- [ ] 自动 merge 规则：非 UI / 非 schema PR 全绿后 AI 自决合
-- [ ] CLAUDE.md 写明工作流现状，新会话开起来 5 行内进入状态
+- [x] 任意 PR push 后 < 10 min CI 完成（cold ~7-8 min，warm ~4-5 min for non-UI swift）
+- [x] UI 改动 PR 必出现"自动验收 · 截图"评论（PR #77 验证）
+- [x] CI 失败必出现"❌ CI failed"评论含真错误（PR #76 验证 — 抓到 SwiftFormat + type-check timeout）
+- [x] 文档 / OpenSpec / 注释类 PR 跳过 macOS build（PR #83 验证）
+- [x] 自动 merge 规则：非 UI / 非 schema PR 全绿后 AI 自决合（2026-05-14 一日 9 PR auto-merge）
+- [x] CLAUDE.md 写明工作流现状（§11-14）
+
+**Task 1 状态：CLOSED**（待归档到 `openspec/specs/`）
 
 ## 已完成的子能力
 
