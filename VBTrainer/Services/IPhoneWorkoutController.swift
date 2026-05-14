@@ -17,7 +17,6 @@ import SwiftUI
 @available(iOS 17.0, *)
 @MainActor
 public final class IPhoneWorkoutController: ObservableObject {
-
     public enum Phase: String { case ready, setActive, setEnded, resting, finished }
 
     @Published public private(set) var phase: Phase = .ready
@@ -38,30 +37,42 @@ public final class IPhoneWorkoutController: ObservableObject {
     public var currentItem: TemplateItemSnapshot? {
         plannedItems.indices.contains(currentItemIndex) ? plannedItems[currentItemIndex] : nil
     }
+
     public var currentPlannedSpecs: [TemplateSetSpecSnapshot] {
         (currentItem?.setSpecs ?? []).sorted { $0.index < $1.index }
     }
+
     public var loggedSetsForCurrent: [LoggedSet] {
         loggedSetsByExercise[currentItemIndex] ?? []
     }
-    public var exerciseId: String { currentItem?.exerciseId ?? "" }
+
+    public var exerciseId: String {
+        currentItem?.exerciseId ?? ""
+    }
+
     public var exerciseDisplayName: String {
         guard let id = currentItem?.exerciseId else { return "" }
         return ExerciseLookup.exercise(byId: id)?.nameZH ?? id
     }
+
     /// Total sets across the whole session (work only — preserves what
     /// the bottom progress bar should show).
     public var totalPlannedSets: Int {
         plannedItems.reduce(0) { $0 + max(1, $1.effectiveWorkSetCount) }
     }
+
     public var totalLoggedSets: Int {
-        loggedSetsByExercise.values.reduce(0) { $0 + $1.filter { $0.completed }.count }
+        loggedSetsByExercise.values.reduce(0) { $0 + $1.filter(\.completed).count }
     }
+
     /// 已勾选完成的组数（按动作索引），供 UI 显示 chip 进度等。
     public func completedSetCount(forExerciseIndex idx: Int) -> Int {
-        (loggedSetsByExercise[idx] ?? []).filter { $0.completed }.count
+        (loggedSetsByExercise[idx] ?? []).filter(\.completed).count
     }
-    public var workoutStartedAt: Date { startedAt }
+
+    public var workoutStartedAt: Date {
+        startedAt
+    }
 
     public struct LoggedSet: Identifiable, Equatable {
         public let id: UUID
@@ -76,8 +87,8 @@ public final class IPhoneWorkoutController: ObservableObject {
         public var completed: Bool
     }
 
-    private var liveWorkoutId: UUID = UUID()
-    private var startedAt: Date = Date()
+    private var liveWorkoutId: UUID = .init()
+    private var startedAt: Date = .init()
     private var restTask: Task<Void, Never>?
     private var templateId: UUID?
 
@@ -215,16 +226,19 @@ public final class IPhoneWorkoutController: ObservableObject {
         let clamped = max(0, min(500, w))
         currentWeightKg = clamped
         if var list = loggedSetsByExercise[currentItemIndex],
-           let pendingIdx = list.firstIndex(where: { !$0.completed }) {
+           let pendingIdx = list.firstIndex(where: { !$0.completed })
+        {
             list[pendingIdx].weightKg = clamped
             loggedSetsByExercise[currentItemIndex] = list
         }
     }
+
     public func updateCurrentReps(_ r: Int) {
         let clamped = max(1, min(99, r))
         currentReps = clamped
         if var list = loggedSetsByExercise[currentItemIndex],
-           let pendingIdx = list.firstIndex(where: { !$0.completed }) {
+           let pendingIdx = list.firstIndex(where: { !$0.completed })
+        {
             list[pendingIdx].reps = clamped
             loggedSetsByExercise[currentItemIndex] = list
         }
@@ -281,7 +295,7 @@ public final class IPhoneWorkoutController: ObservableObject {
         restTask?.cancel()
         restTask = nil
         // 把游标拉回到「下一个待完成」组并刷新当前 weight/reps。
-        let completedCount = list.filter { $0.completed }.count
+        let completedCount = list.filter(\.completed).count
         currentSetIndex = completedCount
         let specs = currentPlannedSpecs
         if currentSetIndex < specs.count {
@@ -329,17 +343,17 @@ public final class IPhoneWorkoutController: ObservableObject {
         restTask?.cancel()
         restTask = Task { @MainActor [weak self] in
             guard let self else { return }
-            while self.restRemainingSec > 0, !Task.isCancelled {
-                self.pushLive(.restCountdown)
+            while restRemainingSec > 0, !Task.isCancelled {
+                pushLive(.restCountdown)
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
-                if !Task.isCancelled { self.restRemainingSec -= 1 }
+                if !Task.isCancelled { restRemainingSec -= 1 }
             }
             if !Task.isCancelled {
-                self.pushLive(.restCountdown)
+                pushLive(.restCountdown)
                 #if canImport(UIKit) && os(iOS)
-                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
                 #endif
-                self.advanceToNextSet()
+                advanceToNextSet()
             }
         }
     }
@@ -351,7 +365,7 @@ public final class IPhoneWorkoutController: ObservableObject {
         // 回退到 effectiveWorkSetCount（= targetSets）。这样避免 specs
         // 为空时第 1 组刚完就被判定「全部完成」直接跳到下一动作。
         let totalForExercise = max(specs.count, currentItem?.effectiveWorkSetCount ?? 0)
-        let doneCount = loggedSetsForCurrent.filter { $0.completed }.count
+        let doneCount = loggedSetsForCurrent.filter(\.completed).count
 
         // 还有未完成的组 → 留在当前动作。
         if doneCount < totalForExercise {
@@ -376,7 +390,7 @@ public final class IPhoneWorkoutController: ObservableObject {
         }
 
         // 纯 ad-hoc 单动作：无限继续。
-        if plannedItems.count == 1 && totalForExercise == 0 {
+        if plannedItems.count == 1, totalForExercise == 0 {
             phase = .ready
             pushLive(.ready)
             return
@@ -404,7 +418,11 @@ public final class IPhoneWorkoutController: ObservableObject {
     /// Fetch the most recent completed Workout for a given exerciseId so the
     /// training table can show a "上次" comparison column. Returns nil if
     /// the user has never done this exercise.
-    public static func lastWorkoutSummary(exerciseId: String, in context: ModelContext, excluding workoutId: UUID? = nil) -> LastWorkoutSummary? {
+    public static func lastWorkoutSummary(
+        exerciseId: String,
+        in context: ModelContext,
+        excluding workoutId: UUID? = nil
+    ) -> LastWorkoutSummary? {
         var descriptor = FetchDescriptor<Workout>(
             predicate: #Predicate { $0.exerciseId == exerciseId },
             sortBy: [SortDescriptor(\.startedAt, order: .reverse)]
@@ -436,7 +454,7 @@ public final class IPhoneWorkoutController: ObservableObject {
         // One Workout per exercise that actually got any logged sets.
         for (idx, item) in plannedItems.enumerated() {
             // 只持久化勾选完成的组；用户加了但未勾选的占位行不写入历史。
-            let sets = (loggedSetsByExercise[idx] ?? []).filter { $0.completed }
+            let sets = (loggedSetsByExercise[idx] ?? []).filter(\.completed)
             guard !sets.isEmpty else { continue }
             let workout = Workout(
                 id: UUID(),
@@ -476,7 +494,7 @@ public final class IPhoneWorkoutController: ObservableObject {
                 NotificationCenter.default.post(name: .vbtWorkoutImported, object: workout.id)
             } catch {
                 #if DEBUG
-                print("[IPhoneWorkoutController] save error: \(error)")
+                    print("[IPhoneWorkoutController] save error: \(error)")
                 #endif
             }
         }

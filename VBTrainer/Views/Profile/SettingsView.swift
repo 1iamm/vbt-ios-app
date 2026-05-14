@@ -81,9 +81,9 @@ struct SettingsView: View {
 
     private var autoModeHint: String {
         switch trainingMode {
-        case .auto:        return WorkoutModeResolver.autoResolutionLabel + " · 将\(WorkoutModeResolver.hasWatch ? "走 Watch 实测" : "走 iPhone 手动")"
-        case .forceWatch:  return "强制走 Watch：需要佩戴 Apple Watch 才能开始训练"
-        case .forceIPhone: return "强制走 iPhone：手动输入每组重量和次数，不测速度"
+        case .auto: WorkoutModeResolver.autoResolutionLabel + " · 将\(WorkoutModeResolver.hasWatch ? "走 Watch 实测" : "走 iPhone 手动")"
+        case .forceWatch: "强制走 Watch：需要佩戴 Apple Watch 才能开始训练"
+        case .forceIPhone: "强制走 iPhone：手动输入每组重量和次数，不测速度"
         }
     }
 }

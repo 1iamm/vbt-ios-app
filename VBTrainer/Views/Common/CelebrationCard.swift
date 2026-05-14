@@ -12,8 +12,8 @@
 //   - subtle scale-in + spring animation
 //   - haptic .success on appear
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct CelebrationCard: View {
     let kind: Kind
@@ -29,35 +29,35 @@ struct CelebrationCard: View {
 
     private var icon: String {
         switch kind {
-        case .prBeaten:               return "trophy.fill"
-        case .weeklyFullyCompleted:   return "checkmark.seal.fill"
-        case .streakMilestone:        return "flame.fill"
-        case .generic:                return "checkmark.circle.fill"
+        case .prBeaten: "trophy.fill"
+        case .weeklyFullyCompleted: "checkmark.seal.fill"
+        case .streakMilestone: "flame.fill"
+        case .generic: "checkmark.circle.fill"
         }
     }
 
     private var title: String {
         switch kind {
-        case .prBeaten(let name, _):           return "\(name) PR 破了"
-        case .weeklyFullyCompleted(let n):     return "本周满训 · \(n)/\(n)"
-        case .streakMilestone(let d):          return "连续 \(d) 天"
-        case .generic:                          return "今日完成"
+        case let .prBeaten(name, _): "\(name) PR 破了"
+        case let .weeklyFullyCompleted(n): "本周满训 · \(n)/\(n)"
+        case let .streakMilestone(d): "连续 \(d) 天"
+        case .generic: "今日完成"
         }
     }
 
     private var body_: String {
         switch kind {
-        case .prBeaten(_, let v):               return "新纪录 \(v) — 已写入 PR 列表"
-        case .weeklyFullyCompleted:             return "保持节奏，下周继续"
-        case .streakMilestone(let d):
+        case let .prBeaten(_, v): "新纪录 \(v) — 已写入 PR 列表"
+        case .weeklyFullyCompleted: "保持节奏，下周继续"
+        case let .streakMilestone(d):
             switch d {
-            case 3:  return "习惯成形中 — 连续 3 天"
-            case 7:  return "稳定一周 — 真挺住了"
-            case 14: return "两周不间断 — 多数人到不了这"
-            case 30: return "一个月节奏 — 你已经赢了大多数"
-            default: return "连续 \(d) 天，持续累积"
+            case 3: "习惯成形中 — 连续 3 天"
+            case 7: "稳定一周 — 真挺住了"
+            case 14: "两周不间断 — 多数人到不了这"
+            case 30: "一个月节奏 — 你已经赢了大多数"
+            default: "连续 \(d) 天，持续累积"
             }
-        case .generic:                          return "训练数据已同步，去综合时间轴看复盘"
+        case .generic: "训练数据已同步，去综合时间轴看复盘"
         }
     }
 
@@ -67,7 +67,8 @@ struct CelebrationCard: View {
                 Circle()
                     .fill(LinearGradient(
                         colors: [Color.white.opacity(0.45), Color.white.opacity(0.15)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing))
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ))
                     .frame(width: 44, height: 44)
                 Image(systemName: icon)
                     .font(.system(size: 20, weight: .bold))
@@ -95,8 +96,11 @@ struct CelebrationCard: View {
         }
         .padding(14)
         .background(
-            LinearGradient(colors: [accent, accent.opacity(0.78)],
-                           startPoint: .topLeading, endPoint: .bottomTrailing),
+            LinearGradient(
+                colors: [accent, accent.opacity(0.78)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
             in: RoundedRectangle(cornerRadius: 16)
         )
         .shadow(color: accent.opacity(0.45), radius: 14, x: 0, y: 8)
@@ -118,7 +122,6 @@ struct CelebrationCard: View {
 /// Internal because its result type (`CelebrationCard.Kind`) is internal.
 @available(iOS 17.0, *)
 enum CelebrationResolver {
-
     @MainActor
     static func resolve(
         completedWorkoutId: UUID?,
@@ -133,13 +136,11 @@ enum CelebrationResolver {
             fd.fetchLimit = 1
             if let pr = (try? context.fetch(fd))?.first {
                 let exName = ExerciseLookup.exercise(byId: pr.exerciseId)?.nameZH ?? pr.exerciseId
-                let valueLabel: String = {
-                    switch pr.kind {
-                    case .maxWeight, .e1RM, .maxVolume: return "\(Int(pr.value)) kg"
-                    case .maxSingleRepVelocity:         return String(format: "%.2f m/s", pr.value)
-                    case .maxCMJ:                       return "\(Int(pr.value)) cm"
-                    }
-                }()
+                let valueLabel = switch pr.kind {
+                case .maxWeight, .e1RM, .maxVolume: "\(Int(pr.value)) kg"
+                case .maxSingleRepVelocity: String(format: "%.2f m/s", pr.value)
+                case .maxCMJ: "\(Int(pr.value)) cm"
+                }
                 return .prBeaten(exerciseName: exName, valueLabel: valueLabel)
             }
         }

@@ -15,7 +15,6 @@
 import XCTest
 
 final class ConnectivityContractTests: XCTestCase {
-
     // MARK: - Per-case roundtrips
 
     func testWorkoutSnapshotRoundTrips() throws {
@@ -189,7 +188,7 @@ final class ConnectivityContractTests: XCTestCase {
                 exerciseName: "x", targetReps: 1, targetWeightKg: 0
             )), .liveProgress),
             (.restAdjust(RestAdjustPayload(deltaSeconds: 0)), .restAdjust),
-            (.setControl(SetControlPayload(action: .endSet)), .setControl),
+            (.setControl(SetControlPayload(action: .endSet)), .setControl)
         ]
         // Total assertion guards against a new case being added to
         // `ConnectivityMessage` without adding a test sample here.
@@ -197,10 +196,16 @@ final class ConnectivityContractTests: XCTestCase {
         for (msg, expectedKind) in samples {
             let userInfo = try ConnectivityCodec.encode(msg)
             let kindRaw = userInfo[ConnectivityCodec.userInfoKindKey] as? String
-            XCTAssertEqual(kindRaw, expectedKind.rawValue,
-                           "encode dropped wrong kind tag for \(msg)")
-            XCTAssertEqual(msg.kind, expectedKind,
-                           "ConnectivityMessage.kind getter mismatch for \(msg)")
+            XCTAssertEqual(
+                kindRaw,
+                expectedKind.rawValue,
+                "encode dropped wrong kind tag for \(msg)"
+            )
+            XCTAssertEqual(
+                msg.kind,
+                expectedKind,
+                "ConnectivityMessage.kind getter mismatch for \(msg)"
+            )
         }
     }
 
@@ -209,14 +214,14 @@ final class ConnectivityContractTests: XCTestCase {
     func testDecodeRejectsCorruptedPayload() {
         let userInfo: [String: Any] = [
             ConnectivityCodec.userInfoKindKey: "preferences",
-            ConnectivityCodec.userInfoPayloadKey: Data([0xff, 0xfe, 0x00]),
+            ConnectivityCodec.userInfoPayloadKey: Data([0xFF, 0xFE, 0x00])
         ]
         XCTAssertThrowsError(try ConnectivityCodec.decode(userInfo))
     }
 
     func testDecodeReturnsNilOnMissingPayload() throws {
         let userInfo: [String: Any] = [
-            ConnectivityCodec.userInfoKindKey: "preferences",
+            ConnectivityCodec.userInfoKindKey: "preferences"
             // payload key missing
         ]
         let decoded = try ConnectivityCodec.decode(userInfo)
@@ -240,9 +245,9 @@ final class ConnectivityContractTests: XCTestCase {
 
 // MARK: - Hand-rolled CaseIterable for non-CaseIterable enums
 
-// LiveProgressPayload.Phase and SetControlPayload.Action are not declared
-// CaseIterable in production code. We list all known cases here so the
-// test fails loudly if a new case is added without updating these.
+/// LiveProgressPayload.Phase and SetControlPayload.Action are not declared
+/// CaseIterable in production code. We list all known cases here so the
+/// test fails loudly if a new case is added without updating these.
 private extension LiveProgressPayload.Phase {
     static var allCasesEnumerated: [LiveProgressPayload.Phase] {
         [.ready, .repDetected, .setEnded, .restCountdown, .workoutEnded]

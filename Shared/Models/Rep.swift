@@ -11,12 +11,12 @@ import SwiftData
 @Model
 public final class Rep {
     @Attribute(.unique) public var id: UUID
-    public var index: Int                       // 1-based within the set
-    public var meanVelocity: Double             // m/s, MV
-    public var peakVelocity: Double             // m/s, PV
-    public var meanPropulsiveVelocity: Double?  // m/s, MPV (nil if not computed)
+    public var index: Int // 1-based within the set
+    public var meanVelocity: Double // m/s, MV
+    public var peakVelocity: Double // m/s, PV
+    public var meanPropulsiveVelocity: Double? // m/s, MPV (nil if not computed)
     public var timestamp: Date
-    public var metStatusRaw: String             // MetStatus enum
+    public var metStatusRaw: String // MetStatus enum
 
     public var set: WorkoutSet?
 
@@ -35,7 +35,7 @@ public final class Rep {
         self.peakVelocity = peakVelocity
         self.meanPropulsiveVelocity = meanPropulsiveVelocity
         self.timestamp = timestamp
-        self.metStatusRaw = metStatus.rawValue
+        metStatusRaw = metStatus.rawValue
     }
 
     public var metStatus: MetStatus {
@@ -46,9 +46,9 @@ public final class Rep {
     /// Returns the velocity that matches the given variant.
     public func velocity(for variant: VelocityVariant) -> Double {
         switch variant {
-        case .mv:  return meanVelocity
-        case .mpv: return meanPropulsiveVelocity ?? meanVelocity
-        case .pv:  return peakVelocity
+        case .mv: meanVelocity
+        case .mpv: meanPropulsiveVelocity ?? meanVelocity
+        case .pv: peakVelocity
         }
     }
 }

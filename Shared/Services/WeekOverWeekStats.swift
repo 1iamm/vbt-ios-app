@@ -31,17 +31,14 @@ public struct WeekOverWeekHeadline: Sendable {
 
 @available(iOS 17.0, watchOS 10.0, *)
 public enum WeekOverWeekStats {
-
     @MainActor
     public static func headline(now: Date = Date(), context: ModelContext) -> WeekOverWeekHeadline {
         var cal = Calendar.current
         cal.firstWeekday = 2 // Monday — matches design
 
-        guard
-            let thisWeekStart = cal.dateInterval(of: .weekOfYear, for: now)?.start,
-            let lastWeekStart = cal.date(byAdding: .day, value: -7, to: thisWeekStart),
-            let thisWeekEnd = cal.date(byAdding: .day, value: 7, to: thisWeekStart)
-        else { return .init() }
+        guard let thisWeekStart = cal.dateInterval(of: .weekOfYear, for: now)?.start,
+              let lastWeekStart = cal.date(byAdding: .day, value: -7, to: thisWeekStart),
+              let thisWeekEnd = cal.date(byAdding: .day, value: 7, to: thisWeekStart) else { return .init() }
 
         let lo = lastWeekStart
         let hi = thisWeekEnd

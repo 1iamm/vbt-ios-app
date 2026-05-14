@@ -9,8 +9,8 @@
 //   • Dual X axis: absolute time (主) + relative +Nm (三级灰)
 //   • Tappable legend: hide/show each series
 
-import SwiftUI
 import Charts
+import SwiftUI
 
 struct ComprehensiveChartView: View {
     let workout: Workout
@@ -30,13 +30,20 @@ struct ComprehensiveChartView: View {
         workout.sets.sorted { $0.index < $1.index }
     }
 
-    private var workoutStart: Date { workout.startedAt }
+    private var workoutStart: Date {
+        workout.startedAt
+    }
+
     private var workoutEnd: Date {
         if let e = workout.endedAt { return e }
         let lastRep = orderedSets.flatMap { $0.reps.map(\.timestamp) }.max()
         return lastRep ?? workoutStart.addingTimeInterval(60)
     }
-    private var timeDomain: ClosedRange<Date> { workoutStart...workoutEnd }
+
+    private var timeDomain: ClosedRange<Date> {
+        workoutStart...workoutEnd
+    }
+
     private var totalSeconds: TimeInterval {
         max(60, workoutEnd.timeIntervalSince(workoutStart))
     }
@@ -52,7 +59,7 @@ struct ComprehensiveChartView: View {
         Color(hex: "5AC8FA"), // light cyan
         Color(hex: "30D158"), // green
         Color(hex: "FF9F0A"), // amber
-        Color(hex: "BF5AF2"), // pink-purple
+        Color(hex: "BF5AF2") // pink-purple
     ]
 
     private var exerciseColorMap: [String: Color] {
@@ -95,12 +102,24 @@ struct ComprehensiveChartView: View {
 
     private var legend: some View {
         HStack(spacing: 16) {
-            legendButton(color: Tokens.Color.Data.heartRate, label: "心率",
-                         isOn: $showHR, style: .solid)
-            legendButton(color: Tokens.Color.Data.velocity, label: "速度",
-                         isOn: $showVelocity, style: .scatter)
-            legendButton(color: Tokens.Color.Data.velocityLoss, label: "VL%",
-                         isOn: $showVL, style: .dashed)
+            legendButton(
+                color: Tokens.Color.Data.heartRate,
+                label: "心率",
+                isOn: $showHR,
+                style: .solid
+            )
+            legendButton(
+                color: Tokens.Color.Data.velocity,
+                label: "速度",
+                isOn: $showVelocity,
+                style: .scatter
+            )
+            legendButton(
+                color: Tokens.Color.Data.velocityLoss,
+                label: "VL%",
+                isOn: $showVL,
+                style: .dashed
+            )
             Spacer()
         }
         .font(.system(size: 11, weight: .medium))
@@ -119,8 +138,10 @@ struct ComprehensiveChartView: View {
                     .foregroundStyle(isOn.wrappedValue ? Tokens.Color.label : Tokens.Color.tertiaryLabel)
             }
             .padding(.horizontal, 6).padding(.vertical, 3)
-            .background(isOn.wrappedValue ? color.opacity(0.10) : Color.clear,
-                        in: Capsule())
+            .background(
+                isOn.wrappedValue ? color.opacity(0.10) : Color.clear,
+                in: Capsule()
+            )
         }
         .buttonStyle(.plain)
     }
@@ -174,8 +195,10 @@ struct ComprehensiveChartView: View {
                     ForEach(set.reps) { rep in
                         PointMark(
                             x: .value("时间", rep.timestamp),
-                            y: .value("BPM-mapped",
-                                       velocityToBpm(rep.meanVelocity))
+                            y: .value(
+                                "BPM-mapped",
+                                velocityToBpm(rep.meanVelocity)
+                            )
                         )
                         .foregroundStyle(Tokens.Color.Data.velocity)
                         .symbol(.circle)
@@ -190,18 +213,18 @@ struct ComprehensiveChartView: View {
                 ForEach(setIntervals.indices, id: \.self) { i in
                     let iv = setIntervals[i]
                     let firstV = iv.set.reps.first?.meanVelocity ?? 0
-                    let lastV  = iv.set.reps.last?.meanVelocity  ?? firstV
+                    let lastV = iv.set.reps.last?.meanVelocity ?? firstV
                     let vl = firstV > 0 ? max(0, (firstV - lastV) / firstV * 100) : 0
                     LineMark(
                         x: .value("start", iv.start),
-                        y: .value("vl",   bpmYForVL(vl)),
+                        y: .value("vl", bpmYForVL(vl)),
                         series: .value("series", "vl-\(i)")
                     )
                     .foregroundStyle(Tokens.Color.Data.velocityLoss)
                     .lineStyle(.init(lineWidth: 1.5, dash: [4, 3]))
                     LineMark(
                         x: .value("end", iv.end),
-                        y: .value("vl",  bpmYForVL(vl)),
+                        y: .value("vl", bpmYForVL(vl)),
                         series: .value("series", "vl-\(i)")
                     )
                     .foregroundStyle(Tokens.Color.Data.velocityLoss)
@@ -248,11 +271,11 @@ struct ComprehensiveChartView: View {
     /// Map velocity 0..1.5 m/s onto BPM domain (40..220) so a single Y axis can render both.
     private func velocityToBpm(_ v: Double) -> Double {
         // 0 m/s  → 40 BPM,   1.5 m/s → 220 BPM
-        return 40 + min(1.5, max(0, v)) / 1.5 * 180
+        40 + min(1.5, max(0, v)) / 1.5 * 180
     }
 
     private func bpmToVelocity(_ b: Double) -> Double {
-        return min(1.5, max(0, (b - 40) / 180.0 * 1.5))
+        min(1.5, max(0, (b - 40) / 180.0 * 1.5))
     }
 
     /// Map VL% onto the velocity axis at a fixed visual height.
@@ -264,7 +287,7 @@ struct ComprehensiveChartView: View {
     }
 
     @ViewBuilder
-    private func setBandView(proxy: ChartProxy, plot: CGSize) -> some View {
+    private func setBandView(proxy: ChartProxy, plot _: CGSize) -> some View {
         let yOffset: CGFloat = -22
         // proxy.plotAreaFrame is `Anchor<CGRect>?`, not a usable rect; we
         // already get the plot size from the ChartProxy.plotAreaSize, so
@@ -273,7 +296,8 @@ struct ComprehensiveChartView: View {
             ForEach(setIntervals.indices, id: \.self) { i in
                 let iv = setIntervals[i]
                 if let xStart = proxy.position(forX: iv.start),
-                   let xEnd   = proxy.position(forX: iv.end) {
+                   let xEnd = proxy.position(forX: iv.end)
+                {
                     let x = min(xStart, xEnd)
                     let w = max(4, abs(xEnd - xStart))
                     VStack(alignment: .leading, spacing: 1) {

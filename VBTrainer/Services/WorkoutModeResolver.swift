@@ -11,19 +11,19 @@
 import Foundation
 
 #if canImport(WatchConnectivity)
-import WatchConnectivity
+    import WatchConnectivity
 #endif
 
 @available(iOS 17.0, *)
 public enum WorkoutModeResolver {
-
     private static let prefKey = "vbt.trainingModePreference"
 
     /// Persisted user override. Defaults to `.auto`.
     public static var preference: TrainingModePreference {
         get {
             if let raw = UserDefaults.standard.string(forKey: prefKey),
-               let p = TrainingModePreference(rawValue: raw) {
+               let p = TrainingModePreference(rawValue: raw)
+            {
                 return p
             }
             return .auto
@@ -38,20 +38,20 @@ public enum WorkoutModeResolver {
     /// never set up a Watch.
     public static var hasWatch: Bool {
         #if canImport(WatchConnectivity) && os(iOS)
-        guard WCSession.isSupported() else { return false }
-        let session = WCSession.default
-        return session.isPaired && session.isWatchAppInstalled
+            guard WCSession.isSupported() else { return false }
+            let session = WCSession.default
+            return session.isPaired && session.isWatchAppInstalled
         #else
-        return false
+            return false
         #endif
     }
 
     /// The effective source the next workout will use.
     public static var effectiveSource: WorkoutSource {
         switch preference {
-        case .forceWatch:  return .watch
-        case .forceIPhone: return .iPhone
-        case .auto:        return hasWatch ? .watch : .iPhone
+        case .forceWatch: .watch
+        case .forceIPhone: .iPhone
+        case .auto: hasWatch ? .watch : .iPhone
         }
     }
 

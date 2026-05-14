@@ -21,6 +21,6 @@ public enum VBTSchemaV1 {
         TemplateItem.self,
         TemplateSetSpec.self,
         DayPlan.self,
-        PersonalRecord.self,
+        PersonalRecord.self
     ]
 }

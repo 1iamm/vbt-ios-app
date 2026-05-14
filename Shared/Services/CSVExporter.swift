@@ -7,9 +7,8 @@ import Foundation
 
 @available(iOS 17.0, watchOS 10.0, *)
 public enum CSVExporter {
-
     public static func csvString(for workouts: [Workout]) -> String {
-        var rows: [String] = [
+        var rows = [
             "workout_id,date,exercise_id,set_index,weight_kg,rep_index,mean_velocity,peak_velocity,mean_propulsive_velocity,met_status,timestamp"
         ]
         let isoFormatter = ISO8601DateFormatter()

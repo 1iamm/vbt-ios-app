@@ -9,7 +9,6 @@
 import Foundation
 
 public struct VelocityLossCalculator {
-
     public private(set) var firstRep: RepEvent?
     public let variant: VelocityVariant
 
@@ -29,7 +28,7 @@ public struct VelocityLossCalculator {
     public func velocityLoss(for rep: RepEvent) -> Double {
         guard let base = firstRep, base.index != rep.index else { return 0 }
         let v0 = base.velocity(for: variant)
-        let v  = rep.velocity(for: variant)
+        let v = rep.velocity(for: variant)
         guard v0 > 0 else { return 0 }
         return max(0, (v0 - v) / v0 * 100.0)
     }

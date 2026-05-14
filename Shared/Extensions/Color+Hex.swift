@@ -15,13 +15,14 @@ extension Color {
         let cleaned = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             .replacingOccurrences(of: "#", with: "")
         guard cleaned.count == 6,
-              let value = UInt64(cleaned, radix: 16) else {
+              let value = UInt64(cleaned, radix: 16) else
+        {
             self = .gray
             return
         }
         let r = Double((value >> 16) & 0xFF) / 255.0
-        let g = Double((value >> 8)  & 0xFF) / 255.0
-        let b = Double( value        & 0xFF) / 255.0
+        let g = Double((value >> 8) & 0xFF) / 255.0
+        let b = Double(value & 0xFF) / 255.0
         self.init(red: r, green: g, blue: b)
     }
 }

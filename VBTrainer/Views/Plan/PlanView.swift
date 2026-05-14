@@ -9,8 +9,8 @@
 //
 // Replaces the multi-page TemplateEditorView flow on the new Plan tab.
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct PlanView: View {
     @Environment(\.modelContext) private var context
@@ -38,14 +38,19 @@ struct PlanView: View {
 
     private enum PushState: Equatable {
         case idle
-        case pushing                  // sendMessage in flight, show spinner
-        case delivered                // Watch confirmed receipt
-        case queued                   // fell back to transferUserInfo
-        case failed(String)           // couldn't even queue
+        case pushing // sendMessage in flight, show spinner
+        case delivered // Watch confirmed receipt
+        case queued // fell back to transferUserInfo
+        case failed(String) // couldn't even queue
     }
 
-    private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
-    private var accent: Color { GoalTheme.accent(for: goal) }
+    private var goal: TrainingGoal {
+        profiles.first?.trainingGoal ?? .strength
+    }
+
+    private var accent: Color {
+        GoalTheme.accent(for: goal)
+    }
 
     private var orderedItems: [TemplateItem] {
         template.items.sorted { $0.index < $1.index }
@@ -160,8 +165,8 @@ struct PlanView: View {
         Binding(
             get: {
                 switch pushState {
-                case .delivered, .queued, .failed: return true
-                case .idle, .pushing: return false
+                case .delivered, .queued, .failed: true
+                case .idle, .pushing: false
                 }
             },
             set: { if !$0 { pushState = .idle } }
@@ -170,19 +175,19 @@ struct PlanView: View {
 
     private var pushAlertTitle: String {
         switch pushState {
-        case .delivered: return "Watch 已激活"
-        case .queued:    return "已加入队列"
-        case .failed:    return "推送失败"
-        default:         return ""
+        case .delivered: "Watch 已激活"
+        case .queued: "已加入队列"
+        case .failed: "推送失败"
+        default: ""
         }
     }
 
     private var pushAlertMessage: String {
         switch pushState {
-        case .delivered: return "Watch 已自动跳到训练界面，可以开始了"
-        case .queued:    return "Watch 暂时不可达。打开 Apple Watch 上的 VBTrainer 后会自动激活"
-        case .failed(let msg): return "原因：\(msg)"
-        default: return ""
+        case .delivered: "Watch 已自动跳到训练界面，可以开始了"
+        case .queued: "Watch 暂时不可达。打开 Apple Watch 上的 VBTrainer 后会自动激活"
+        case let .failed(msg): "原因：\(msg)"
+        default: ""
         }
     }
 
@@ -202,8 +207,11 @@ struct PlanView: View {
             HStack(alignment: .firstTextBaseline, spacing: 14) {
                 statBlock(value: "\(summary.ex)", label: "动作")
                 statBlock(value: "\(summary.sets)", label: "组")
-                statBlock(value: formatVolume(summary.volumeKg), label: "训练量",
-                          unit: summary.volumeKg >= 1000 ? "t" : "kg")
+                statBlock(
+                    value: formatVolume(summary.volumeKg),
+                    label: "训练量",
+                    unit: summary.volumeKg >= 1000 ? "t" : "kg"
+                )
                 Spacer(minLength: 0)
                 statBlock(value: "~\(summary.est)", label: "预估", unit: "min", alignment: .trailing)
             }
@@ -213,8 +221,12 @@ struct PlanView: View {
         .padding(.bottom, 12)
     }
 
-    private func statBlock(value: String, label: String, unit: String? = nil,
-                           alignment: HorizontalAlignment = .leading) -> some View {
+    private func statBlock(
+        value: String,
+        label: String,
+        unit: String? = nil,
+        alignment: HorizontalAlignment = .leading
+    ) -> some View {
         VStack(alignment: alignment, spacing: 2) {
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text(value)
@@ -364,7 +376,8 @@ struct PlanView: View {
             let uniqueReps = Set(workSpecs.map(\.reps))
             // 所有正式组完全相同 → 紧凑显示「reps×组数 @重量」
             if uniqueWeights.count == 1 && uniqueReps.count == 1,
-               let first = workSpecs.first {
+               let first = workSpecs.first
+            {
                 return "\(first.reps)×\(workSpecs.count) @\(Int(first.weightKg))kg"
             }
             // 各组不同 → 显示重量和次数范围，避免误导性的 5×3@60kg
@@ -414,11 +427,13 @@ struct PlanView: View {
                     try? context.save()
                     editingSet = spec
                 } label: {
-                    setRow(tag: "\(idx + 1)",
-                           weight: item.targetWeightKg ?? 60,
-                           reps: item.targetReps,
-                           rest: item.restSeconds,
-                           kind: .work)
+                    setRow(
+                        tag: "\(idx + 1)",
+                        weight: item.targetWeightKg ?? 60,
+                        reps: item.targetReps,
+                        rest: item.restSeconds,
+                        kind: .work
+                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -427,11 +442,13 @@ struct PlanView: View {
                 Button {
                     editingSet = spec
                 } label: {
-                    setRow(tag: tagFor(spec),
-                           weight: spec.weightKg,
-                           reps: spec.reps,
-                           rest: spec.restSeconds,
-                           kind: spec.kind)
+                    setRow(
+                        tag: tagFor(spec),
+                        weight: spec.weightKg,
+                        reps: spec.reps,
+                        rest: spec.restSeconds,
+                        kind: spec.kind
+                    )
                 }
                 .buttonStyle(.plain)
             }
@@ -448,8 +465,13 @@ struct PlanView: View {
         return "\(spec.index)"
     }
 
-    private func setRow(tag: String, weight: Double, reps: Int, rest: Int,
-                        kind: TemplateSetKind) -> some View {
+    private func setRow(
+        tag: String,
+        weight: Double,
+        reps: Int,
+        rest: Int,
+        kind: TemplateSetKind
+    ) -> some View {
         HStack(spacing: 8) {
             ZStack {
                 RoundedRectangle(cornerRadius: 5)
@@ -461,12 +483,21 @@ struct PlanView: View {
             }
             .frame(width: 32, alignment: .leading)
 
-            cellPill(text: weight == 0 ? "—" : "\(Int(weight))", unit: "kg",
-                     mute: weight == 0)
-            cellPill(text: reps == 0 ? "—" : "\(reps)", unit: "次",
-                     mute: reps == 0)
-            cellPill(text: rest == 0 ? "—" : formatRest(rest), unit: nil,
-                     mute: rest == 0)
+            cellPill(
+                text: weight == 0 ? "—" : "\(Int(weight))",
+                unit: "kg",
+                mute: weight == 0
+            )
+            cellPill(
+                text: reps == 0 ? "—" : "\(reps)",
+                unit: "次",
+                mute: reps == 0
+            )
+            cellPill(
+                text: rest == 0 ? "—" : formatRest(rest),
+                unit: nil,
+                mute: rest == 0
+            )
 
             Image(systemName: "chevron.right")
                 .font(.system(size: 11, weight: .semibold))
@@ -714,7 +745,7 @@ struct PlanView: View {
             case .queued:
                 Haptics.success()
                 pushState = .queued
-            case .failed(let msg):
+            case let .failed(msg):
                 pushState = .failed(msg)
             }
         }
@@ -903,11 +934,12 @@ struct SchedulePlanSheet: View {
     let template: Template
     let accent: Color
 
-    @State private var date: Date = Date()
+    @State private var date: Date = .init()
     @State private var time: Date = {
         let cal = Calendar.current
         return cal.date(bySettingHour: 7, minute: 30, second: 0, of: Date()) ?? Date()
     }()
+
     @State private var syncToCalendar = true
     @State private var statusMessage: String?
 
@@ -963,35 +995,34 @@ struct SchedulePlanSheet: View {
 
         if syncToCalendar {
             #if os(iOS)
-            // Use full access — write-only (iOS 17+) can't enumerate
-            // calendars, which means upsert() can't pick a target calendar
-            // and silently sends events to nowhere. Full access lets us
-            // both create + read, and the resulting event shows in the iOS
-            // Calendar app reliably.
-            let granted: Bool
-            if EventKitService.shared.isAuthorized {
-                granted = true
-            } else {
-                granted = await EventKitService.shared.requestFullAccess()
-            }
-            if granted {
-                do {
-                    let id = try EventKitService.shared.upsert(
-                        title: "训练 · \(template.name)",
-                        date: plan.date,
-                        timeMinutes: plan.scheduledTimeMinutes,
-                        notes: "VBTrainer 自动生成 · 共 \(template.items.count) 个动作",
-                        existingIdentifier: plan.eventKitIdentifier
-                    )
-                    plan.eventKitIdentifier = id
-                    try? context.save()
-                    statusMessage = "已同步到 iPhone 日历"
-                } catch {
-                    statusMessage = "日历写入失败：\(error.localizedDescription)"
+                // Use full access — write-only (iOS 17+) can't enumerate
+                // calendars, which means upsert() can't pick a target calendar
+                // and silently sends events to nowhere. Full access lets us
+                // both create + read, and the resulting event shows in the iOS
+                // Calendar app reliably.
+                let granted: Bool = if EventKitService.shared.isAuthorized {
+                    true
+                } else {
+                    await EventKitService.shared.requestFullAccess()
                 }
-            } else {
-                statusMessage = "未授权日历访问"
-            }
+                if granted {
+                    do {
+                        let id = try EventKitService.shared.upsert(
+                            title: "训练 · \(template.name)",
+                            date: plan.date,
+                            timeMinutes: plan.scheduledTimeMinutes,
+                            notes: "VBTrainer 自动生成 · 共 \(template.items.count) 个动作",
+                            existingIdentifier: plan.eventKitIdentifier
+                        )
+                        plan.eventKitIdentifier = id
+                        try? context.save()
+                        statusMessage = "已同步到 iPhone 日历"
+                    } catch {
+                        statusMessage = "日历写入失败：\(error.localizedDescription)"
+                    }
+                } else {
+                    statusMessage = "未授权日历访问"
+                }
             #endif
         }
         let templateRef = template

@@ -19,12 +19,11 @@
 import XCTest
 
 final class OnboardingUITest: XCTestCase {
-
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
 
-    func testOnboardingFlow() throws {
+    func testOnboardingFlow() {
         let app = XCUIApplication()
         app.launchArguments.append("-UI_TEST_MODE")
         app.launch()

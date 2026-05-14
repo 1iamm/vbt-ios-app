@@ -1,15 +1,20 @@
 // LVPChartView.swift
 // VBTrainer · iPhone · 2026-05
 
-import SwiftUI
 import Charts
+import SwiftUI
 
 struct LVPChartView: View {
     let fit: LVPFit
     let points: [(load: Double, velocity: Double)]
 
-    private var minLoad: Double { points.map(\.load).min() ?? 0 }
-    private var maxLoad: Double { points.map(\.load).max() ?? 100 }
+    private var minLoad: Double {
+        points.map(\.load).min() ?? 0
+    }
+
+    private var maxLoad: Double {
+        points.map(\.load).max() ?? 100
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Tokens.Space.md) {
@@ -23,7 +28,7 @@ struct LVPChartView: View {
             }
 
             Chart {
-                ForEach(Array(points.enumerated()), id: \.offset) { (_, p) in
+                ForEach(Array(points.enumerated()), id: \.offset) { _, p in
                     PointMark(
                         x: .value("重量", p.load),
                         y: .value("速度", p.velocity)

@@ -17,7 +17,7 @@ import SwiftData
 @Model
 public final class ReadinessSnapshot {
     @Attribute(.unique) public var id: UUID
-    public var date: Date                        // start-of-day, unique per day
+    public var date: Date // start-of-day, unique per day
 
     // Sleep
     public var sleepDurationHours: Double?
@@ -25,15 +25,15 @@ public final class ReadinessSnapshot {
     public var remSleepHours: Double?
 
     // HRV
-    public var hrv: Double?                      // SDNN in ms
-    public var hrvBaseline: Double?              // 7-day rolling
+    public var hrv: Double? // SDNN in ms
+    public var hrvBaseline: Double? // 7-day rolling
 
     // Resting HR
     public var restingHR: Int?
     public var restingHRBaseline: Double?
 
-    // Wrist temperature (Apple Watch Series 8+)
-    public var wristTemperatureDelta: Double?    // Celsius offset from baseline
+    /// Wrist temperature (Apple Watch Series 8+)
+    public var wristTemperatureDelta: Double? // Celsius offset from baseline
 
     public var respiratoryRate: Double?
 
@@ -68,7 +68,7 @@ public final class ReadinessSnapshot {
         self.wristTemperatureDelta = wristTemperatureDelta
         self.respiratoryRate = respiratoryRate
         self.score = score
-        self.tierRaw = tier.rawValue
+        tierRaw = tier.rawValue
     }
 
     public var tier: ReadinessTier {

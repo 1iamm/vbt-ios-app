@@ -15,11 +15,11 @@ import SwiftData
 @Model
 public final class DayPlan {
     @Attribute(.unique) public var id: UUID
-    public var date: Date              // start-of-day in user's calendar
+    public var date: Date // start-of-day in user's calendar
     public var templateId: UUID
-    public var scheduledTimeMinutes: Int   // minutes after midnight (0-1439)
+    public var scheduledTimeMinutes: Int // minutes after midnight (0-1439)
     public var eventKitIdentifier: String? // EKEvent.eventIdentifier when synced
-    public var completed: Bool             // legacy boolean; kept in sync with statusRaw
+    public var completed: Bool // legacy boolean; kept in sync with statusRaw
     public var completedWorkoutId: UUID?
     public var createdAt: Date
 
@@ -47,8 +47,8 @@ public final class DayPlan {
         self.completed = completed
         self.completedWorkoutId = completedWorkoutId
         self.createdAt = createdAt
-        self.statusRaw = status.rawValue
-        self.statusUpdatedAt = createdAt
+        statusRaw = status.rawValue
+        statusUpdatedAt = createdAt
     }
 
     public var status: DayPlanStatus {

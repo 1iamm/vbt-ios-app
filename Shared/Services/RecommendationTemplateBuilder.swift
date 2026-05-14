@@ -18,7 +18,6 @@ import SwiftData
 
 @available(iOS 17.0, watchOS 10.0, *)
 public enum RecommendationTemplateBuilder {
-
     /// 5-set pyramid PR re-test for a single exercise.
     @MainActor
     public static func buildPRRetest(
@@ -27,8 +26,10 @@ public enum RecommendationTemplateBuilder {
         in context: ModelContext
     ) -> Template {
         let exName = ExerciseLookup.exercise(byId: exerciseId)?.nameZH ?? exerciseId
-        let template = Template(name: "PR 重测 · \(exName)",
-                                notes: "金字塔加重 · 单动作冲 1RM")
+        let template = Template(
+            name: "PR 重测 · \(exName)",
+            notes: "金字塔加重 · 单动作冲 1RM"
+        )
         context.insert(template)
 
         let item = TemplateItem(
@@ -49,29 +50,37 @@ public enum RecommendationTemplateBuilder {
         // 2 warm-up + 5 work sets
         let warmups: [(Double, Int, Int)] = [
             (lastTopWeight * 0.40, 8, 90),
-            (lastTopWeight * 0.65, 5, 120),
+            (lastTopWeight * 0.65, 5, 120)
         ]
         let pyramid: [(Double, Int, Int)] = [
             (lastTopWeight * 0.80, 5, 150),
             (lastTopWeight * 0.90, 3, 180),
             (lastTopWeight * 0.95, 2, 180),
             (lastTopWeight * 1.00, 1, 180),
-            (lastTopWeight * 1.05, 1, 0),  // attempt
+            (lastTopWeight * 1.05, 1, 0) // attempt
         ]
         var idx = 1
         for (w, r, rest) in warmups {
-            let s = TemplateSetSpec(index: idx, kind: .warmUp,
-                                    weightKg: round(w),
-                                    reps: r, restSeconds: rest)
+            let s = TemplateSetSpec(
+                index: idx,
+                kind: .warmUp,
+                weightKg: round(w),
+                reps: r,
+                restSeconds: rest
+            )
             s.item = item
             item.setSpecs.append(s)
             context.insert(s)
             idx += 1
         }
         for (w, r, rest) in pyramid {
-            let s = TemplateSetSpec(index: idx, kind: .work,
-                                    weightKg: round(w),
-                                    reps: r, restSeconds: rest)
+            let s = TemplateSetSpec(
+                index: idx,
+                kind: .work,
+                weightKg: round(w),
+                reps: r,
+                restSeconds: rest
+            )
             s.item = item
             item.setSpecs.append(s)
             context.insert(s)
@@ -88,8 +97,10 @@ public enum RecommendationTemplateBuilder {
         baseTemplate: Template,
         in context: ModelContext
     ) -> Template {
-        let template = Template(name: "减载 · \(baseTemplate.name)",
-                                notes: "降量 15% · 维持速度 · 神经恢复")
+        let template = Template(
+            name: "减载 · \(baseTemplate.name)",
+            notes: "降量 15% · 维持速度 · 神经恢复"
+        )
         context.insert(template)
 
         for orig in baseTemplate.items.sorted(by: { $0.index < $1.index }) {

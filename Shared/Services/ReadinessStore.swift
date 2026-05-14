@@ -6,7 +6,6 @@ import SwiftData
 
 @available(iOS 17.0, watchOS 10.0, *)
 public enum ReadinessStore {
-
     /// Inserts or replaces the snapshot for the given calendar day.
     public static func upsert(
         _ snapshot: ReadinessSnapshot,
@@ -20,7 +19,9 @@ public enum ReadinessStore {
             }
         )
         if let existing = try? context.fetch(descriptor) {
-            for old in existing { context.delete(old) }
+            for old in existing {
+                context.delete(old)
+            }
         }
         snapshot.date = day
         context.insert(snapshot)

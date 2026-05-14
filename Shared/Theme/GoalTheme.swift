@@ -8,35 +8,34 @@
 import SwiftUI
 
 public enum GoalTheme {
-
     public static func accent(for goal: TrainingGoal) -> Color {
         switch goal {
-        case .power:    return Color(hex: "FF3B30")  // 爆发 — 系统红
-        case .strength: return Tokens.Color.accent   // 力量 — 品牌橙
-        case .muscle:   return Color(hex: "BF5AF2")  // 增肌 — 紫
-        case .fatLoss:  return Color(hex: "32ADE6")  // 减脂 — 浅蓝
-        case .general:  return Color(hex: "5E5CE6")  // 综合 — 靛
+        case .power: Color(hex: "FF3B30") // 爆发 — 系统红
+        case .strength: Tokens.Color.accent // 力量 — 品牌橙
+        case .muscle: Color(hex: "BF5AF2") // 增肌 — 紫
+        case .fatLoss: Color(hex: "32ADE6") // 减脂 — 浅蓝
+        case .general: Color(hex: "5E5CE6") // 综合 — 靛
         }
     }
 
     public static func label(for goal: TrainingGoal) -> String {
         switch goal {
-        case .power:    return "爆发"
-        case .strength: return "力量"
-        case .muscle:   return "增肌"
-        case .fatLoss:  return "减脂"
-        case .general:  return "综合"
+        case .power: "爆发"
+        case .strength: "力量"
+        case .muscle: "增肌"
+        case .fatLoss: "减脂"
+        case .general: "综合"
         }
     }
 
     /// Default VL ceiling per goal (PRD §M5).
     public static func defaultVLCeiling(for goal: TrainingGoal) -> Double {
         switch goal {
-        case .power:    return 10
-        case .strength: return 20
-        case .muscle:   return 30
-        case .fatLoss:  return 40
-        case .general:  return 25
+        case .power: 10
+        case .strength: 20
+        case .muscle: 30
+        case .fatLoss: 40
+        case .general: 25
         }
     }
 }

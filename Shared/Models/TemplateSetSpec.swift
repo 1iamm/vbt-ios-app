@@ -19,11 +19,11 @@ public enum TemplateSetKind: String, Codable, CaseIterable, Sendable {
 @Model
 public final class TemplateSetSpec {
     @Attribute(.unique) public var id: UUID
-    public var index: Int                  // 1-based within the item
-    public var kindRaw: String             // TemplateSetKind
+    public var index: Int // 1-based within the item
+    public var kindRaw: String // TemplateSetKind
     public var weightKg: Double
     public var reps: Int
-    public var restSeconds: Int            // rest after this set; 0 = no rest
+    public var restSeconds: Int // rest after this set; 0 = no rest
 
     public var item: TemplateItem?
 
@@ -37,7 +37,7 @@ public final class TemplateSetSpec {
     ) {
         self.id = id
         self.index = index
-        self.kindRaw = kind.rawValue
+        kindRaw = kind.rawValue
         self.weightKg = weightKg
         self.reps = reps
         self.restSeconds = restSeconds

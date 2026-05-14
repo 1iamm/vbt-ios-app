@@ -1,8 +1,8 @@
 // PRListView.swift
 // VBTrainer · iPhone · 2026-05
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct PRListView: View {
     @Query(sort: \PersonalRecord.achievedAt, order: .reverse) private var prs: [PersonalRecord]
@@ -67,34 +67,34 @@ struct PRListView: View {
 
     private func prIcon(_ kind: PRKind) -> String {
         switch kind {
-        case .maxWeight: return "scalemass.fill"
-        case .e1RM: return "speedometer"
-        case .maxVolume: return "chart.bar.fill"
-        case .maxSingleRepVelocity: return "bolt.fill"
-        case .maxCMJ: return "figure.run"
+        case .maxWeight: "scalemass.fill"
+        case .e1RM: "speedometer"
+        case .maxVolume: "chart.bar.fill"
+        case .maxSingleRepVelocity: "bolt.fill"
+        case .maxCMJ: "figure.run"
         }
     }
 
     private func prLabel(_ kind: PRKind) -> String {
         switch kind {
-        case .maxWeight: return "最大重量"
-        case .e1RM: return "e1RM 估算"
-        case .maxVolume: return "最大训练量"
-        case .maxSingleRepVelocity: return "最快单 Rep"
-        case .maxCMJ: return "最高 CMJ"
+        case .maxWeight: "最大重量"
+        case .e1RM: "e1RM 估算"
+        case .maxVolume: "最大训练量"
+        case .maxSingleRepVelocity: "最快单 Rep"
+        case .maxCMJ: "最高 CMJ"
         }
     }
 
     private func formattedValue(_ pr: PersonalRecord) -> String {
         switch pr.kind {
         case .maxWeight, .e1RM:
-            return String(format: "%.1f kg", pr.value)
+            String(format: "%.1f kg", pr.value)
         case .maxVolume:
-            return String(format: "%.0f kg", pr.value)
+            String(format: "%.0f kg", pr.value)
         case .maxSingleRepVelocity:
-            return String(format: "%.2f m/s", pr.value)
+            String(format: "%.2f m/s", pr.value)
         case .maxCMJ:
-            return String(format: "%.1f cm", pr.value)
+            String(format: "%.1f cm", pr.value)
         }
     }
 }

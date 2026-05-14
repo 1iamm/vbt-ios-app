@@ -15,7 +15,6 @@ import SwiftUI
 @available(iOS 17.0, *)
 @MainActor
 public final class LiveWorkoutStore: ObservableObject {
-
     public static let shared = LiveWorkoutStore()
 
     /// Latest payload received. Nil until first .ready message arrives.
@@ -33,10 +32,14 @@ public final class LiveWorkoutStore: ObservableObject {
     public init() {}
 
     /// User tapped the minimize chevron — keep session active, hide cover.
-    public func minimize() { isMinimized = true }
+    public func minimize() {
+        isMinimized = true
+    }
 
     /// User tapped the Today banner — re-present the cover.
-    public func expand() { isMinimized = false }
+    public func expand() {
+        isMinimized = false
+    }
 
     /// Apply a payload received from the Watch. Old payloads (older
     /// timestamp than current) are ignored — protects against out-of-order
@@ -44,7 +47,7 @@ public final class LiveWorkoutStore: ObservableObject {
     public func apply(_ p: LiveProgressPayload) {
         if let current = payload, current.timestamp > p.timestamp {
             #if DEBUG
-            print("[LiveStore] dropping stale payload phase=\(p.phase) ts=\(p.timestamp) < current=\(current.timestamp)")
+                print("[LiveStore] dropping stale payload phase=\(p.phase) ts=\(p.timestamp) < current=\(current.timestamp)")
             #endif
             return
         }
@@ -58,7 +61,7 @@ public final class LiveWorkoutStore: ObservableObject {
             isLive = false
         }
         #if DEBUG
-        print("[LiveStore] apply phase=\(p.phase.rawValue) rep=\(p.currentRep)/\(p.targetReps) v=\(p.lastRepVelocity ?? -1)")
+            print("[LiveStore] apply phase=\(p.phase.rawValue) rep=\(p.currentRep)/\(p.targetReps) v=\(p.lastRepVelocity ?? -1)")
         #endif
     }
 

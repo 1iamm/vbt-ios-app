@@ -25,7 +25,7 @@ public struct ReadinessInput: Sendable, Equatable {
     public var sleepTotalHours: Double?
     public var sleepDeepHours: Double?
 
-    public var wristTempDelta: Double?    // Celsius from baseline
+    public var wristTempDelta: Double? // Celsius from baseline
 
     public init(
         hrv: Double? = nil,
@@ -60,12 +60,11 @@ public struct ReadinessOutput: Sendable, Equatable {
 }
 
 public enum ReadinessCalculator {
-
     /// Reference: Citations.plews2013HRV — HRV / readiness weighting.
-    public static let weightHRV: Double   = 0.50
+    public static let weightHRV: Double = 0.50
     public static let weightSleep: Double = 0.25
-    public static let weightRHR: Double   = 0.20
-    public static let weightTemp: Double  = 0.05
+    public static let weightRHR: Double = 0.20
+    public static let weightTemp: Double = 0.05
 
     public static func compute(input: ReadinessInput) -> ReadinessOutput {
         // Need at least HRV with baseline (or RHR with baseline) to score.
@@ -88,10 +87,10 @@ public enum ReadinessCalculator {
         // Weighted average over available subscores
         var totalWeight: Double = 0
         var totalScore: Double = 0
-        if let s = hrvSub   { totalScore += Double(s) * weightHRV;   totalWeight += weightHRV }
+        if let s = hrvSub { totalScore += Double(s) * weightHRV; totalWeight += weightHRV }
         if let s = sleepSub { totalScore += Double(s) * weightSleep; totalWeight += weightSleep }
-        if let s = rhrSub   { totalScore += Double(s) * weightRHR;   totalWeight += weightRHR }
-        if let s = tempSub  { totalScore += Double(s) * weightTemp;  totalWeight += weightTemp }
+        if let s = rhrSub { totalScore += Double(s) * weightRHR; totalWeight += weightRHR }
+        if let s = tempSub { totalScore += Double(s) * weightTemp; totalWeight += weightTemp }
 
         guard totalWeight > 0 else {
             return ReadinessOutput(
@@ -114,9 +113,9 @@ public enum ReadinessCalculator {
 
     public static func tierFromScore(_ score: Int) -> ReadinessTier {
         switch score {
-        case 80...:   return .green
-        case 60..<80: return .yellow
-        default:      return .red
+        case 80...: .green
+        case 60..<80: .yellow
+        default: .red
         }
     }
 
@@ -126,7 +125,7 @@ public enum ReadinessCalculator {
         guard let hrv = input.hrv,
               let mean = input.hrvBaselineMean else { return nil }
         let std = input.hrvBaselineStd ?? max(1, mean * 0.1)
-        let z = (hrv - mean) / std    // higher than baseline is better for HRV
+        let z = (hrv - mean) / std // higher than baseline is better for HRV
         return scoreFromZ(z, higherIsBetter: true)
     }
 
@@ -134,7 +133,7 @@ public enum ReadinessCalculator {
         guard let rhr = input.rhr,
               let mean = input.rhrBaselineMean else { return nil }
         let std = input.rhrBaselineStd ?? max(1, mean * 0.05)
-        let z = (Double(rhr) - mean) / std    // lower rhr is better
+        let z = (Double(rhr) - mean) / std // lower rhr is better
         return scoreFromZ(z, higherIsBetter: false)
     }
 
@@ -142,13 +141,12 @@ public enum ReadinessCalculator {
         guard let total = input.sleepTotalHours else { return nil }
         // Reference: Citations.watson2017Sleep — adults benefit from 7-9h.
         // Score = max at 7.5h, drops linearly outside [6, 9].
-        let totalScore: Double
-        switch total {
-        case ..<5:    totalScore = 30
-        case 5..<6:   totalScore = 50 + (total - 5) * 30
-        case 6..<7.5: totalScore = 80 + (total - 6) * 13
-        case 7.5...9: totalScore = 100 - (total - 7.5) * 5
-        default:      totalScore = max(50, 80 - (total - 9) * 10)
+        let totalScore: Double = switch total {
+        case ..<5: 30
+        case 5..<6: 50 + (total - 5) * 30
+        case 6..<7.5: 80 + (total - 6) * 13
+        case 7.5...9: 100 - (total - 7.5) * 5
+        default: max(50, 80 - (total - 9) * 10)
         }
 
         // Bonus from deep sleep (max +10 if deep ≥ 1.5h)
@@ -177,11 +175,11 @@ public enum ReadinessCalculator {
     private static func scoreFromZ(_ z: Double, higherIsBetter: Bool) -> Int {
         let effective = higherIsBetter ? z : -z
         switch effective {
-        case 1...:           return 100
-        case 0..<1:          return Int((90 + effective * 10).rounded())  // 90-100
-        case -1..<0:         return Int((90 + effective * 30).rounded())  // 60-90
-        case -2..<(-1):      return Int((30 + (effective + 2) * 30).rounded()) // 30-60
-        default:             return 0
+        case 1...: return 100
+        case 0..<1: return Int((90 + effective * 10).rounded()) // 90-100
+        case -1..<0: return Int((90 + effective * 30).rounded()) // 60-90
+        case -2..<(-1): return Int((30 + (effective + 2) * 30).rounded()) // 30-60
+        default: return 0
         }
     }
 }

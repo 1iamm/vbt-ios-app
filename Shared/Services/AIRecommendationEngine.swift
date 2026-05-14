@@ -64,14 +64,14 @@ public struct AIRecommendation: Identifiable, Hashable, Sendable {
 
 @available(iOS 17.0, watchOS 10.0, *)
 public enum AIRecommendationEngine {
-
     @MainActor
     public static func recommendations(context: ModelContext) -> [AIRecommendation] {
         var out: [AIRecommendation] = []
 
         // Rule 1: low readiness → deload (uses most recent template as base)
         if let snap = latestReadiness(context: context),
-           let score = snap.score, score < 65 {
+           let score = snap.score, score < 65
+        {
             let baseTemplateId = latestTemplate(context: context)?.id
             out.append(.init(
                 title: "减载日",
@@ -87,7 +87,8 @@ public enum AIRecommendationEngine {
         // Rule 2: PR re-test if no recent PR attempt
         if let topExId = topExerciseId(context: context),
            let exName = ExerciseLookup.exercise(byId: topExId)?.nameZH,
-           daysSinceLastWorkout(exerciseId: topExId, context: context) >= 21 {
+           daysSinceLastWorkout(exerciseId: topExId, context: context) >= 21
+        {
             let topW = lastTopWeight(exerciseId: topExId, context: context) ?? 100
             out.append(.init(
                 title: "\(exName) · PR 重测",

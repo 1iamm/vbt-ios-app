@@ -7,13 +7,13 @@
 import Foundation
 
 public struct PaperCitation: Identifiable, Codable, Hashable, Sendable {
-    public let id: String        // e.g. "gonzalezBadillo2010Velocity"
+    public let id: String // e.g. "gonzalezBadillo2010Velocity"
     public let authors: String
     public let year: Int
     public let title: String
     public let journal: String
     public let doi: String?
-    public let url: String       // PubMed / PMC / DOI — must be https://
+    public let url: String // PubMed / PMC / DOI — must be https://
     public let topic: CitationTopic
 
     public init(

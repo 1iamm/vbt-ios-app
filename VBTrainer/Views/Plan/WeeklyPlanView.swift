@@ -6,8 +6,8 @@
 // day, and (optionally) writes those entries to iPhone's Calendar via
 // EventKit.
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct WeeklyPlanView: View {
     @Environment(\.modelContext) private var context
@@ -25,9 +25,17 @@ struct WeeklyPlanView: View {
         let date: Date
     }
 
-    private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
-    private var accent: Color { GoalTheme.accent(for: goal) }
-    private var sysBlue: Color { Color(hex: "0A84FF") }
+    private var goal: TrainingGoal {
+        profiles.first?.trainingGoal ?? .strength
+    }
+
+    private var accent: Color {
+        GoalTheme.accent(for: goal)
+    }
+
+    private var sysBlue: Color {
+        Color(hex: "0A84FF")
+    }
 
     private var weekStart: Date {
         var cal = Calendar.current
@@ -200,7 +208,7 @@ struct WeeklyPlanView: View {
 
     private func dayRow(day: Date, plan: DayPlan?) -> some View {
         let cal = Calendar.current
-        let weekdayLabels = ["日","一","二","三","四","五","六"]
+        let weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"]
         let weekday = weekdayLabels[cal.component(.weekday, from: day) - 1]
         let template = plan.flatMap { p in templates.first(where: { $0.id == p.templateId }) }
         return HStack(spacing: 12) {
@@ -265,8 +273,11 @@ struct WeeklyPlanView: View {
 
     private var syncOptions: some View {
         VStack(spacing: 0) {
-            optionRow(icon: "tag", label: "写入到日历",
-                      trailing: EventKitService.calendarName)
+            optionRow(
+                icon: "tag",
+                label: "写入到日历",
+                trailing: EventKitService.calendarName
+            )
             Divider().padding(.leading, 44)
             optionRow(icon: "bell", label: "提前提醒", trailing: "30 分钟")
             Divider().padding(.leading, 44)
@@ -347,7 +358,7 @@ struct WeeklyPlanView: View {
                 plan.eventKitIdentifier = id
             } catch {
                 #if DEBUG
-                print("WeeklyPlanView sync error: \(error)")
+                    print("WeeklyPlanView sync error: \(error)")
                 #endif
             }
         }
@@ -364,9 +375,7 @@ struct DayTemplatePickerSheet: View {
     @Query(sort: \Template.updatedAt, order: .reverse) private var templates: [Template]
     @Query(sort: \DayPlan.date) private var allPlans: [DayPlan]
 
-    @State private var time: Date = {
-        Calendar.current.date(bySettingHour: 7, minute: 30, second: 0, of: Date()) ?? Date()
-    }()
+    @State private var time: Date = Calendar.current.date(bySettingHour: 7, minute: 30, second: 0, of: Date()) ?? Date()
 
     private var existing: DayPlan? {
         let start = Calendar.current.startOfDay(for: day)
@@ -423,8 +432,10 @@ struct DayTemplatePickerSheet: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if let plan = existing {
-                let comps = DateComponents(hour: plan.scheduledTimeMinutes / 60,
-                                           minute: plan.scheduledTimeMinutes % 60)
+                let comps = DateComponents(
+                    hour: plan.scheduledTimeMinutes / 60,
+                    minute: plan.scheduledTimeMinutes % 60
+                )
                 if let t = Calendar.current.date(from: comps) { time = t }
             }
         }
@@ -453,7 +464,7 @@ struct DayTemplatePickerSheet: View {
                 try? context.save()
             } catch {
                 #if DEBUG
-                print("DayTemplatePicker EventKit error: \(error)")
+                    print("DayTemplatePicker EventKit error: \(error)")
                 #endif
             }
         }
@@ -470,4 +481,3 @@ struct DayTemplatePickerSheet: View {
         return f.string(from: date)
     }
 }
-

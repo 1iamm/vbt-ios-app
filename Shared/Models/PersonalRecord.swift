@@ -28,7 +28,7 @@ public final class PersonalRecord {
     ) {
         self.id = id
         self.exerciseId = exerciseId
-        self.kindRaw = kind.rawValue
+        kindRaw = kind.rawValue
         self.value = value
         self.achievedAt = achievedAt
         self.sourceWorkoutId = sourceWorkoutId

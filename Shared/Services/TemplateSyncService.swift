@@ -7,12 +7,11 @@
 import Foundation
 
 #if canImport(WatchConnectivity)
-import WatchConnectivity
+    import WatchConnectivity
 #endif
 
 @available(iOS 17.0, watchOS 10.0, *)
 public enum TemplateSyncService {
-
     public static func snapshot(of template: Template, on date: Date) -> TemplateSnapshot {
         let day = Calendar.current.startOfDay(for: date)
         let items: [TemplateItemSnapshot] = template.items
@@ -55,17 +54,17 @@ public enum TemplateSyncService {
     public static func push(template: Template, on date: Date) {
         let snap = snapshot(of: template, on: date)
         #if canImport(WatchConnectivity) && os(iOS)
-        guard WCSession.isSupported() else { return }
-        let session = WCSession.default
-        guard session.activationState == .activated else { return }
-        do {
-            let userInfo = try ConnectivityCodec.encode(.template(snap))
-            session.transferUserInfo(userInfo)
-        } catch {
-            #if DEBUG
-            print("TemplateSyncService.push error: \(error)")
-            #endif
-        }
+            guard WCSession.isSupported() else { return }
+            let session = WCSession.default
+            guard session.activationState == .activated else { return }
+            do {
+                let userInfo = try ConnectivityCodec.encode(.template(snap))
+                session.transferUserInfo(userInfo)
+            } catch {
+                #if DEBUG
+                    print("TemplateSyncService.push error: \(error)")
+                #endif
+            }
         #endif
     }
 
@@ -98,89 +97,89 @@ public enum TemplateSyncService {
         // is what makes the in-flight UI actually populate.
         let templateSnap = snapshot(of: template, on: date)
         #if canImport(WatchConnectivity) && os(iOS)
-        guard WCSession.isSupported() else { return .failed("WCSession unsupported") }
-        let session = WCSession.default
-        // Activation is async after session.activate() — if user taps right
-        // after app launch, state can still be .inactive / .notActivated.
-        // Poll up to 3s for .activated before giving up. (Simulator first-
-        // launch usually completes within 1s.)
-        if session.activationState != .activated {
-            #if DEBUG
-            print("[WC] iPhone pushAndStart waiting for activation, current state=\(session.activationState.rawValue)")
-            #endif
-            session.activate()
-            let deadline = Date().addingTimeInterval(3.0)
-            while Date() < deadline && session.activationState != .activated {
-                try? await Task.sleep(nanoseconds: 100_000_000)
-            }
-            #if DEBUG
-            print("[WC] iPhone pushAndStart post-wait state=\(session.activationState.rawValue)")
-            #endif
-        }
-        guard session.activationState == .activated else {
-            return .failed("Watch 还没连接好，等几秒再试")
-        }
-        // Push the queued template AFTER activation succeeds so the
-        // transferUserInfo doesn't get dropped on the floor.
-        push(template: template, on: date)
-        let activation = StartWorkoutSnapshot(
-            templateId: template.id,
-            startItemIndex: startItemIndex,
-            template: templateSnap
-        )
-        let userInfo: [String: Any]
-        do {
-            userInfo = try ConnectivityCodec.encode(.startWorkout(activation))
-        } catch {
-            return .failed("encode error: \(error.localizedDescription)")
-        }
-
-        #if DEBUG
-        print("[WC] iPhone pushAndStart reachable=\(session.isReachable) (will sendMessage regardless)")
-        #endif
-
-        // 1) Always try sendMessage first — 模拟器里 isReachable 经常误报
-        // false，但 sendMessage 实际可能成功。失败时 errorHandler 立即回落
-        // transferUserInfo。
-        let delivered = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
-            var resumed = false
-            let lock = NSLock()
-            let resume: (Bool) -> Void = { value in
-                lock.lock(); defer { lock.unlock() }
-                guard !resumed else { return }
-                resumed = true
-                cont.resume(returning: value)
-            }
-            let timeoutTask = Task {
-                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-                resume(false)
-            }
-            session.sendMessage(userInfo, replyHandler: { _ in
-                timeoutTask.cancel()
-                resume(true)
-            }, errorHandler: { err in
+            guard WCSession.isSupported() else { return .failed("WCSession unsupported") }
+            let session = WCSession.default
+            // Activation is async after session.activate() — if user taps right
+            // after app launch, state can still be .inactive / .notActivated.
+            // Poll up to 3s for .activated before giving up. (Simulator first-
+            // launch usually completes within 1s.)
+            if session.activationState != .activated {
                 #if DEBUG
-                print("[WC] iPhone sendMessage failed: \(err.localizedDescription)")
+                    print("[WC] iPhone pushAndStart waiting for activation, current state=\(session.activationState.rawValue)")
                 #endif
-                timeoutTask.cancel()
-                resume(false)
-            })
-        }
-        if delivered {
-            #if DEBUG
-            print("[WC] iPhone pushAndStart .delivered")
-            #endif
-            return .delivered
-        }
+                session.activate()
+                let deadline = Date().addingTimeInterval(3.0)
+                while Date() < deadline, session.activationState != .activated {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                }
+                #if DEBUG
+                    print("[WC] iPhone pushAndStart post-wait state=\(session.activationState.rawValue)")
+                #endif
+            }
+            guard session.activationState == .activated else {
+                return .failed("Watch 还没连接好，等几秒再试")
+            }
+            // Push the queued template AFTER activation succeeds so the
+            // transferUserInfo doesn't get dropped on the floor.
+            push(template: template, on: date)
+            let activation = StartWorkoutSnapshot(
+                templateId: template.id,
+                startItemIndex: startItemIndex,
+                template: templateSnap
+            )
+            let userInfo: [String: Any]
+            do {
+                userInfo = try ConnectivityCodec.encode(.startWorkout(activation))
+            } catch {
+                return .failed("encode error: \(error.localizedDescription)")
+            }
 
-        // 2) Fallback: queue via transferUserInfo (delivered on next watch launch)
-        session.transferUserInfo(userInfo)
-        #if DEBUG
-        print("[WC] iPhone pushAndStart .queued (transferUserInfo fallback)")
-        #endif
-        return .queued
+            #if DEBUG
+                print("[WC] iPhone pushAndStart reachable=\(session.isReachable) (will sendMessage regardless)")
+            #endif
+
+            // 1) Always try sendMessage first — 模拟器里 isReachable 经常误报
+            // false，但 sendMessage 实际可能成功。失败时 errorHandler 立即回落
+            // transferUserInfo。
+            let delivered = await withCheckedContinuation { (cont: CheckedContinuation<Bool, Never>) in
+                var resumed = false
+                let lock = NSLock()
+                let resume: (Bool) -> Void = { value in
+                    lock.lock(); defer { lock.unlock() }
+                    guard !resumed else { return }
+                    resumed = true
+                    cont.resume(returning: value)
+                }
+                let timeoutTask = Task {
+                    try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                    resume(false)
+                }
+                session.sendMessage(userInfo, replyHandler: { _ in
+                    timeoutTask.cancel()
+                    resume(true)
+                }, errorHandler: { err in
+                    #if DEBUG
+                        print("[WC] iPhone sendMessage failed: \(err.localizedDescription)")
+                    #endif
+                    timeoutTask.cancel()
+                    resume(false)
+                })
+            }
+            if delivered {
+                #if DEBUG
+                    print("[WC] iPhone pushAndStart .delivered")
+                #endif
+                return .delivered
+            }
+
+            // 2) Fallback: queue via transferUserInfo (delivered on next watch launch)
+            session.transferUserInfo(userInfo)
+            #if DEBUG
+                print("[WC] iPhone pushAndStart .queued (transferUserInfo fallback)")
+            #endif
+            return .queued
         #else
-        return .failed("WatchConnectivity unavailable on this build")
+            return .failed("WatchConnectivity unavailable on this build")
         #endif
     }
 
@@ -190,17 +189,17 @@ public enum TemplateSyncService {
     /// `xcodegen generate` to pick up a new file.
     public static func pushPreferences(_ snapshot: WatchPreferencesSnapshot) {
         #if canImport(WatchConnectivity) && os(iOS)
-        guard WCSession.isSupported() else { return }
-        let session = WCSession.default
-        guard session.activationState == .activated else { return }
-        do {
-            let userInfo = try ConnectivityCodec.encode(.preferences(snapshot))
-            session.transferUserInfo(userInfo)
-        } catch {
-            #if DEBUG
-            print("TemplateSyncService.pushPreferences error: \(error)")
-            #endif
-        }
+            guard WCSession.isSupported() else { return }
+            let session = WCSession.default
+            guard session.activationState == .activated else { return }
+            do {
+                let userInfo = try ConnectivityCodec.encode(.preferences(snapshot))
+                session.transferUserInfo(userInfo)
+            } catch {
+                #if DEBUG
+                    print("TemplateSyncService.pushPreferences error: \(error)")
+                #endif
+            }
         #endif
     }
 
@@ -218,19 +217,19 @@ public enum TemplateSyncService {
 
     private static func pushRest(payload: RestAdjustPayload) {
         #if canImport(WatchConnectivity) && os(iOS)
-        guard WCSession.isSupported() else { return }
-        let session = WCSession.default
-        guard session.activationState == .activated else { return }
-        do {
-            let userInfo = try ConnectivityCodec.encode(.restAdjust(payload))
-            session.sendMessage(userInfo, replyHandler: nil) { _ in
-                session.transferUserInfo(userInfo)
+            guard WCSession.isSupported() else { return }
+            let session = WCSession.default
+            guard session.activationState == .activated else { return }
+            do {
+                let userInfo = try ConnectivityCodec.encode(.restAdjust(payload))
+                session.sendMessage(userInfo, replyHandler: nil) { _ in
+                    session.transferUserInfo(userInfo)
+                }
+            } catch {
+                #if DEBUG
+                    print("TemplateSyncService.pushRest error: \(error)")
+                #endif
             }
-        } catch {
-            #if DEBUG
-            print("TemplateSyncService.pushRest error: \(error)")
-            #endif
-        }
         #endif
     }
 
@@ -239,19 +238,19 @@ public enum TemplateSyncService {
     /// delivery shape as pushRest.
     public static func pushSetControl(_ action: SetControlPayload.Action, workoutId: UUID? = nil) {
         #if canImport(WatchConnectivity) && os(iOS)
-        guard WCSession.isSupported() else { return }
-        let session = WCSession.default
-        guard session.activationState == .activated else { return }
-        do {
-            let userInfo = try ConnectivityCodec.encode(.setControl(SetControlPayload(action: action, workoutId: workoutId)))
-            session.sendMessage(userInfo, replyHandler: nil) { _ in
-                session.transferUserInfo(userInfo)
+            guard WCSession.isSupported() else { return }
+            let session = WCSession.default
+            guard session.activationState == .activated else { return }
+            do {
+                let userInfo = try ConnectivityCodec.encode(.setControl(SetControlPayload(action: action, workoutId: workoutId)))
+                session.sendMessage(userInfo, replyHandler: nil) { _ in
+                    session.transferUserInfo(userInfo)
+                }
+            } catch {
+                #if DEBUG
+                    print("TemplateSyncService.pushSetControl error: \(error)")
+                #endif
             }
-        } catch {
-            #if DEBUG
-            print("TemplateSyncService.pushSetControl error: \(error)")
-            #endif
-        }
         #endif
     }
 }

@@ -6,7 +6,6 @@ import SwiftData
 
 @available(iOS 17.0, watchOS 10.0, *)
 public enum JumpTestStore {
-
     @discardableResult
     public static func save(
         attempts: [Double],

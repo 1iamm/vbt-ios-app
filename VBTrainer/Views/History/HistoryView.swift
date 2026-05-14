@@ -5,8 +5,8 @@
 // Supports list / exercise grouping segments. Done = accent dot, planned =
 // blue dot, CMJ = velocity-blue dot. Today = system-red filled circle.
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct HistoryView: View {
     @Environment(\.modelContext) private var context
@@ -27,8 +27,13 @@ struct HistoryView: View {
         case exercise = "动作"
     }
 
-    private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
-    private var accent: Color { GoalTheme.accent(for: goal) }
+    private var goal: TrainingGoal {
+        profiles.first?.trainingGoal ?? .strength
+    }
+
+    private var accent: Color {
+        GoalTheme.accent(for: goal)
+    }
 
     var body: some View {
         NavigationStack {
@@ -78,8 +83,8 @@ struct HistoryView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(Color(hex: "0A84FF"))
             Text(EventKitService.shared.isAuthorized
-                 ? "已与 iPhone 日历「\(EventKitService.calendarName)」联动"
-                 : "未联动 iPhone 日历")
+                ? "已与 iPhone 日历「\(EventKitService.calendarName)」联动"
+                : "未联动 iPhone 日历")
                 .font(.system(size: 11))
                 .foregroundStyle(Tokens.Color.secondaryLabel)
             Spacer()
@@ -136,7 +141,8 @@ struct HistoryView: View {
         // day doesn't already carry a completed-workout dot. Skipped / missed
         // plans get no calendar dot — they're surfaced in the list views.
         for plan in allPlans
-            where plan.status == .scheduled || plan.status == .inProgress {
+            where plan.status == .scheduled || plan.status == .inProgress
+        {
             let key = cal.startOfDay(for: plan.date)
             if !out.keys.contains(key) {
                 out[key, default: []].append(.planned)
@@ -161,8 +167,6 @@ struct HistoryView: View {
         } else if let plan, let template = templates.first(where: { $0.id == plan.templateId }) {
             SectionHeader(title: formatDay(day))
             plannedDayCard(plan: plan, template: template)
-        } else {
-            EmptyView()
         }
     }
 
@@ -192,9 +196,11 @@ struct HistoryView: View {
             }
             HStack(spacing: 8) {
                 miniStat(value: "\(dur)", label: "时长", unit: "分钟")
-                miniStat(value: vol >= 1000 ? String(format: "%.1f", vol / 1000) : String(format: "%.0f", vol),
-                         label: "总训练量",
-                         unit: vol >= 1000 ? "t" : "kg")
+                miniStat(
+                    value: vol >= 1000 ? String(format: "%.1f", vol / 1000) : String(format: "%.0f", vol),
+                    label: "总训练量",
+                    unit: vol >= 1000 ? "t" : "kg"
+                )
                 miniStat(value: "\(setCount)", label: "总组数", unit: nil)
                 miniStat(value: String(format: "%.2f", avgVelocity), label: "均速", unit: "m/s")
             }
@@ -278,7 +284,7 @@ struct HistoryView: View {
         let dur = Int(w.durationSeconds / 60)
         let vol = w.totalVolumeKg
         let cal = Calendar.current
-        let weekdayLabels = ["日","一","二","三","四","五","六"]
+        let weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"]
         let weekday = weekdayLabels[cal.component(.weekday, from: w.startedAt) - 1]
         return HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
@@ -309,10 +315,12 @@ struct HistoryView: View {
     @ViewBuilder
     private var listView: some View {
         if workouts.isEmpty {
-            EmptyStateCard(title: "还没有训练记录",
-                           subtitle: "在 Watch 上完成第一次训练后，记录会自动同步到这里")
-                .padding(.horizontal, Tokens.Space.lg)
-                .padding(.top, 16)
+            EmptyStateCard(
+                title: "还没有训练记录",
+                subtitle: "在 Watch 上完成第一次训练后，记录会自动同步到这里"
+            )
+            .padding(.horizontal, Tokens.Space.lg)
+            .padding(.top, 16)
         } else {
             VStack(spacing: 0) {
                 ForEach(workouts) { w in
@@ -336,7 +344,7 @@ struct HistoryView: View {
     @ViewBuilder
     private var exerciseGroupsView: some View {
         let groups = Dictionary(grouping: workouts) { $0.exerciseId }
-            .map { (id, ws) in (id, ws.sorted(by: { $0.startedAt > $1.startedAt })) }
+            .map { id, ws in (id, ws.sorted(by: { $0.startedAt > $1.startedAt })) }
             .sorted { $0.1.count > $1.1.count }
         VStack(spacing: 0) {
             ForEach(groups, id: \.0) { id, ws in

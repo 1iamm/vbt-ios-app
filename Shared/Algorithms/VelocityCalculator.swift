@@ -11,7 +11,6 @@
 import Foundation
 
 public struct VelocityCalculator {
-
     /// Internal velocity state (m/s) along the integration axis.
     public private(set) var velocity: Double = 0
 
@@ -77,7 +76,7 @@ public struct VelocityCalculator {
         let propulsive = window.filter { $0.a > 0 }
         let mpv: Double
         if propulsive.isEmpty {
-            mpv = meanV   // fallback
+            mpv = meanV // fallback
         } else {
             let propVels = propulsive.map { abs($0.v) }
             mpv = propVels.reduce(0, +) / Double(propVels.count)

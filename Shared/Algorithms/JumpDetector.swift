@@ -11,7 +11,6 @@
 import Foundation
 
 public final class JumpDetector {
-
     public struct JumpResult: Sendable, Equatable {
         public let heightCm: Double
         public let flightTimeSeconds: Double
@@ -21,16 +20,18 @@ public final class JumpDetector {
 
     public struct Tuning: Sendable {
         /// |userAccel.z| below this for ≥ minFlightDuration → flight
-        public var freeFallAccelThreshold: Double = 1.5      // m/s²
-        public var landingImpactThreshold: Double = 15.0     // m/s² (≈ 1.5g over removed gravity)
-        public var minFlightDuration: Double = 0.10          // s — under this is noise
-        public var maxFlightDuration: Double = 1.20          // s — over this is unrealistic
+        public var freeFallAccelThreshold: Double = 1.5 // m/s²
+        public var landingImpactThreshold: Double = 15.0 // m/s² (≈ 1.5g over removed gravity)
+        public var minFlightDuration: Double = 0.10 // s — under this is noise
+        public var maxFlightDuration: Double = 1.20 // s — over this is unrealistic
 
         public init() {}
     }
 
     public private(set) var attempts: [JumpResult] = []
-    public var bestHeightCm: Double { attempts.map(\.heightCm).max() ?? 0 }
+    public var bestHeightCm: Double {
+        attempts.map(\.heightCm).max() ?? 0
+    }
 
     public var onJump: ((JumpResult) -> Void)?
 
@@ -65,7 +66,7 @@ public final class JumpDetector {
                 // Once in free-fall for the minimum duration, flag as in-flight.
                 if let s = freeFallStartedAt, t - s > tuning.minFlightDuration {
                     phase = .inFlight
-                    freeFallStartedAt = s   // keep takeoff time
+                    freeFallStartedAt = s // keep takeoff time
                 }
             } else {
                 freeFallStartedAt = nil
@@ -76,7 +77,7 @@ public final class JumpDetector {
             if a > tuning.landingImpactThreshold {
                 let takeoff = freeFallStartedAt ?? t
                 let flight = t - takeoff
-                if flight >= tuning.minFlightDuration && flight <= tuning.maxFlightDuration {
+                if flight >= tuning.minFlightDuration, flight <= tuning.maxFlightDuration {
                     let g = 9.80665
                     let height_m = g * flight * flight / 8.0
                     let result = JumpResult(

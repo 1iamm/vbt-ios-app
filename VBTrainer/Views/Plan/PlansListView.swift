@@ -5,8 +5,8 @@
 // weekly planner. Replaces the old PlansView's NavigationLink → form-based
 // editor with the new single-screen PlanView editor.
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct PlansListView: View {
     @Environment(\.modelContext) private var context
@@ -20,8 +20,13 @@ struct PlansListView: View {
     @State private var renameText: String = ""
     @State private var deleteTarget: Template?
 
-    private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
-    private var accent: Color { GoalTheme.accent(for: goal) }
+    private var goal: TrainingGoal {
+        profiles.first?.trainingGoal ?? .strength
+    }
+
+    private var accent: Color {
+        GoalTheme.accent(for: goal)
+    }
 
     var body: some View {
         NavigationStack {
@@ -107,7 +112,6 @@ struct PlansListView: View {
         }
     }
 
-    @ViewBuilder
     private func templateRow(_ tpl: Template) -> some View {
         NavigationLink {
             PlanView(template: tpl, plannedDate: Date())

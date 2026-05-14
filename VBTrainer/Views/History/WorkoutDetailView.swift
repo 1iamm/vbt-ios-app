@@ -5,8 +5,8 @@
 // cards (every set's weight × reps × rest × mean-velocity, with PR badge and
 // inline mini sparkline of velocity decay).
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 struct WorkoutDetailView: View {
     let workoutId: UUID
@@ -24,9 +24,17 @@ struct WorkoutDetailView: View {
         _prs = Query(filter: #Predicate<PersonalRecord> { $0.sourceWorkoutId == workoutId })
     }
 
-    private var workout: Workout? { workouts.first }
-    private var goal: TrainingGoal { profiles.first?.trainingGoal ?? .strength }
-    private var accent: Color { GoalTheme.accent(for: goal) }
+    private var workout: Workout? {
+        workouts.first
+    }
+
+    private var goal: TrainingGoal {
+        profiles.first?.trainingGoal ?? .strength
+    }
+
+    private var accent: Color {
+        GoalTheme.accent(for: goal)
+    }
 
     @State private var editingFeedback = false
     @State private var draftRPE: Int = 7
@@ -125,8 +133,11 @@ struct WorkoutDetailView: View {
             }
             HStack(spacing: 18) {
                 heroStat(value: "\(dur)", unit: "min", label: "时长")
-                heroStat(value: vol >= 1000 ? String(format: "%.1f", vol / 1000) : String(format: "%.0f", vol),
-                         unit: vol >= 1000 ? "t" : "kg", label: "训练量")
+                heroStat(
+                    value: vol >= 1000 ? String(format: "%.1f", vol / 1000) : String(format: "%.0f", vol),
+                    unit: vol >= 1000 ? "t" : "kg",
+                    label: "训练量"
+                )
                 heroStat(value: "\(setCount)", unit: "组", label: "总组数")
                 heroStat(value: String(format: "%.2f", avgVel), unit: "m/s", label: "均速")
             }
@@ -222,20 +233,20 @@ struct WorkoutDetailView: View {
 
     private func rpeRingColor(_ rpe: Int) -> Color {
         switch rpe {
-        case 1...4:  return Tokens.Color.success
-        case 5...7:  return accent
-        case 8...9:  return Tokens.Color.warning
-        default:     return Tokens.Color.danger
+        case 1...4: Tokens.Color.success
+        case 5...7: accent
+        case 8...9: Tokens.Color.warning
+        default: Tokens.Color.danger
         }
     }
 
     private func rpeLabel(_ rpe: Int) -> String {
         switch rpe {
-        case 1...3: return "轻松"
-        case 4...5: return "中等"
-        case 6...7: return "偏重"
-        case 8...9: return "很重"
-        default:    return "极限"
+        case 1...3: "轻松"
+        case 4...5: "中等"
+        case 6...7: "偏重"
+        case 8...9: "很重"
+        default: "极限"
         }
     }
 
@@ -279,10 +290,8 @@ struct WorkoutDetailView: View {
     private func exerciseGroups(workout: Workout) -> some View {
         // V1 has one exercise per workout. Group sets together; future workouts
         // with multiple exercises (template-driven) will show separate cards.
-        let groups: [(exId: String, sets: [WorkoutSet])] = {
-            // Treat all sets as belonging to the workout's exerciseId for now.
-            return [(workout.exerciseId, workout.sets.sorted { $0.index < $1.index })]
-        }()
+        let groups: [(exId: String, sets: [WorkoutSet])] = // Treat all sets as belonging to the workout's exerciseId for now.
+            [(workout.exerciseId, workout.sets.sorted { $0.index < $1.index })]
         VStack(spacing: 10) {
             ForEach(Array(groups.enumerated()), id: \.offset) { idx, group in
                 exerciseCard(idx: idx, exId: group.exId, sets: group.sets)
@@ -452,7 +461,7 @@ struct FeedbackEditorSheet: View {
                         get: { Double(rpe) },
                         set: { rpe = Int($0.rounded()) }
                     ), in: 1...10, step: 1)
-                    .tint(accent)
+                        .tint(accent)
                 }
                 .padding(.vertical, 4)
             }
@@ -499,28 +508,28 @@ struct FeedbackEditorSheet: View {
 
     private var rpeColor: Color {
         switch rpe {
-        case 1...4: return Tokens.Color.success
-        case 5...7: return accent
-        case 8...9: return Tokens.Color.warning
-        default:    return Tokens.Color.danger
+        case 1...4: Tokens.Color.success
+        case 5...7: accent
+        case 8...9: Tokens.Color.warning
+        default: Tokens.Color.danger
         }
     }
 
     private var rpeLabel: String {
         switch rpe {
-        case 1: return "极轻 · 暖身"
-        case 2...3: return "轻松"
-        case 4...5: return "中等"
-        case 6...7: return "偏重 · 挑战"
-        case 8: return "很重 · 接近极限"
-        case 9: return "极重 · 1-2 reps in reserve"
-        default: return "极限 · 不能再多一组"
+        case 1: "极轻 · 暖身"
+        case 2...3: "轻松"
+        case 4...5: "中等"
+        case 6...7: "偏重 · 挑战"
+        case 8: "很重 · 接近极限"
+        case 9: "极重 · 1-2 reps in reserve"
+        default: "极限 · 不能再多一组"
         }
     }
 }
 
-// Wrapper that locks the existing comprehensive chart into a forced-landscape
-// orientation while it's on screen. Keeps the chart implementation untouched.
+/// Wrapper that locks the existing comprehensive chart into a forced-landscape
+/// orientation while it's on screen. Keeps the chart implementation untouched.
 struct ComprehensiveTimelineLandscape: View {
     let workout: Workout
     @Environment(\.dismiss) private var dismiss
@@ -528,10 +537,14 @@ struct ComprehensiveTimelineLandscape: View {
     var body: some View {
         GeometryReader { geo in
             ComprehensiveChartView(workout: workout)
-                .frame(width: max(geo.size.width, geo.size.height),
-                       height: min(geo.size.width, geo.size.height))
-                .rotationEffect(geo.size.width < geo.size.height ? .degrees(90) : .zero,
-                                anchor: .topLeading)
+                .frame(
+                    width: max(geo.size.width, geo.size.height),
+                    height: min(geo.size.width, geo.size.height)
+                )
+                .rotationEffect(
+                    geo.size.width < geo.size.height ? .degrees(90) : .zero,
+                    anchor: .topLeading
+                )
                 .offset(x: geo.size.width < geo.size.height ? geo.size.width : 0)
         }
         .navigationTitle("综合时间轴")

@@ -14,7 +14,6 @@ import SwiftUI
 @available(watchOS 10.0, *)
 @MainActor
 public final class LiveWorkoutController: ObservableObject {
-
     // MARK: - Published mirrors of session state
 
     @Published public private(set) var rep: Int = 0
@@ -53,7 +52,7 @@ public final class LiveWorkoutController: ObservableObject {
     /// weight/reps/rest are pulled from `plannedSpecs[plannedSetCursor]`
     /// instead of repeating `currentWeightKg`.
     public private(set) var plannedSpecs: [TemplateSetSpecSnapshot] = []
-    public private(set) var plannedSetCursor: Int = 0  // 0-based index into plannedSpecs
+    public private(set) var plannedSetCursor: Int = 0 // 0-based index into plannedSpecs
 
     /// V2 resume support: the TemplateItem the controller is currently working
     /// on, persisted alongside `plannedSpecs` / `plannedSetCursor` so a
@@ -94,7 +93,7 @@ public final class LiveWorkoutController: ObservableObject {
 
     /// Unique id for this whole training session (multi-exercise). Used by
     /// the iPhone-side LiveWorkoutStore to detect new sessions vs same.
-    private var liveWorkoutId: UUID = UUID()
+    private var liveWorkoutId: UUID = .init()
 
     /// Rest countdown task — runs while in .setEnded → restCountdown phase,
     /// posts ticks to iPhone at 1Hz. Cancelled on next start / cancel.
@@ -234,9 +233,10 @@ public final class LiveWorkoutController: ObservableObject {
     public func endRestNowAndAdvanceLiveProgress() {
         restCountdownTask?.cancel()
         restCountdownTask = nil
-        if !plannedItems.isEmpty
-            && plannedItemCursor >= plannedItems.count - 1
-            && plannedSetCursor >= plannedSpecs.count {
+        if !plannedItems.isEmpty,
+           plannedItemCursor >= plannedItems.count - 1,
+           plannedSetCursor >= plannedSpecs.count
+        {
             // No more sets anywhere → workout is done.
             pushLiveProgress(phase: .workoutEnded)
         } else {
@@ -356,7 +356,9 @@ public final class LiveWorkoutController: ObservableObject {
     public private(set) var lastResolvedRest: Int = 90
 
     /// Public alias of `lastResolvedRest` for V2 view consumers.
-    public var currentRestSeconds: Int { lastResolvedRest }
+    public var currentRestSeconds: Int {
+        lastResolvedRest
+    }
 
     /// Summary of the most recently completed set, derived from
     /// `completedSets.last`. V2 SetResult screen reads this to render the
@@ -364,11 +366,10 @@ public final class LiveWorkoutController: ObservableObject {
     public var lastSetMetSummary: (status: MetStatus, mv: Double, target: ClosedRange<Double>?)? {
         guard let last = completedSets.last, !last.reps.isEmpty else { return nil }
         let mv = last.reps.map(\.meanVelocity).reduce(0, +) / Double(last.reps.count)
-        let status: MetStatus
-        if let range = currentTargetRange {
-            status = MetStatusEvaluator.evaluate(velocity: mv, target: range)
+        let status: MetStatus = if let range = currentTargetRange {
+            MetStatusEvaluator.evaluate(velocity: mv, target: range)
         } else {
-            status = .met
+            .met
         }
         return (status, mv, currentTargetRange)
     }
@@ -453,7 +454,7 @@ public final class LiveWorkoutController: ObservableObject {
 
     @discardableResult
     public func complete() async -> WorkoutSnapshot {
-        return await completeWithFeedback(rpe: nil, notes: nil)
+        await completeWithFeedback(rpe: nil, notes: nil)
     }
 
     /// Complete the session and stamp the snapshot with subjective feedback
@@ -515,7 +516,7 @@ public final class LiveWorkoutController: ObservableObject {
 
     public func apply(_ event: ActiveWorkoutSession.SessionEvent) {
         switch event {
-        case .repCompleted(let repEvent, let status):
+        case let .repCompleted(repEvent, status):
             rep = repEvent.index
             velocity = repEvent.meanVelocity
             metStatus = status
@@ -531,22 +532,22 @@ public final class LiveWorkoutController: ObservableObject {
             pushLiveProgress(phase: .repDetected)
             resetInactivityTimer()
 
-        case .heartRate(let bpm):
+        case let .heartRate(bpm):
             heartRate = bpm
             heartRateSamples.append(.init(timestamp: Date(), bpm: bpm))
 
-        case .setEnded(let snapshot):
+        case let .setEnded(snapshot):
             lastSetSnapshot = snapshot
             completedSets.append(snapshot)
             setBaselineVelocity = nil
             vlPercent = 0
 
-        case .sessionEnded(let snapshot):
+        case let .sessionEnded(snapshot):
             finishedSnapshot = snapshot
             isCompleted = true
             isRunning = false
 
-        case .vlCeilingExceeded(let vl, let ceiling):
+        case let .vlCeilingExceeded(vl, ceiling):
             NotificationCenter.default.post(
                 name: .vbtVLCeilingExceeded,
                 object: nil,
@@ -560,7 +561,12 @@ public final class LiveWorkoutController: ObservableObject {
 
     // MARK: - Live progress push to iPhone
 
-    private func pushLiveProgress(phase: LiveProgressPayload.Phase, repsForBar: [Double]? = nil, restRemaining: Int? = nil, restTotal: Int? = nil) {
+    private func pushLiveProgress(
+        phase: LiveProgressPayload.Phase,
+        repsForBar: [Double]? = nil,
+        restRemaining: Int? = nil,
+        restTotal: Int? = nil
+    ) {
         let exName = currentExerciseId.isEmpty ? "训练" : currentExerciseId
         let payload = LiveProgressPayload(
             phase: phase,
@@ -612,7 +618,7 @@ public final class LiveWorkoutController: ObservableObject {
             // 8s pre-warning
             try? await Task.sleep(nanoseconds: Self.inactivityWarnNanos)
             guard !Task.isCancelled, let self else { return }
-            if self.isRunning {
+            if isRunning {
                 HapticFeedback.inactivityWarning()
             }
             // 4 more seconds → 12s total → auto-end. `self` is already
@@ -621,7 +627,7 @@ public final class LiveWorkoutController: ObservableObject {
             // only re-check cancellation.
             try? await Task.sleep(nanoseconds: Self.inactivityEndNanos - Self.inactivityWarnNanos)
             guard !Task.isCancelled else { return }
-            await self.inactivityAutoEnd()
+            await inactivityAutoEnd()
         }
     }
 
@@ -630,7 +636,7 @@ public final class LiveWorkoutController: ObservableObject {
     public func inactivityAutoEnd() async {
         guard isRunning else { return }
         #if DEBUG
-        print("[LiveCtrl] inactivity 12s → auto endSet()")
+            print("[LiveCtrl] inactivity 12s → auto endSet()")
         #endif
         await endSet()
     }
@@ -647,7 +653,7 @@ public final class LiveWorkoutController: ObservableObject {
     }
 
     public var avgVelocity: Double {
-        let all = completedSets.flatMap { $0.reps }
+        let all = completedSets.flatMap(\.reps)
         guard !all.isEmpty else { return 0 }
         return all.map(\.meanVelocity).reduce(0, +) / Double(all.count)
     }
@@ -699,6 +705,7 @@ public final class LiveWorkoutController: ObservableObject {
     }
 
     // MARK: - V2 resume persistence
+
     //
     // The plannedSpecs + cursor + templateItemId tuple is the minimum state
     // needed to resume mid-template after the watch app is killed by the
@@ -728,8 +735,7 @@ public final class LiveWorkoutController: ObservableObject {
 
     public func restoreFromCursorIfPossible() {
         guard let data = UserDefaults.standard.data(forKey: Self.resumeKey),
-              let cursor = try? JSONDecoder().decode(ResumeCursor.self, from: data)
-        else { return }
+              let cursor = try? JSONDecoder().decode(ResumeCursor.self, from: data) else { return }
         plannedSpecs = cursor.plannedSpecs
         plannedSetCursor = cursor.plannedSetCursor
         currentTemplateItemId = cursor.templateItemId

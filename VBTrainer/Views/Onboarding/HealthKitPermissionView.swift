@@ -7,11 +7,10 @@
 import SwiftUI
 
 #if canImport(HealthKit)
-import HealthKit
+    import HealthKit
 #endif
 
 struct HealthKitPermissionView: View {
-
     @State private var requestedPermission = false
 
     var body: some View {
@@ -64,17 +63,17 @@ struct HealthKitPermissionView: View {
 
     private func requestPermission() async {
         #if canImport(HealthKit)
-        let store = HKHealthStore()
-        var read: Set<HKObjectType> = []
-        if let hr = HKObjectType.quantityType(forIdentifier: .heartRate) { read.insert(hr) }
-        if let hrv = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN) { read.insert(hrv) }
-        if let rhr = HKObjectType.quantityType(forIdentifier: .restingHeartRate) { read.insert(rhr) }
-        if let respiratoryRate = HKObjectType.quantityType(forIdentifier: .respiratoryRate) { read.insert(respiratoryRate) }
-        if let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) { read.insert(sleep) }
-        if #available(iOS 17.0, *) {
-            if let temp = HKObjectType.quantityType(forIdentifier: .appleSleepingWristTemperature) { read.insert(temp) }
-        }
-        try? await store.requestAuthorization(toShare: [], read: read)
+            let store = HKHealthStore()
+            var read: Set<HKObjectType> = []
+            if let hr = HKObjectType.quantityType(forIdentifier: .heartRate) { read.insert(hr) }
+            if let hrv = HKObjectType.quantityType(forIdentifier: .heartRateVariabilitySDNN) { read.insert(hrv) }
+            if let rhr = HKObjectType.quantityType(forIdentifier: .restingHeartRate) { read.insert(rhr) }
+            if let respiratoryRate = HKObjectType.quantityType(forIdentifier: .respiratoryRate) { read.insert(respiratoryRate) }
+            if let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) { read.insert(sleep) }
+            if #available(iOS 17.0, *) {
+                if let temp = HKObjectType.quantityType(forIdentifier: .appleSleepingWristTemperature) { read.insert(temp) }
+            }
+            try? await store.requestAuthorization(toShare: [], read: read)
         #endif
         requestedPermission = true
     }

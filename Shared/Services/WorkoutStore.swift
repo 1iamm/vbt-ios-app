@@ -9,7 +9,6 @@ import SwiftData
 
 @available(iOS 17.0, watchOS 10.0, *)
 public enum WorkoutStore {
-
     public enum StoreError: Error {
         case duplicate(UUID)
         case persistenceFailure(Error)
@@ -114,12 +113,12 @@ public enum WorkoutStore {
                 )
             }
 
-        let hr: [HeartRateSample]
-        if let data = workout.heartRateSamplesData,
-           let decoded = try? JSONDecoder().decode([HeartRateSample].self, from: data) {
-            hr = decoded
+        let hr: [HeartRateSample] = if let data = workout.heartRateSamplesData,
+                                       let decoded = try? JSONDecoder().decode([HeartRateSample].self, from: data)
+        {
+            decoded
         } else {
-            hr = []
+            []
         }
 
         return WorkoutSnapshot(

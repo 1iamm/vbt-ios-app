@@ -58,9 +58,9 @@ struct TodayHeader: View {
     private var ringColor: Color {
         guard let snap = snapshot else { return Tokens.Color.tertiaryLabel }
         switch snap.tier {
-        case .green:        return Tokens.Color.success
-        case .yellow:       return Tokens.Color.warning
-        case .red:          return Tokens.Color.danger
+        case .green: return Tokens.Color.success
+        case .yellow: return Tokens.Color.warning
+        case .red: return Tokens.Color.danger
         case .insufficient: return Tokens.Color.tertiaryLabel
         }
     }
@@ -68,9 +68,9 @@ struct TodayHeader: View {
     private var subtitle: String {
         guard let snap = snapshot else { return "数据建立中 · 先做几次训练" }
         switch snap.tier {
-        case .green:        return "体能良好 · 适合中高强度"
-        case .yellow:       return "保守训练 · 关注速度"
-        case .red:          return "建议休息或低强度"
+        case .green: return "体能良好 · 适合中高强度"
+        case .yellow: return "保守训练 · 关注速度"
+        case .red: return "建议休息或低强度"
         case .insufficient: return "数据不足 · 建立 7 天基线"
         }
     }
@@ -116,14 +116,22 @@ struct TodayHeader: View {
             }
 
             HStack(spacing: 0) {
-                miniMetric("HRV", value: snapshot?.hrv.map { String(Int($0)) } ?? "—",
-                           delta: snapshot?.hrv != nil ? "实时" : nil, dividerLeading: false)
-                miniMetric("睡眠",
-                           value: snapshot?.sleepDurationHours.map { String(format: "%.1f", $0) } ?? "—",
-                           delta: snapshot?.sleepDurationHours != nil ? "h" : nil)
-                miniMetric("RHR",
-                           value: snapshot?.restingHR.map(String.init) ?? "—",
-                           delta: snapshot?.restingHR != nil ? "bpm" : nil)
+                miniMetric(
+                    "HRV",
+                    value: snapshot?.hrv.map { String(Int($0)) } ?? "—",
+                    delta: snapshot?.hrv != nil ? "实时" : nil,
+                    dividerLeading: false
+                )
+                miniMetric(
+                    "睡眠",
+                    value: snapshot?.sleepDurationHours.map { String(format: "%.1f", $0) } ?? "—",
+                    delta: snapshot?.sleepDurationHours != nil ? "h" : nil
+                )
+                miniMetric(
+                    "RHR",
+                    value: snapshot?.restingHR.map(String.init) ?? "—",
+                    delta: snapshot?.restingHR != nil ? "bpm" : nil
+                )
                 Spacer(minLength: 8)
                 Image(systemName: "chevron.right")
                     .font(.system(size: 11, weight: .semibold))
@@ -138,8 +146,12 @@ struct TodayHeader: View {
         .padding(.bottom, 16)
     }
 
-    private func miniMetric(_ label: String, value: String, delta: String?,
-                            dividerLeading: Bool = true) -> some View {
+    private func miniMetric(
+        _ label: String,
+        value: String,
+        delta: String?,
+        dividerLeading: Bool = true
+    ) -> some View {
         HStack(spacing: 0) {
             if dividerLeading {
                 Divider().frame(height: 26).padding(.horizontal, 12)
@@ -170,9 +182,9 @@ struct TodayHeader: View {
 
 struct SectionHeader: View {
     let title: String
-    var action: String? = nil
+    var action: String?
     var accent: Color = Tokens.Color.accent
-    var onAction: (() -> Void)? = nil
+    var onAction: (() -> Void)?
 
     var body: some View {
         HStack {
@@ -235,47 +247,71 @@ struct ScheduledTrainingCard: View {
     private var theme: Theme {
         switch status {
         case .scheduled:
-            return Theme(bgOpacity: 0.08, strokeOpacity: 0.22,
-                         badgeText: "已安排", badgeColor: accent,
-                         primaryLabel: "从 Watch 开始", primaryIcon: "applewatch",
-                         primaryFilled: true,
-                         secondaryLabel: "编辑",
-                         footerHint: nil)
+            Theme(
+                bgOpacity: 0.08,
+                strokeOpacity: 0.22,
+                badgeText: "已安排",
+                badgeColor: accent,
+                primaryLabel: "从 Watch 开始",
+                primaryIcon: "applewatch",
+                primaryFilled: true,
+                secondaryLabel: "编辑",
+                footerHint: nil
+            )
         case .inProgress:
-            return Theme(bgOpacity: 0.10, strokeOpacity: 0.30,
-                         badgeText: "训练中", badgeColor: Tokens.Color.success,
-                         primaryLabel: "在 Watch 上继续", primaryIcon: "waveform",
-                         primaryFilled: true,
-                         secondaryLabel: nil,
-                         footerHint: "结束后自动同步回这里")
+            Theme(
+                bgOpacity: 0.10,
+                strokeOpacity: 0.30,
+                badgeText: "训练中",
+                badgeColor: Tokens.Color.success,
+                primaryLabel: "在 Watch 上继续",
+                primaryIcon: "waveform",
+                primaryFilled: true,
+                secondaryLabel: nil,
+                footerHint: "结束后自动同步回这里"
+            )
         case .completed:
             // 用户反馈：完成卡不需要「再练一次」（容易误点制造重复 workout）
-            return Theme(bgOpacity: 0.06, strokeOpacity: 0.18,
-                         badgeText: "已完成", badgeColor: Tokens.Color.success,
-                         primaryLabel: "看复盘", primaryIcon: "chart.xyaxis.line",
-                         primaryFilled: false,
-                         secondaryLabel: nil,
-                         footerHint: nil)
+            Theme(
+                bgOpacity: 0.06,
+                strokeOpacity: 0.18,
+                badgeText: "已完成",
+                badgeColor: Tokens.Color.success,
+                primaryLabel: "看复盘",
+                primaryIcon: "chart.xyaxis.line",
+                primaryFilled: false,
+                secondaryLabel: nil,
+                footerHint: nil
+            )
         case .skipped:
-            return Theme(bgOpacity: 0.04, strokeOpacity: 0.10,
-                         badgeText: "已跳过", badgeColor: Tokens.Color.secondaryLabel,
-                         primaryLabel: "重新安排", primaryIcon: "calendar",
-                         primaryFilled: false,
-                         secondaryLabel: nil,
-                         footerHint: nil)
+            Theme(
+                bgOpacity: 0.04,
+                strokeOpacity: 0.10,
+                badgeText: "已跳过",
+                badgeColor: Tokens.Color.secondaryLabel,
+                primaryLabel: "重新安排",
+                primaryIcon: "calendar",
+                primaryFilled: false,
+                secondaryLabel: nil,
+                footerHint: nil
+            )
         case .missed:
-            return Theme(bgOpacity: 0.04, strokeOpacity: 0.14,
-                         badgeText: "未完成", badgeColor: Tokens.Color.warning,
-                         primaryLabel: "补今天 / 看原计划",
-                         primaryIcon: "arrow.triangle.2.circlepath",
-                         primaryFilled: false,
-                         secondaryLabel: nil,
-                         footerHint: "昨日漏练，可以以原计划补做或跳过")
+            Theme(
+                bgOpacity: 0.04,
+                strokeOpacity: 0.14,
+                badgeText: "未完成",
+                badgeColor: Tokens.Color.warning,
+                primaryLabel: "补今天 / 看原计划",
+                primaryIcon: "arrow.triangle.2.circlepath",
+                primaryFilled: false,
+                secondaryLabel: nil,
+                footerHint: "昨日漏练，可以以原计划补做或跳过"
+            )
         }
     }
 
     var body: some View {
-        let theme = self.theme
+        let theme = theme
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 10) {
                 RoundedRectangle(cornerRadius: 2)
@@ -315,10 +351,16 @@ struct ScheduledTrainingCard: View {
                     .foregroundStyle(theme.primaryFilled ? .white : accent)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(theme.primaryFilled ? accent : Tokens.Color.card,
-                                in: RoundedRectangle(cornerRadius: 12))
-                    .shadow(color: theme.primaryFilled ? accent.opacity(0.5) : .clear,
-                            radius: theme.primaryFilled ? 10 : 0, x: 0, y: 4)
+                    .background(
+                        theme.primaryFilled ? accent : Tokens.Color.card,
+                        in: RoundedRectangle(cornerRadius: 12)
+                    )
+                    .shadow(
+                        color: theme.primaryFilled ? accent.opacity(0.5) : .clear,
+                        radius: theme.primaryFilled ? 10 : 0,
+                        x: 0,
+                        y: 4
+                    )
                 }
                 .buttonStyle(.plain)
                 if let secondaryLabel = theme.secondaryLabel {
@@ -352,10 +394,13 @@ struct ScheduledTrainingCard: View {
         HStack(spacing: 12) {
             stat(value: "\(s.durationMin)", unit: "min", label: "时长")
             Divider().frame(height: 28)
-            stat(value: s.totalVolumeKg >= 1000
-                  ? String(format: "%.1f", s.totalVolumeKg / 1000)
-                  : String(format: "%.0f", s.totalVolumeKg),
-                 unit: s.totalVolumeKg >= 1000 ? "t" : "kg", label: "训练量")
+            stat(
+                value: s.totalVolumeKg >= 1000
+                    ? String(format: "%.1f", s.totalVolumeKg / 1000)
+                    : String(format: "%.0f", s.totalVolumeKg),
+                unit: s.totalVolumeKg >= 1000 ? "t" : "kg",
+                label: "训练量"
+            )
             Divider().frame(height: 28)
             stat(value: "\(s.setCount)", unit: "组", label: "组数")
             Divider().frame(height: 28)
@@ -543,7 +588,7 @@ struct MiniSparkline: View {
 // MARK: - 8. iOS-native calendar month
 
 struct IOSCalendarMonth: View {
-    @Binding var month: Date  // any date within the month to display
+    @Binding var month: Date // any date within the month to display
     @Binding var selected: Date
 
     /// `markers[startOfDay]` describes which dots to draw for that day.
@@ -581,13 +626,17 @@ struct IOSCalendarMonth: View {
         let leading = (weekday - 2 + 7) % 7
         let daysIn = cal.range(of: .day, in: .month, for: first)?.count ?? 30
         var out: [(Int?, Date?)] = []
-        for _ in 0..<leading { out.append((nil, nil)) }
+        for _ in 0..<leading {
+            out.append((nil, nil))
+        }
         for d in 1...daysIn {
             let date = cal.date(byAdding: .day, value: d - 1, to: first) ?? first
             out.append((d, date))
         }
         // pad to a multiple of 7 to keep grid stable
-        while out.count % 7 != 0 { out.append((nil, nil)) }
+        while out.count % 7 != 0 {
+            out.append((nil, nil))
+        }
         return out
     }
 
@@ -595,7 +644,7 @@ struct IOSCalendarMonth: View {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
         let selectedDay = cal.startOfDay(for: selected)
-        let weekdays = ["一","二","三","四","五","六","日"]
+        let weekdays = ["一", "二", "三", "四", "五", "六", "日"]
         let cells = cells()
 
         return VStack(alignment: .leading, spacing: 0) {
@@ -663,7 +712,11 @@ struct IOSCalendarMonth: View {
                                             .frame(width: 28, height: 28)
                                     }
                                     Text("\(dayNum)")
-                                        .font(.system(size: 16, weight: isToday ? .bold : (isSelected ? .semibold : .regular), design: .rounded))
+                                        .font(.system(
+                                            size: 16,
+                                            weight: isToday ? .bold : (isSelected ? .semibold : .regular),
+                                            design: .rounded
+                                        ))
                                         .monospacedDigit()
                                         .tracking(-0.3)
                                         .foregroundStyle(isToday ? .white : (isSelected ? Tokens.Color.accent : Tokens.Color.label))
@@ -691,9 +744,9 @@ struct IOSCalendarMonth: View {
 
     private func color(for dot: CalendarDot) -> Color {
         switch dot {
-        case .done(let c): return c
-        case .planned:     return Self.sysBlue
-        case .cmj:         return Tokens.Color.Data.velocity
+        case let .done(c): c
+        case .planned: Self.sysBlue
+        case .cmj: Tokens.Color.Data.velocity
         }
     }
 }
@@ -704,7 +757,7 @@ struct IOSCalendarMonth: View {
 /// DayPlan.status (or empty when no plan that day).
 struct WeekProgressStrip: View {
     let weekStart: Date
-    let dayStatus: [Date: DayPlanStatus]   // start-of-day → status
+    let dayStatus: [Date: DayPlanStatus] // start-of-day → status
     let accent: Color
 
     private var days: [Date] {
@@ -713,7 +766,7 @@ struct WeekProgressStrip: View {
         }
     }
 
-    private static let weekdayLabels = ["一","二","三","四","五","六","日"]
+    private static let weekdayLabels = ["一", "二", "三", "四", "五", "六", "日"]
 
     var body: some View {
         let cal = Calendar.current
@@ -736,7 +789,7 @@ struct WeekProgressStrip: View {
     }
 
     @ViewBuilder
-    private func dot(for status: DayPlanStatus?, isToday: Bool) -> some View {
+    private func dot(for status: DayPlanStatus?, isToday _: Bool) -> some View {
         switch status {
         case .completed:
             Circle().fill(accent).frame(width: 9, height: 9)
@@ -767,6 +820,7 @@ struct StartChipsBar<T: Hashable>: View {
         let icon: String
         let label: String
     }
+
     let chips: [Chip]
     @Binding var selected: T
     var accent: Color = Tokens.Color.accent
@@ -786,7 +840,7 @@ struct StartChipsBar<T: Hashable>: View {
                         .foregroundStyle(selected == c.id ? accent : Tokens.Color.label)
                         .padding(.horizontal, 11).padding(.vertical, 7)
                         .background(
-                            (selected == c.id ? accent.opacity(0.12) : Tokens.Color.fill),
+                            selected == c.id ? accent.opacity(0.12) : Tokens.Color.fill,
                             in: Capsule()
                         )
                     }

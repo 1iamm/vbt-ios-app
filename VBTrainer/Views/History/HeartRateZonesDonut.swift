@@ -1,9 +1,9 @@
 // HeartRateZonesDonut.swift
 // VBTrainer · iPhone · 2026-05
 
-import SwiftUI
-import SwiftData
 import Charts
+import SwiftData
+import SwiftUI
 
 struct HeartRateZonesDonut: View {
     let workout: Workout
@@ -23,7 +23,7 @@ struct HeartRateZonesDonut: View {
         var bins: [HRZone: Int] = [:]
         for s in samples {
             let zone = HRZone.classify(bpm: s.bpm, hrMax: hrMax)
-            bins[zone, default: 0] += 1   // each sample ≈ 1 second
+            bins[zone, default: 0] += 1 // each sample ≈ 1 second
         }
         return bins
     }
@@ -84,36 +84,38 @@ struct HeartRateZonesDonut: View {
 enum HRZone: String, CaseIterable, Identifiable {
     case z1, z2, z3, z4, z5
 
-    var id: String { rawValue }
+    var id: String {
+        rawValue
+    }
 
     var index: Int {
         switch self {
-        case .z1: return 1
-        case .z2: return 2
-        case .z3: return 3
-        case .z4: return 4
-        case .z5: return 5
+        case .z1: 1
+        case .z2: 2
+        case .z3: 3
+        case .z4: 4
+        case .z5: 5
         }
     }
 
     var color: Color {
         switch self {
-        case .z1: return Color.gray
-        case .z2: return Color.blue
-        case .z3: return Color.green
-        case .z4: return Color.orange
-        case .z5: return Color.red
+        case .z1: Color.gray
+        case .z2: Color.blue
+        case .z3: Color.green
+        case .z4: Color.orange
+        case .z5: Color.red
         }
     }
 
     static func classify(bpm: Int, hrMax: Int) -> HRZone {
         let pct = Double(bpm) / Double(max(1, hrMax))
         switch pct {
-        case 0..<0.6:    return .z1
-        case 0.6..<0.7:  return .z2
-        case 0.7..<0.8:  return .z3
-        case 0.8..<0.9:  return .z4
-        default:         return .z5
+        case 0..<0.6: return .z1
+        case 0.6..<0.7: return .z2
+        case 0.7..<0.8: return .z3
+        case 0.8..<0.9: return .z4
+        default: return .z5
         }
     }
 }

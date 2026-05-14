@@ -27,18 +27,18 @@ public enum WatchRoute: Hashable, Identifiable {
 
     public var id: String {
         switch self {
-        case .syncIdle:                        return "syncIdle"
-        case .planSynced:                      return "planSynced"
-        case .setReady:                        return "setReady"
-        case .liveWorkout(let id, let w):      return "live\(id)\(w)"
-        case .setResult:                       return "setResult"
-        case .rest(let s):                     return "rest\(s)"
-        case .workoutDone:                     return "workoutDone"
-        case .readiness:                       return "readiness"
-        case .summary:                         return "summary"
-        case .prCelebration(let t, let v):     return "pr\(t)\(v)"
-        case .vlStopWarning(let v, let t):     return "vl\(v)\(t)"
-        case .rpeInput:                        return "rpe"
+        case .syncIdle: "syncIdle"
+        case .planSynced: "planSynced"
+        case .setReady: "setReady"
+        case let .liveWorkout(id, w): "live\(id)\(w)"
+        case .setResult: "setResult"
+        case let .rest(s): "rest\(s)"
+        case .workoutDone: "workoutDone"
+        case .readiness: "readiness"
+        case .summary: "summary"
+        case let .prCelebration(t, v): "pr\(t)\(v)"
+        case let .vlStopWarning(v, t): "vl\(v)\(t)"
+        case .rpeInput: "rpe"
         }
     }
 }

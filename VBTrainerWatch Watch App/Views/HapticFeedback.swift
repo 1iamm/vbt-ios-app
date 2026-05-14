@@ -8,11 +8,10 @@
 import Foundation
 
 #if canImport(WatchKit)
-import WatchKit
+    import WatchKit
 #endif
 
 public enum HapticFeedback {
-
     /// Minimum spacing between rep haptics. watchOS itself drops play() calls
     /// fired < ~200ms apart; throttling on our side makes the drop deterministic
     /// rather than letting the system silently lose them. Weber's-law floor on
@@ -34,14 +33,13 @@ public enum HapticFeedback {
         }
         lastRepFireAt = now
         #if canImport(WatchKit)
-        let pattern: WKHapticType
-        switch status {
-        case .excellent:  pattern = .success
-        case .met:        pattern = .directionUp
-        case .borderline: pattern = .directionDown
-        case .failed:     pattern = .failure
-        }
-        WKInterfaceDevice.current().play(pattern)
+            let pattern: WKHapticType = switch status {
+            case .excellent: .success
+            case .met: .directionUp
+            case .borderline: .directionDown
+            case .failed: .failure
+            }
+            WKInterfaceDevice.current().play(pattern)
         #endif
     }
 
@@ -49,7 +47,7 @@ public enum HapticFeedback {
     /// Not gated by `enableRepHaptic` (stage markers should always fire).
     public static func setEnded() {
         #if canImport(WatchKit)
-        WKInterfaceDevice.current().play(.stop)
+            WKInterfaceDevice.current().play(.stop)
         #endif
     }
 
@@ -59,7 +57,7 @@ public enum HapticFeedback {
     /// — short and attention-grabbing without feeling like a failure.
     public static func inactivityWarning() {
         #if canImport(WatchKit)
-        WKInterfaceDevice.current().play(.notification)
+            WKInterfaceDevice.current().play(.notification)
         #endif
     }
 
@@ -67,25 +65,25 @@ public enum HapticFeedback {
     /// the 2nd play() within ~200ms of the 1st).
     public static func workoutEnded() {
         #if canImport(WatchKit)
-        WKInterfaceDevice.current().play(.success)
+            WKInterfaceDevice.current().play(.success)
         #endif
     }
 
     public static func restEnded() {
         #if canImport(WatchKit)
-        WKInterfaceDevice.current().play(.start)
+            WKInterfaceDevice.current().play(.start)
         #endif
     }
 
     public static func vlCeilingExceeded() {
         #if canImport(WatchKit)
-        WKInterfaceDevice.current().play(.failure)
+            WKInterfaceDevice.current().play(.failure)
         #endif
     }
 
     public static func notification() {
         #if canImport(WatchKit)
-        WKInterfaceDevice.current().play(.notification)
+            WKInterfaceDevice.current().play(.notification)
         #endif
     }
 

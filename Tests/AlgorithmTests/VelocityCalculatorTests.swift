@@ -4,11 +4,10 @@
 import XCTest
 
 final class VelocityCalculatorTests: XCTestCase {
-
     func testConstantAccelerationProducesLinearVelocity() {
         var calc = VelocityCalculator()
         let dt = 1.0 / 100.0
-        let a = 1.0   // m/s²
+        let a = 1.0 // m/s²
         for i in 0...100 {
             calc.integrate(timestamp: Double(i) * dt, accel: a)
         }
@@ -37,7 +36,7 @@ final class VelocityCalculatorTests: XCTestCase {
         XCTAssertTrue(calc.samples.isEmpty)
     }
 
-    func testStatsOverWindow() {
+    func testStatsOverWindow() throws {
         // Synthesize: 0.5s ramp up to 0.5 m/s, hold 0.5s, then ramp back.
         var calc = VelocityCalculator()
         let hz: Double = 100
@@ -62,7 +61,7 @@ final class VelocityCalculatorTests: XCTestCase {
 
         let stats = calc.stats(from: 0, to: t)
         XCTAssertNotNil(stats)
-        let s = stats!
+        let s = try XCTUnwrap(stats)
         XCTAssertEqual(s.peakVelocity, 0.5, accuracy: 0.05)
         XCTAssertGreaterThan(s.meanVelocity, 0)
     }

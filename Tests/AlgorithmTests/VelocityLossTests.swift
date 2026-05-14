@@ -4,7 +4,6 @@
 import XCTest
 
 final class VelocityLossTests: XCTestCase {
-
     private func makeRep(index: Int, mv: Double) -> RepEvent {
         RepEvent(
             index: index,
@@ -50,7 +49,7 @@ final class VelocityLossTests: XCTestCase {
     func testNonNegative() {
         var calc = VelocityLossCalculator(variant: .mv)
         let r1 = makeRep(index: 1, mv: 0.5)
-        let r2 = makeRep(index: 2, mv: 0.7)   // velocity GAIN — VL should clamp to 0
+        let r2 = makeRep(index: 2, mv: 0.7) // velocity GAIN — VL should clamp to 0
         calc.record(rep: r1)
         XCTAssertEqual(calc.velocityLoss(for: r2), 0)
     }
