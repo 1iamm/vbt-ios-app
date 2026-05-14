@@ -9,20 +9,29 @@
 - [x] **PR #53** Auto-extract UI test screenshots → per-PR release → comment — merged `fe73715`
 - [x] **PR #54** (=PR #5.5) Persist mandate into CLAUDE.md + OpenSpec — merged `aaa51f4`
 - [x] **PR #56** (=PR #6) CI 加速：brew 缓存 + 条件 UI test — merged `ae5ce1b`
-- [ ] **PR #57** format-baseline trigger 改 push（in flight）
-- [ ] **PR #58** 触发 format-baseline 全仓格式化（pending; needs #57 merged）
-- [ ] **PR #59** lint 升 blocking + warnings as errors（pending; needs #58）
-- [ ] **PR #7** Watch 端静态截图 + visual diff baseline（pending）
+- [x] **PR #57** format-baseline trigger 改 push — merged earlier
+- [x] **PR #58** 触发 format-baseline 全仓格式化 — merged earlier
+- [x] **PR #59** lint 升 blocking + warnings as errors — superseded by Round 2 sub-PRs
 - [x] **PR #9 Round 1** 3-agent 终审 — completed 2026-05-13，**NO PASS**，findings 归 `round1-review.md`
-- [ ] **PR #60-#66** Round 1 findings 修复批次：
-  - [ ] #61 docs-only skip build (DX F8 + Cost #2)
-  - [ ] #62 DerivedData cache (Cost #1)
-  - [ ] #63 失败 dump 完整化 + sticky failure comment (DX F1-F5)
-  - [ ] #64 build-for-testing 拆分 + sim boot 并行 (Cost #3)
-  - [ ] #60 SwiftData migration 测试 (Reliability #1)
-  - [ ] #65 WatchConnectivity 契约测试 (Reliability #3)
-  - [ ] #66 修 RepDetector testCleanFiveReps 根因 (Reliability #4)
-- [ ] **PR #9 Round 2** 重审，目标 PASS
+- [x] **PR #60-#66** Round 1 findings 修复批次（all merged）：
+  - [x] #61 docs-only skip build (DX F8 + Cost #2)
+  - [x] #62 DerivedData cache (Cost #1)
+  - [x] #63 失败 dump 完整化 + sticky failure comment (DX F1-F5)
+  - [x] #64 build-for-testing 拆分 + sim boot 并行 (Cost #3)
+  - [x] #60 SwiftData migration 测试 (Reliability #1)
+  - [x] #65 WatchConnectivity 契约测试 (Reliability #3)
+  - [x] #66 修 RepDetector testCleanFiveReps 根因 (Reliability #4)
+- [x] **PR #9 Round 2** 终审 — completed 2026-05-13/14，CONDITIONAL PASS，open items dispatched as #69-#76
+- [x] **PR #69** build-for-testing + sim boot 并行（re-applied on PR #66） — merged `c4b32f0`
+- [x] **PR #70** ProfileView accessibilityIdentifier — merged `d1734c7`
+- [x] **PR #71** SwiftData crash-safe recovery (Reliability R2 #17) — merged `942f1aa`
+- [x] **PR #72** cleanup-screenshot-releases workflow (Reliability R2 #19) — merged `17c51df`
+- [x] **PR #73** format-baseline runs check-structure.sh (DX R2 #3) — merged `1ad4592`
+- [x] **PR #74** Prerelease vs Draft text fix — merged `427a53c`
+- [x] **PR #75** ci cache key hashes only project.yml (Cost R2 #C2-C3) — merged `56d731c`
+- [x] **PR #76** velocity precision roundtrip test (IX R1 F15) — merged `fa67bf8`
+- [ ] **PR #7** Watch 端静态截图 + visual diff baseline（pending — deferred to V2）
+- [ ] **PR #9 Round 3** 终审，目标 PASS（**now ready to run — all Round 2 PRs landed 2026-05-14**）
 
 ## 验收标准
 
