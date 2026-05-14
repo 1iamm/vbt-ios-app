@@ -53,6 +53,16 @@ jobs:
       - name: Apply SwiftFormat
         run: swiftformat .
 
+      # Round 2 DX #3: format-baseline auto-commit uses [skip ci] to
+      # avoid loops, but that also skipped ci.yml's structure / build
+      # validation — 4000 LOC of mechanical changes landed unverified.
+      # Run the cheap Linux-side structure check here so structural
+      # violations (e.g. SwiftFormat accidentally moving a file's
+      # import order in a way that breaks scripts/check-structure.sh
+      # invariants) are caught before the bot pushes.
+      - name: Project structure check (pre-push gate)
+        run: bash scripts/check-structure.sh
+
       - name: Commit + push if changes
         run: |
           if git diff --quiet; then
