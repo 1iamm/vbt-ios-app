@@ -120,3 +120,13 @@
 
 每 round 完成 → 跑 3 agent 复审 → 写新 round 报告 → 更新本 `tasks.md` 状态。
 所有 P0/P1 都 done/wontfix-rationale 且两轮复审都 PASS → Task 2 完成。
+
+## 2026-05-14 Task 2 状态：**CLOSED ✅**
+
+- Round 2 (4-agent): 4× CONDITIONAL PASS
+- Round 3 (4-agent): 3× CONDITIONAL PASS + USR PASS
+- Round 4 (4-agent): **4× PASS**
+
+Two consecutive USR PASS (R3 + R4) + 4× R4 PASS satisfies the exit gate.
+
+详 `round2-review.md` + `round4-review.md`。
