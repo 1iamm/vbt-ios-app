@@ -426,7 +426,7 @@ jobs:
             const tag_marker = '<!-- pr-screenshots -->';
 
             let body = `${tag_marker}\n## 🎬 自动验收 · 截图 (${sha})\n\n`;
-            body += `测试跑通 \`OnboardingUITest.testOnboardingFlow\`，按以下顺序展示动线：\n\n`;
+            body += `${pngs.length} 张截图覆盖：onboarding 4 步 + 5 个主 tab + 深层交互（Tweaks / Profile editor / 新模板编辑器）\n\n`;
             body += `<table><tr>\n`;
             for (const png of pngs) {
               const url = `${baseUrl}/${encodeURIComponent(png)}`;
@@ -438,7 +438,7 @@ jobs:
             body += `</tr></table>\n\n`;
             body += `<details><summary>验收说明</summary>\n\n`;
             body += `- 截图来源：每次 UI test pass 自动从 .xcresult bundle 提取\n`;
-            body += `- 存储：Prerelease \`${tag}\`（每次 push 覆盖；PR close 时由 cleanup workflow 删）\n`;
+            body += `- 存储：Prerelease \`${tag}\`（每次 push 覆盖；合并后保留 14 天，由定时 GC 清理）\n`;
             body += `- 点图可放大\n\n`;
             body += `</details>\n`;
 
@@ -541,6 +541,79 @@ jobs:
               return [...out].sort();
             };
 
+            // List all executed test cases (passed or failed). xcodebuild
+            // emits "Test Case '-[Module.Class testFoo]' started" before
+            // each. Parsing that captures the full case list, not just
+            // failures.
+            const executedTests = (path) => {
+              if (!fs.existsSync(path)) return [];
+              const txt = fs.readFileSync(path, 'utf8');
+              const re = /Test Case '-\[([^.\]]+)\.([^.\]\s]+)\s+(\w+)\]' started/g;
+              const grouped = {};
+              let m;
+              while ((m = re.exec(txt)) !== null) {
+                const cls = m[2];
+                const fn = m[3];
+                grouped[cls] = grouped[cls] || new Set();
+                grouped[cls].add(fn);
+              }
+              return Object.entries(grouped)
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([cls, fns]) => ({ cls, fns: [...fns].sort() }));
+            };
+
+            // ── Fetch this PR's changed files for impact summary ──────────
+            // GitHub action token already has repo:read; listFiles returns
+            // up to 3000 entries paginated. For our scale 300 is plenty.
+            let changedFiles = [];
+            try {
+              const { data: files } = await github.rest.pulls.listFiles({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: parseInt(process.env.PR_NUMBER, 10),
+                per_page: 300,
+              });
+              changedFiles = files.map(f => ({
+                name: f.filename,
+                additions: f.additions,
+                deletions: f.deletions,
+                status: f.status,
+              }));
+            } catch (e) {
+              console.log('listFiles failed (continuing without impact section):', e.message);
+            }
+
+            // Categorise changed files into product / test / CI / docs.
+            const categorise = (path) => {
+              if (/^Tests\//.test(path)) return 'tests';
+              if (/^\.github\/|^scripts\//.test(path)) return 'ci';
+              if (/^openspec\/|\.md$/i.test(path)) return 'docs';
+              if (/^VBTrainerWatch Watch App\//.test(path)) return 'watch';
+              if (/^VBTrainer\/Views\//.test(path)) return 'iphone-views';
+              if (/^Shared\/Models\//.test(path)) return 'schema';
+              if (/^Shared\/(Algorithms|Services)\//.test(path)) return 'algo-svc';
+              if (/^Shared\/Theme\//.test(path)) return 'theme';
+              return 'other';
+            };
+
+            const buckets = {};
+            for (const f of changedFiles) {
+              const cat = categorise(f.name);
+              buckets[cat] = buckets[cat] || [];
+              buckets[cat].push(f);
+            }
+            const bucketLabel = {
+              'iphone-views': '📱 iPhone UI',
+              'watch': '⌚️ Watch UI',
+              'algo-svc': '⚙️ 算法 / 服务',
+              'schema': '📐 SwiftData schema',
+              'theme': '🎨 Theme / tokens',
+              'tests': '🧪 测试',
+              'ci': '⚙️ CI / scripts',
+              'docs': '📝 文档 / openspec',
+              'other': '📂 其他',
+            };
+
             const prNum = parseInt(process.env.PR_NUMBER, 10);
             const sha = context.sha.slice(0, 7);
             const tag_marker = '<!-- pr-test-summary -->';
@@ -559,17 +632,49 @@ jobs:
                   lines.push('');
                 }
               }
+              // Per-class test case list (collapsed).
+              const groups = executedTests(logPath);
+              if (groups.length > 0) {
+                const totalCases = groups.reduce((acc, g) => acc + g.fns.length, 0);
+                lines.push(`<details><summary>跑过的 ${totalCases} 个 case</summary>\n`);
+                for (const g of groups) {
+                  lines.push(`\n**${g.cls}** (${g.fns.length})`);
+                  for (const fn of g.fns) lines.push(`- \`${fn}\``);
+                }
+                lines.push('\n</details>');
+              }
               return lines.join('\n');
             };
 
             let body = `${tag_marker}\n## ✅ 测试通过 · \`${sha}\`\n\n`;
+
+            // ── Section 1: 改动摘要 ────────────────────────────────────────
+            const totalAdd = changedFiles.reduce((a, f) => a + f.additions, 0);
+            const totalDel = changedFiles.reduce((a, f) => a + f.deletions, 0);
+            if (changedFiles.length > 0) {
+              body += `### 📝 本次改动\n\n`;
+              body += `**${changedFiles.length}** 文件 · **+${totalAdd} / −${totalDel}** LOC\n\n`;
+              const order = ['iphone-views', 'watch', 'algo-svc', 'schema', 'theme', 'tests', 'ci', 'docs', 'other'];
+              for (const cat of order) {
+                if (!buckets[cat]) continue;
+                body += `**${bucketLabel[cat]}** (${buckets[cat].length})\n`;
+                for (const f of buckets[cat].slice(0, 8)) {
+                  const tag = f.status === 'added' ? '+' : f.status === 'removed' ? '−' : '~';
+                  body += `- \`${tag}\` ${f.name} (+${f.additions} / −${f.deletions})\n`;
+                }
+                if (buckets[cat].length > 8) body += `- _… +${buckets[cat].length - 8} more_\n`;
+                body += '\n';
+              }
+            }
+
+            // ── Section 2: 测试结果 ────────────────────────────────────────
             body += fmtSection('AlgorithmTests (单元 + 算法)', algo, '/tmp/test.log');
             body += '\n';
             body += fmtSection('UITests (XCUITest + 截图)', ui, '/tmp/uitest.log');
             body += '\n<details><summary>说明</summary>\n\n';
             body += '- 来源：xcodebuild test 直接输出，每次 push 覆盖\n';
             body += '- 失败时此评论隐藏，由 `<!-- ci-failure -->` 评论替代\n';
-            body += '- 想看具体哪些 case 跑了：点 Actions 页查看 raw 日志\n\n';
+            body += '- 截图见 `<!-- pr-screenshots -->` 评论\n\n';
             body += '</details>\n';
 
             // Sticky: update existing if present.

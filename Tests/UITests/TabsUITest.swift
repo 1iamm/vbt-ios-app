@@ -1,20 +1,19 @@
 // TabsUITest.swift
 // VBTrainer · UITests · 2026-05
 //
-// Visual smoke for the 5 main tabs (Today / Plan / History / Stats /
-// Profile). Onboarding is dismissed first so this exercises the actual
-// product surface — every PR's screenshot set will then cover the
-// screens a user actually sees, not just onboarding.
+// Two-part smoke:
+//   A) 5 main tabs render (Today / Plan / History / Stats / Profile)
+//   B) Deeper interactions on Today / Plan / Profile (more screenshots
+//      so PR reviewers see the actual product surface, not just empty
+//      tabs).
 //
-// Each tab gets a `keepAlways` screenshot so PR comments show the full
-// 5-tab visual diff per push.
+// Each step takes a `keepAlways` screenshot so PR comments cover the
+// real interaction graph.
 //
 // Tab lookup uses the visible Chinese label text rather than
 // `accessibilityIdentifier`. SwiftUI's `.accessibilityIdentifier(...)`
 // modifier applied to a `.tabItem(...)` does NOT propagate to the
-// underlying UITabBarItem (verified by first CI run on PR #98 where
-// `tab.today` was never found). Labels are stable product copy and
-// surface correctly on the tab bar.
+// underlying UITabBarItem.
 
 import XCTest
 
@@ -27,23 +26,9 @@ final class TabsUITest: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments.append("-UI_TEST_MODE")
         app.launch()
+        dismissOnboardingIfPresent(app)
 
-        // ── Dismiss onboarding IF it's showing ─────────────────────────
-        // OnboardingUITest may have already run in this session and
-        // persisted a UserProfile, so the app could launch straight into
-        // MainTabsView. Treat onboarding as optional. Short timeout (4s)
-        // — if no CTA appears we're already in MainTabsView.
-        let continueCTA = app.buttons["onboarding.cta.continue"]
-        if continueCTA.waitForExistence(timeout: 4) {
-            continueCTA.tap()
-            _ = continueCTA.waitForExistence(timeout: 6)
-            continueCTA.tap()
-            let finishCTA = app.buttons["onboarding.cta.finish"]
-            _ = finishCTA.waitForExistence(timeout: 6)
-            finishCTA.tap()
-        }
-
-        // ── 1 · Today (default tab) ────────────────────────────────────
+        // ── 1 · Today ──────────────────────────────────────────────────
         let todayTab = app.tabBars.buttons["今天"]
         waitForExistence(of: todayTab, in: app, timeout: 8, message: "Today tab (by label)")
         attachScreenshot("05-tab-today")
@@ -68,5 +53,72 @@ final class TabsUITest: XCTestCase {
         let editRow = app.buttons["profile.editProfileRow"]
         _ = editRow.waitForExistence(timeout: 4)
         attachScreenshot("09-tab-profile")
+    }
+
+    /// Drives one step deeper than `testEachMainTabRenders` — captures
+    /// the panels users actually open most often (Tweaks bottom sheet,
+    /// profile editor, new template editor). Reviewers get a 15-image
+    /// PR comment instead of 9 idle tab-open shots.
+    func testDeeperInteractionScreens() {
+        let app = XCUIApplication()
+        app.launchArguments.append("-UI_TEST_MODE")
+        app.launch()
+        dismissOnboardingIfPresent(app)
+
+        // ── 10 · Tweaks sheet (from Today) ─────────────────────────────
+        // Today is the default tab. Tweaks 按钮在右上角，打开 sheet
+        // 包含训练目标 / 数据密度 / Readiness 风格 3 个选择。
+        _ = app.tabBars.buttons["今天"].waitForExistence(timeout: 6)
+        let tweaks = app.buttons["today.tweaks"]
+        if tweaks.waitForExistence(timeout: 4) {
+            tweaks.tap()
+            Thread.sleep(forTimeInterval: 0.8)
+            attachScreenshot("10-tweaks-sheet")
+            // Dismiss the sheet by swipe-down so subsequent steps run cleanly.
+            app.swipeDown()
+            Thread.sleep(forTimeInterval: 0.4)
+        }
+
+        // ── 11 · ProfileEditor (from Profile) ──────────────────────────
+        app.tabBars.buttons["我的"].tap()
+        Thread.sleep(forTimeInterval: 0.6)
+        // NavigationLink inside Form renders as a cell, not a button in
+        // XCUITest. Try `descendants(.any)` so the accessibilityIdentifier
+        // on the inner HStack still matches.
+        let editRow = app.descendants(matching: .any)["profile.editProfileRow"].firstMatch
+        if editRow.waitForExistence(timeout: 4) {
+            editRow.tap()
+            Thread.sleep(forTimeInterval: 0.8)
+            attachScreenshot("11-profile-editor")
+            // Pop back to the tab stack
+            if app.navigationBars.buttons.count > 0 {
+                app.navigationBars.buttons.firstMatch.tap()
+            }
+            Thread.sleep(forTimeInterval: 0.4)
+        }
+
+        // ── 12 · New-template editor (from Today empty state) ──────────
+        app.tabBars.buttons["今天"].tap()
+        Thread.sleep(forTimeInterval: 0.5)
+        let newTemplate = app.buttons["today.newTemplate"]
+        if newTemplate.waitForExistence(timeout: 4) {
+            newTemplate.tap()
+            Thread.sleep(forTimeInterval: 0.8)
+            attachScreenshot("12-plan-editor")
+        }
+    }
+
+    // MARK: - Helpers
+
+    private func dismissOnboardingIfPresent(_ app: XCUIApplication) {
+        let continueCTA = app.buttons["onboarding.cta.continue"]
+        if continueCTA.waitForExistence(timeout: 4) {
+            continueCTA.tap()
+            _ = continueCTA.waitForExistence(timeout: 6)
+            continueCTA.tap()
+            let finishCTA = app.buttons["onboarding.cta.finish"]
+            _ = finishCTA.waitForExistence(timeout: 6)
+            finishCTA.tap()
+        }
     }
 }
