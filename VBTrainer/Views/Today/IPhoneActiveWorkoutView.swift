@@ -588,7 +588,7 @@ struct IPhoneActiveWorkoutView: View {
                             .foregroundStyle(Tokens.Color.label)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
-                            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+                            .cardStyle()
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14)
                                     .stroke(Tokens.Color.accent.opacity(0.5), lineWidth: 1.5)

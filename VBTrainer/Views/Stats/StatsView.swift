@@ -94,7 +94,7 @@ struct StatsView: View {
             }
         }
         .padding(14)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
         .padding(.top, 8)
         .padding(.bottom, 8)
@@ -211,7 +211,7 @@ struct StatsView: View {
                     }
                 }
             }
-            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+            .cardStyle()
             .padding(.horizontal, Tokens.Space.lg)
             .padding(.bottom, 12)
         }
@@ -309,7 +309,7 @@ struct StatsView: View {
             }
         }
         .padding(14)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
         .padding(.bottom, 12)
     }
@@ -336,7 +336,7 @@ struct StatsView: View {
                     }
                 }
             }
-            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+            .cardStyle()
             .padding(.horizontal, Tokens.Space.lg)
             .padding(.bottom, 12)
         }

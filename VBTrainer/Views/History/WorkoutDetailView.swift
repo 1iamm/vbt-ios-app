@@ -210,7 +210,7 @@ struct WorkoutDetailView: View {
                 }
             }
             .padding(14)
-            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+            .cardStyle()
         }
         .buttonStyle(.plain)
         .padding(.horizontal, Tokens.Space.lg)
@@ -277,7 +277,7 @@ struct WorkoutDetailView: View {
                     .foregroundStyle(Tokens.Color.tertiaryLabel)
             }
             .padding(14)
-            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+            .cardStyle()
             .padding(.horizontal, Tokens.Space.lg)
         }
         .buttonStyle(.plain)
@@ -364,7 +364,7 @@ struct WorkoutDetailView: View {
                 }
             }
         }
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
     }
 
     private var tableHeader: some View {

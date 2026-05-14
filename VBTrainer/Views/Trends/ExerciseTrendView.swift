@@ -197,7 +197,7 @@ struct ExerciseTrendView: View {
         }
         .padding(Tokens.Space.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
     }
 
@@ -209,7 +209,7 @@ struct ExerciseTrendView: View {
             content()
         }
         .padding(Tokens.Space.lg)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
     }
 }

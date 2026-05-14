@@ -375,7 +375,7 @@ struct TodayView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(20)
-            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+            .cardStyle()
             .padding(.horizontal, Tokens.Space.lg)
             .padding(.bottom, 12)
         } else {
@@ -393,7 +393,7 @@ struct TodayView: View {
                     }
                 }
             }
-            .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+            .cardStyle()
             .padding(.horizontal, Tokens.Space.lg)
             .padding(.bottom, 14)
         }
@@ -585,7 +585,7 @@ struct TodayView: View {
             )
         }
         .padding(12)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
         .padding(.horizontal, Tokens.Space.lg)
         .padding(.bottom, 14)
     }

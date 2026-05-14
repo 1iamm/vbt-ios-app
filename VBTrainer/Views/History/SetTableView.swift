@@ -29,7 +29,7 @@ struct SetTableView: View {
             }
         }
         .padding(Tokens.Space.lg)
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
+        .cardStyle()
     }
 
     private var headerRow: some View {

@@ -349,7 +349,7 @@ struct PlanView: View {
                 targetVelocityFooter(for: item)
             }
         }
-        .background(Tokens.Color.card, in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle()
         .overlay(
             RoundedRectangle(cornerRadius: 14)
                 .stroke(isOpen ? accent.opacity(0.3) : .clear, lineWidth: 1)
