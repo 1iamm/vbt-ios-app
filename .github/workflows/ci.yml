@@ -72,7 +72,9 @@ jobs:
             const hasNative = paths.some(p => nativeRE.test(p));
 
             // UI / View / schema subset — when true, also run UI test +
-            // screenshot pipeline.
+            // screenshot pipeline. Includes ci.yml itself: if the CI
+            // workflow changed, we want to actually exercise its UI
+            // pipeline on the diff, not skip it.
             const uiRE = new RegExp([
               '^VBTrainer/Views/',
               '^VBTrainerWatch Watch App/Views/',
@@ -84,6 +86,7 @@ jobs:
               '^Tests/UITests/',
               '^Shared/Extensions/.+UITestMode',
               '^project\\.yml$',
+              '^\\.github/workflows/ci\\.yml$',
             ].join('|'));
             const hasUI = paths.some(p => uiRE.test(p));
 
@@ -260,16 +263,98 @@ jobs:
 
       - name: Build watchOS (simulator)
         # Standalone compile-only gate (watchOS scheme has no tests).
+        # Note: we use a specific simulator (not 'generic') so the build
+        # output is installable for the screenshot step that follows.
+        id: build_watch
         run: |
           set -o pipefail
+          # Pick a Watch simulator that's compatible with deploymentTarget 10.0.
+          # The macos-26 runner has multiple — take the first listed Series.
+          WATCH_UDID=$(xcrun simctl list devices available --json | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)
+          for runtime, devices in data["devices"].items():
+              if "watchOS" not in runtime:
+                  continue
+              for d in devices:
+                  if d.get("isAvailable") and "Apple Watch" in d.get("name", ""):
+                      print(d["udid"])
+                      sys.exit(0)
+          ')
+          echo "WATCH_UDID=$WATCH_UDID" >> $GITHUB_ENV
+          echo "udid=$WATCH_UDID" >> $GITHUB_OUTPUT
+          echo "Picked Watch sim: $WATCH_UDID"
+
           xcodebuild build \
             -project VBTrainer.xcodeproj \
             -scheme "VBTrainerWatch Watch App" \
-            -destination 'generic/platform=watchOS Simulator' \
+            -destination "platform=watchOS Simulator,id=$WATCH_UDID" \
             -configuration Debug \
+            -derivedDataPath /tmp/watch-dd \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/build-watch.log
+
+      - name: Capture watchOS screenshots
+        # Boot the Watch sim, install the app, launch, and take one
+        # `xcrun simctl io ... screenshot` shot. Bypasses watchOS
+        # XCUITest (historically flaky on simulators). Pure shell.
+        #
+        # Hardening (after first run hung past the 25-min job timeout):
+        #   - every external command wrapped in `timeout N` so a stuck
+        #     simctl doesn't waste the whole CI budget
+        #   - extensive logging so failures are diagnosable
+        #   - non-fatal at every step — Watch capture is best-effort,
+        #     iOS pipeline must not block on it
+        if: needs.fast-fail.outputs.has_ui == 'true'
+        env:
+          WATCH_UDID: ${{ env.WATCH_UDID }}
+        timeout-minutes: 5
+        run: |
+          set +e  # never fail the whole step
+          mkdir -p /tmp/screenshots
+          echo "=== Watch screenshot capture ==="
+          if [ -z "$WATCH_UDID" ]; then
+            echo "No Watch sim UDID — skipping."
+            exit 0
+          fi
+          echo "Using Watch sim UDID: $WATCH_UDID"
+
+          echo "--- Locate built app ---"
+          APP_PATH=$(find /tmp/watch-dd/Build/Products -type d -name "VBTrainerWatch Watch App.app" -path "*watchsimulator*" 2>/dev/null | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Watch .app not found; listing /tmp/watch-dd/Build/Products:"
+            find /tmp/watch-dd/Build/Products -maxdepth 4 2>&1 | head -50 || true
+            exit 0
+          fi
+          echo "App: $APP_PATH"
+
+          echo "--- Boot Watch sim (60s timeout) ---"
+          timeout 60 xcrun simctl boot "$WATCH_UDID" 2>&1 || echo "(boot returned $?; may already be booted)"
+          timeout 90 xcrun simctl bootstatus "$WATCH_UDID" -b 2>&1 || echo "(bootstatus timed out)"
+
+          echo "--- Install (60s timeout) ---"
+          timeout 60 xcrun simctl install "$WATCH_UDID" "$APP_PATH" 2>&1
+          INSTALL_RC=$?
+          echo "install exit: $INSTALL_RC"
+          if [ "$INSTALL_RC" -ne 0 ]; then
+            echo "Install failed; skipping launch."
+            exit 0
+          fi
+
+          echo "--- Launch (30s timeout) ---"
+          timeout 30 xcrun simctl launch "$WATCH_UDID" com.vbtrainer.app.watchkitapp 2>&1 || echo "(launch returned $?)"
+
+          echo "--- Wait for first paint (10s) + screenshot ---"
+          sleep 10
+          timeout 30 xcrun simctl io "$WATCH_UDID" screenshot /tmp/screenshots/20-watch-root.png 2>&1
+          if [ -f /tmp/screenshots/20-watch-root.png ]; then
+            ls -la /tmp/screenshots/20-watch-root.png
+            echo "✅ Watch screenshot captured."
+          else
+            echo "❌ Watch screenshot file not created (non-fatal)."
+          fi
+          exit 0
 
       - name: Wait for simulator boot complete
         run: |
