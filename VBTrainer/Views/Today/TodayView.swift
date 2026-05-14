@@ -34,6 +34,10 @@ struct TodayView: View {
     /// `.vbtWorkoutImported` (Watch sync) and `DayPlanEventBus.completed`
     /// (scheduled-plan path) — we only want to celebrate once per workout.
     @State private var celebratedWorkoutIds: Set<UUID> = []
+    /// The workoutId backing the currently-shown celebration card. Set by
+    /// surfaceCelebration; consumed by the card's "查看 →" CTA which
+    /// pushes a WorkoutDetailView for this id. Per PM-F9 (P1).
+    @State private var celebratedWorkoutId: UUID?
 
     struct WorkoutDetailRoute: Identifiable, Hashable {
         let id: UUID
@@ -128,8 +132,15 @@ struct TodayView: View {
             }
             .overlay(alignment: .top) {
                 if let kind = pendingCelebration {
-                    CelebrationCard(kind: kind, onDismiss: dismissCelebration, accent: accent)
-                        .padding(.top, 8)
+                    CelebrationCard(
+                        kind: kind,
+                        onDismiss: dismissCelebration,
+                        onViewDetail: celebratedWorkoutId.map { id in
+                            { pendingWorkoutDetail = .init(id: id); dismissCelebration() }
+                        },
+                        accent: accent
+                    )
+                    .padding(.top, 8)
                 }
             }
             .navigationBarHidden(true)
@@ -498,6 +509,7 @@ struct TodayView: View {
         guard let kind = CelebrationResolver.resolve(
             completedWorkoutId: workoutId, context: context
         ) else { return }
+        celebratedWorkoutId = workoutId
         withAnimation(.spring(response: 0.45, dampingFraction: 0.78)) {
             pendingCelebration = kind
         }
@@ -509,6 +521,7 @@ struct TodayView: View {
 
     private func dismissCelebration() {
         withAnimation(.easeInOut(duration: 0.2)) { pendingCelebration = nil }
+        celebratedWorkoutId = nil
     }
 
     @ViewBuilder
