@@ -399,54 +399,6 @@ struct TodayView: View {
         }
     }
 
-    private var quickStartGrid: some View {
-        let lastWorkout = workouts.first
-        return HStack(spacing: 8) {
-            QuickStartTile(
-                icon: "arrow.uturn.backward",
-                title: "重做上次",
-                subtitle: lastWorkout.flatMap {
-                    ExerciseLookup.exercise(byId: $0.exerciseId)?.nameZH
-                } ?? "—"
-            ) {
-                if let last = lastWorkout, let tpl = templates.first(where: {
-                    $0.items.contains(where: { $0.exerciseId == last.exerciseId })
-                }) {
-                    pendingPlanTemplate = tpl
-                }
-            }
-            QuickStartTile(
-                icon: "calendar",
-                title: "上周同日",
-                subtitle: lastWeekTemplateLabel
-            ) {
-                if let tpl = lastWeekTemplate { pendingPlanTemplate = tpl }
-            }
-            QuickStartTile(
-                icon: "plus",
-                title: "空白训练",
-                subtitle: "边练边记"
-            ) {
-                createNewTemplate()
-            }
-        }
-        .padding(.horizontal, Tokens.Space.lg)
-        .padding(.bottom, 16)
-    }
-
-    private var lastWeekTemplate: Template? {
-        let cal = Calendar.current
-        guard let weekAgo = cal.date(byAdding: .day, value: -7, to: Date()) else { return nil }
-        let dayStart = cal.startOfDay(for: weekAgo)
-        return allPlans.first(where: { cal.isDate($0.date, inSameDayAs: dayStart) })
-            .flatMap { p in templates.first(where: { $0.id == p.templateId }) }
-    }
-
-    private var lastWeekTemplateLabel: String {
-        if let t = lastWeekTemplate { return t.name }
-        return "无"
-    }
-
     private func scheduledSource(plan _: DayPlan) -> String? {
         // templateId is non-Optional; check whether last week's workout
         // referenced the same template instead of nil-checking it.
