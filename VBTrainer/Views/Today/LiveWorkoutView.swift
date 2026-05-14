@@ -204,18 +204,27 @@ private struct SetActiveView: View {
             .buttonStyle(.plain)
             .padding(.horizontal, 16)
 
-            // Secondary: finish whole workout.
+            // Secondary: finish whole workout. Per Round 1 IX-F6 (P1) the
+            // original 13pt translucent text was "鬼祟" — easy to miss but
+            // also easy to mis-tap when a user was reaching for the primary
+            // CTA. Now: same position (secondary to "完成本组") but with a
+            // thin Capsule outline + slightly higher opacity → clearly a
+            // button, still visually subordinate.
             Button {
                 showFinishConfirm = true
             } label: {
                 Text("结束训练")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.6))
-                    .padding(.vertical, 4)
-                    .padding(.horizontal, 10)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.78))
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 18)
+                    .background(
+                        Capsule().stroke(Color.white.opacity(0.28), lineWidth: 1)
+                    )
             }
             .buttonStyle(.plain)
-            .padding(.bottom, 36)
+            .padding(.top, 6)
+            .padding(.bottom, 32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .confirmationDialog("结束训练？", isPresented: $showFinishConfirm) {
