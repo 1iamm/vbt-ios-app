@@ -630,6 +630,7 @@ struct PlanView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("plan.addExercise")
         .padding(.horizontal, Tokens.Space.lg)
         .padding(.top, 12)
     }
@@ -656,6 +657,7 @@ struct PlanView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("plan.startOnPhone")
                 .disabled(pushState == .pushing)
 
                 Button {
@@ -685,6 +687,7 @@ struct PlanView: View {
                     .shadow(color: accent.opacity(0.5), radius: 10, x: 0, y: 4)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("plan.startOnWatch")
                 .disabled(pushState == .pushing)
             }
             HStack(spacing: 6) {
@@ -697,6 +700,7 @@ struct PlanView: View {
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
+            .accessibilityIdentifier("plan.schedule")
             .onTapGesture { showingScheduleSheet = true }
         }
         .padding(.horizontal, Tokens.Space.lg)
