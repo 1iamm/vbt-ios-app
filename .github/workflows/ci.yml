@@ -318,10 +318,15 @@ jobs:
           TAG="screenshots-pr-$PR_NUMBER"
           # Always re-create so old assets from prior commits don't linger.
           gh release delete "$TAG" --yes --cleanup-tag 2>/dev/null || true
+          # NOTE: was --draft, but draft-release asset download URLs
+          # require GitHub auth. Browser <img src="…"> tag in the PR
+          # comment can't auth → 404 → broken image icon. Switching to
+          # --prerelease keeps the release out of the "Latest" badge
+          # while making asset URLs public.
           gh release create "$TAG" \
-            --draft \
+            --prerelease \
             --title "Screenshots for PR #$PR_NUMBER" \
-            --notes "Automated screenshots from commit \`$SHA\`. PR #$PR_NUMBER. This release is a draft (hidden from main Releases page)." \
+            --notes "Automated screenshots from commit \`$SHA\`. PR #$PR_NUMBER. Prerelease (not surfaced as Latest)." \
             "${shots[@]}"
           echo "Uploaded ${#shots[@]} screenshots to release $TAG."
 
