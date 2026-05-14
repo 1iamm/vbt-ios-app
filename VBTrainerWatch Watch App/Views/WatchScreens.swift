@@ -601,22 +601,11 @@ struct WatchSummaryView: View {
     /// Subjective load 1–10 (Borg CR-10). Default 7 = "moderate-hard" — close
     /// to the actual mode for strength training, lets users single-tap accept
     /// without scrolling for typical sessions.
+    ///
+    /// Per Round 1 USR-F11 (P2): "感受" 3-tier (强 / 正常 / 拉胯) was a
+    /// redundant second feedback prompt that essentially duplicated RPE.
+    /// Dropped here — RPE alone captures the perception.
     @State private var rpe: Int = 7
-    @State private var feeling: Feeling = .normal
-
-    enum Feeling: String, CaseIterable {
-        case strong = "强"
-        case normal = "正常"
-        case bad = "拉胯"
-
-        var emoji: String {
-            switch self {
-            case .strong: "💪"
-            case .normal: "·"
-            case .bad: "😩"
-            }
-        }
-    }
 
     var body: some View {
         WatchScreenChrome(title: "训练总结") {
@@ -634,12 +623,9 @@ struct WatchSummaryView: View {
 
                     rpeSection
 
-                    feelingSection
-
                     Button {
                         Task {
-                            let notes = "感受：\(feeling.rawValue)"
-                            let snap = await controller.completeWithFeedback(rpe: rpe, notes: notes)
+                            let snap = await controller.completeWithFeedback(rpe: rpe, notes: nil)
                             WatchConnectivityService.shared.send(message: .workoutSnapshot(snap))
                             nav.popToRoot()
                         }
@@ -706,29 +692,6 @@ struct WatchSummaryView: View {
         case 9: "极重"
         default: "极限"
         }
-    }
-
-    private var feelingSection: some View {
-        HStack(spacing: 6) {
-            ForEach(Feeling.allCases, id: \.self) { f in
-                Button { feeling = f } label: {
-                    HStack(spacing: 3) {
-                        Text(f.emoji).font(.system(size: 11))
-                        Text(f.rawValue)
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .foregroundStyle(feeling == f ? fg : sub)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                    .background(
-                        feeling == f ? accent.opacity(0.25) : Color.white.opacity(0.06),
-                        in: Capsule()
-                    )
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 12)
     }
 
     private func summaryStat(_ label: String, _ value: String, color: Color, unit: String? = nil) -> some View {
