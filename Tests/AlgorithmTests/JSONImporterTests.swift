@@ -107,6 +107,78 @@ final class JSONImporterTests: XCTestCase {
         XCTAssertEqual(try ctx.fetch(FetchDescriptor<PersonalRecord>()).count, 1)
     }
 
+    /// Round 3 Reliability P2 carry-over: idempotency was previously only
+    /// proven for Workouts. JumpTest / ReadinessSnapshot / PersonalRecord
+    /// share the same id-based skip pattern, but a regression in any of
+    /// them would silently duplicate user data on re-import.
+    func testReImportingAllKindsIsIdempotent() throws {
+        let jumpId = UUID()
+        let backup = VBTBackup(
+            workouts: [],
+            jumpTests: [
+                JumpTestSnapshot(
+                    id: jumpId,
+                    performedAt: Date(timeIntervalSince1970: 1_700_000_000),
+                    attempts: [30.0, 31.0, 32.0],
+                    flightTimeSeconds: [0.50, 0.52, 0.54],
+                    bestHeightCm: 32.0,
+                    linkedWorkoutId: nil
+                ),
+            ],
+            readinessSnapshots: [
+                ReadinessSnapshotDTO(
+                    date: Date(timeIntervalSince1970: 1_700_000_000),
+                    score: 80,
+                    tier: "green",
+                    hrv: 55,
+                    restingHR: 54,
+                    sleepDurationHours: 8.0,
+                    deepSleepHours: 1.4,
+                    wristTemperatureDelta: 0.0
+                ),
+            ],
+            personalRecords: [
+                PRDTO(
+                    exerciseId: "bench-press",
+                    kind: "maxWeight",
+                    value: 100,
+                    achievedAt: Date(timeIntervalSince1970: 1_700_000_000)
+                ),
+            ]
+        )
+        let data = try JSONEncoder().encode(backup)
+        let ctx = try makeMemoryContext()
+
+        // First import — inserts all three.
+        let first = try JSONImporter.restore(from: data, in: ctx)
+        XCTAssertEqual(first.jumpTestsInserted, 1)
+        XCTAssertEqual(first.readinessInserted, 1)
+        XCTAssertEqual(first.personalRecordsInserted, 1)
+
+        // Second import:
+        //   - JumpTest dedupes by id   → 0 inserts on re-import
+        //   - Readiness dedupes by date → 0 inserts on re-import
+        //   - PR does NOT dedupe (PRDTO has no UUID, importer accepts dups
+        //     "as the lesser evil vs throwing away real data") → 1 insert,
+        //     documented gap. Tracked as Round 3 Reliability P2 for future
+        //     work (would need PRDTO schema change to carry id).
+        let second = try JSONImporter.restore(from: data, in: ctx)
+        XCTAssertEqual(second.jumpTestsInserted, 0, "JumpTest re-import must dedupe by id")
+        XCTAssertEqual(second.readinessInserted, 0, "Readiness re-import must dedupe by date")
+        XCTAssertEqual(
+            second.personalRecordsInserted, 1,
+            "PR re-import is intentionally non-idempotent today (PRDTO lacks UUID); test asserts current behavior so a future fix is detected"
+        )
+
+        // Final-state counts reflect the asymmetry: JumpTest + Readiness
+        // single-row, PR duplicated. If the importer ever grows true PR
+        // idempotency, line 162 above + line 169 below should flip
+        // together to (0, 1).
+        XCTAssertEqual(try ctx.fetch(FetchDescriptor<JumpTest>()).count, 1)
+        XCTAssertEqual(try ctx.fetch(FetchDescriptor<ReadinessSnapshot>()).count, 1)
+        XCTAssertEqual(try ctx.fetch(FetchDescriptor<PersonalRecord>()).count, 2)
+    }
+
     func testMalformedJSONThrows() {
         let ctx = try? makeMemoryContext()
         guard let ctx else { XCTFail("ctx setup failed"); return }
