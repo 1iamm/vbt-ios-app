@@ -20,17 +20,19 @@
 // All instantiations use `isStoredInMemoryOnly: true` so the test is
 // hermetic — no side effects to ~/Library/Application Support.
 
-import XCTest
 import SwiftData
+import XCTest
 
 final class SwiftDataSchemaBaselineTests: XCTestCase {
-
     /// All 11 @Model types in VBTSchemaV1 should resolve to a non-nil
     /// type and the array should be exactly the expected size — guards
     /// against adding a new model file without registering it.
     func testSchemaInventory() {
-        XCTAssertEqual(VBTSchemaV1.allModels.count, 11,
-                       "If you added/removed a @Model, update VBTSchemaV1.allModels AND this expected count.")
+        XCTAssertEqual(
+            VBTSchemaV1.allModels.count,
+            11,
+            "If you added/removed a @Model, update VBTSchemaV1.allModels AND this expected count."
+        )
         // Spot-check a representative subset still exists in the schema.
         // (We can't compare types directly via Hashable, so probe by name.)
         let typeNames = VBTSchemaV1.allModels.map { String(describing: $0) }
@@ -38,10 +40,12 @@ final class SwiftDataSchemaBaselineTests: XCTestCase {
             "UserProfile", "Workout", "WorkoutSet", "Rep",
             "JumpTest", "ReadinessSnapshot",
             "Template", "TemplateItem", "TemplateSetSpec",
-            "DayPlan", "PersonalRecord",
+            "DayPlan", "PersonalRecord"
         ] {
-            XCTAssertTrue(typeNames.contains(expected),
-                          "Missing \(expected) from VBTSchemaV1 — schema regression?")
+            XCTAssertTrue(
+                typeNames.contains(expected),
+                "Missing \(expected) from VBTSchemaV1 — schema regression?"
+            )
         }
     }
 

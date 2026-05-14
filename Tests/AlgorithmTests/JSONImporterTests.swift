@@ -5,11 +5,10 @@
 // JSON blob, Importer reads it back, content must match. Also verifies
 // idempotent re-import (no duplicates).
 
-import XCTest
 import SwiftData
+import XCTest
 
 final class JSONImporterTests: XCTestCase {
-
     func testRoundTripEmptyBackup() throws {
         let backup = VBTBackup(
             workouts: [],
@@ -72,7 +71,7 @@ final class JSONImporterTests: XCTestCase {
                     flightTimeSeconds: [0.52, 0.54, 0.53],
                     bestHeightCm: 35.5,
                     linkedWorkoutId: nil
-                ),
+                )
             ],
             readinessSnapshots: [
                 ReadinessSnapshotDTO(
@@ -84,7 +83,7 @@ final class JSONImporterTests: XCTestCase {
                     sleepDurationHours: 7.3,
                     deepSleepHours: 1.2,
                     wristTemperatureDelta: 0.1
-                ),
+                )
             ],
             personalRecords: [
                 PRDTO(
@@ -92,7 +91,7 @@ final class JSONImporterTests: XCTestCase {
                     kind: "maxWeight",
                     value: 145,
                     achievedAt: Date(timeIntervalSince1970: 1_700_000_000)
-                ),
+                )
             ]
         )
         let data = try JSONEncoder().encode(backup)
@@ -111,7 +110,7 @@ final class JSONImporterTests: XCTestCase {
     func testMalformedJSONThrows() {
         let ctx = try? makeMemoryContext()
         guard let ctx else { XCTFail("ctx setup failed"); return }
-        XCTAssertThrowsError(try JSONImporter.restore(from: Data([0xff, 0xfe]), in: ctx)) { err in
+        XCTAssertThrowsError(try JSONImporter.restore(from: Data([0xFF, 0xFE]), in: ctx)) { err in
             if case JSONImporter.ImportError.malformedJSON = err { return }
             XCTFail("Expected .malformedJSON, got \(err)")
         }

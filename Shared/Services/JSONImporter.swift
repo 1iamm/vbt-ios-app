@@ -19,10 +19,9 @@ import Foundation
 import SwiftData
 
 public enum JSONImporter {
-
     public struct Result: Sendable, Equatable {
         public let workoutsInserted: Int
-        public let workoutsSkipped: Int       // already-present (idempotent re-import)
+        public let workoutsSkipped: Int // already-present (idempotent re-import)
         public let jumpTestsInserted: Int
         public let jumpTestsSkipped: Int
         public let readinessInserted: Int
