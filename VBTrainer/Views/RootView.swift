@@ -102,7 +102,7 @@ private struct LiveWorkoutPiPBubble: View {
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.orange.opacity(0.6), lineWidth: 1.2)
+                    .stroke(Tokens.Color.training.opacity(0.6), lineWidth: 1.2)
             )
             .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
             .frame(width: 145)
@@ -113,7 +113,7 @@ private struct LiveWorkoutPiPBubble: View {
     private var activeContent: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
-                Circle().fill(Color.orange).frame(width: 6, height: 6)
+                Circle().fill(Tokens.Color.training).frame(width: 6, height: 6)
                 Text("训练中").font(.system(size: 9, weight: .heavy)).tracking(0.6)
                     .foregroundStyle(.secondary)
             }
@@ -148,7 +148,7 @@ private struct LiveWorkoutPiPBubble: View {
             Text(formatTime(payload.restRemainingSec ?? 0))
                 .font(.system(size: 22, weight: .heavy, design: .rounded))
                 .monospacedDigit()
-                .foregroundStyle((payload.restRemainingSec ?? 999) <= 10 ? Color.orange : Color.primary)
+                .foregroundStyle((payload.restRemainingSec ?? 999) <= 10 ? Tokens.Color.training : Color.primary)
             Text("下组 \(Int(payload.targetWeightKg))kg × \(payload.targetReps)")
                 .font(.system(size: 10))
                 .foregroundStyle(.secondary)

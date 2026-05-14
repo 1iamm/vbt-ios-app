@@ -198,8 +198,8 @@ private struct SetActiveView: View {
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 54)
-                .background(Color.orange, in: RoundedRectangle(cornerRadius: 14))
-                .shadow(color: Color.orange.opacity(0.45), radius: 10, x: 0, y: 4)
+                .background(Tokens.Color.training, in: RoundedRectangle(cornerRadius: 14))
+                .shadow(color: Tokens.Color.training.opacity(0.45), radius: 10, x: 0, y: 4)
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 16)
@@ -387,7 +387,7 @@ private struct RestView: View {
 
     var body: some View {
         ZStack {
-            (isFinal10s ? Color.orange.opacity(0.18) : Color.black).ignoresSafeArea()
+            (isFinal10s ? Tokens.Color.training.opacity(0.18) : Color.black).ignoresSafeArea()
                 .animation(.easeOut(duration: 0.3), value: isFinal10s)
 
             VStack(spacing: 0) {
@@ -442,7 +442,7 @@ private struct RestView: View {
                         .padding(.vertical, 12)
                         .background(
                             LinearGradient(
-                                colors: [Color.orange.opacity(0.85), Color.orange.opacity(0.65)],
+                                colors: [Tokens.Color.training.opacity(0.85), Tokens.Color.training.opacity(0.65)],
                                 startPoint: .leading, endPoint: .trailing
                             ),
                             in: RoundedRectangle(cornerRadius: 12)
@@ -463,7 +463,7 @@ private struct RestView: View {
                     Circle()
                         .trim(from: 0, to: ringProgress)
                         .stroke(
-                            isFinal10s ? Color.orange : Color.orange.opacity(0.85),
+                            isFinal10s ? Tokens.Color.training : Tokens.Color.training.opacity(0.85),
                             style: StrokeStyle(lineWidth: 10, lineCap: .round)
                         )
                         .rotationEffect(.degrees(-90))
@@ -516,7 +516,7 @@ private struct RestView: View {
         .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.orange.opacity(0.5), lineWidth: 1.5)
+                .stroke(Tokens.Color.training.opacity(0.5), lineWidth: 1.5)
         )
     }
 
