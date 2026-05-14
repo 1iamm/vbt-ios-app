@@ -1362,6 +1362,21 @@ struct SetResultView: View {
         }
     }
 
+    /// 3-second auto-advance timer (Task 2 IX-F11 / USR-F6 P0).
+    /// Re-introduced per AskUserQuestion 2026-05-14: "保留独立屏 + 3s 自动 advance".
+    /// Tap remains as instant-advance shortcut.
+    @State private var autoAdvanceTask: Task<Void, Never>?
+
+    private func advance() {
+        autoAdvanceTask?.cancel()
+        autoAdvanceTask = nil
+        if controller.nextPlannedParams != nil {
+            nav.replaceTop(with: .rest(secondsRemaining: controller.currentRestSeconds))
+        } else {
+            nav.replaceTop(with: .workoutDone)
+        }
+    }
+
     var body: some View {
         WatchScreenChrome(title: "本组结果", titleColor: color) {
             VStack(spacing: 4) {
@@ -1386,20 +1401,24 @@ struct SetResultView: View {
                     statBox(label: "目标", value: targetText, color: fg)
                 }
                 .padding(.horizontal, 10)
-                Text("点击屏幕任意位置进入休息")
+                Text("3 秒后进入休息 · 或点击屏幕跳过")
                     .font(.system(size: 8, weight: .medium))
                     .foregroundStyle(sub.opacity(0.7))
                     .padding(.top, 6)
                     .padding(.bottom, 6)
             }
-            // Whole-screen tap (was: 3s auto-advance — user wanted manual control)
             .contentShape(Rectangle())
-            .onTapGesture {
-                if controller.nextPlannedParams != nil {
-                    nav.replaceTop(with: .rest(secondsRemaining: controller.currentRestSeconds))
-                } else {
-                    nav.replaceTop(with: .workoutDone)
+            .onTapGesture { advance() }
+            .onAppear {
+                autoAdvanceTask = Task {
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                    guard !Task.isCancelled else { return }
+                    await MainActor.run { advance() }
                 }
+            }
+            .onDisappear {
+                autoAdvanceTask?.cancel()
+                autoAdvanceTask = nil
             }
         }
     }
