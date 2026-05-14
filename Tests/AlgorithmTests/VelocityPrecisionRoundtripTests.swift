@@ -17,19 +17,18 @@
 import XCTest
 
 final class VelocityPrecisionRoundtripTests: XCTestCase {
-
     /// Per-rep velocities must survive encode/decode without precision loss
     /// across the entire significant range (0.01 m/s — 3.0 m/s).
     func testRepVelocityBitExactRoundtrip() throws {
         let samples: [Double] = [
-            0.0,             // boundary
-            0.01,            // sub-threshold
-            0.17,            // bench MPV @ 1RM (Gonzalez-Badillo 2010)
-            0.42,            // typical 5-rep working set
-            0.583_172_94,    // arbitrary high-precision
-            1.0,             // jump-ish
-            2.5,             // upper bound
-            -0.42,           // eccentric (signed)
+            0.0,           // boundary
+            0.01,          // sub-threshold
+            0.17,          // bench MPV @ 1RM (Gonzalez-Badillo 2010)
+            0.42,          // typical 5-rep working set
+            0.583_172_94,  // arbitrary high-precision
+            1.0,           // jump-ish
+            2.5,           // upper bound
+            -0.42,         // eccentric (signed)
         ]
         for v in samples {
             let rep = RepSnapshot(
@@ -55,23 +54,29 @@ final class VelocityPrecisionRoundtripTests: XCTestCase {
     /// A SetSnapshot containing N reps must round-trip — guards against
     /// nested-array Codable bugs.
     func testSetWithRepsRoundtrip() throws {
-        let reps = (0 ..< 5).map { i in
-            RepSnapshot(
+        var reps: [RepSnapshot] = []
+        for i in 0 ..< 5 {
+            let di = Double(i)
+            let mv: Double = 0.5 - di * 0.02
+            let pv: Double = 0.6 - di * 0.02
+            let mpv: Double = 0.55 - di * 0.02
+            let ts = Date(timeIntervalSince1970: 1_700_000_000 + di)
+            reps.append(RepSnapshot(
                 id: UUID(),
                 index: i + 1,
-                meanVelocity: 0.5 - Double(i) * 0.02,
-                peakVelocity: 0.6 - Double(i) * 0.02,
-                meanPropulsiveVelocity: 0.55 - Double(i) * 0.02,
-                timestamp: Date(timeIntervalSince1970: 1_700_000_000 + Double(i)),
+                meanVelocity: mv,
+                peakVelocity: pv,
+                meanPropulsiveVelocity: mpv,
+                timestamp: ts,
                 metStatus: .met
-            )
+            ))
         }
         let set = SetSnapshot(
             id: UUID(),
             index: 1,
             weightKg: 100,
             velocityVariant: .mv,
-            targetRange: 0.45 ... 0.65,
+            targetRange: 0.45...0.65,
             vlCeiling: 0.20,
             side: .both,
             restAfterSeconds: 120,
