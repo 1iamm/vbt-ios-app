@@ -5,9 +5,20 @@
 ## Round 1 状态总览
 
 - Round 1 audit：✅ 完成（4 agent 报告全部归档于本目录）
-- Round 1 修复：⏳ 排队中
+- Round 1 修复：🟡 进行中（2026-05-14 第一批自决项已 dispatch — IX-F7, UI-§3-P2, PM-F12, UI-§3-P1）
 - Round 2 复审：未开始
 - Round 3 复审：未开始
+
+## 2026-05-14 进度日志
+
+- [x] **IX-F7** [P1] — 跳过 rest 双击防抖（PR #86）
+- [x] **UI-§3-P2** — `Tokens.Color.ai` 提取，消除 2 处硬编码（PR #87）
+- [x] **PM-F12** — HeartRateZonesDonut 孤儿组件（PR #77 已删）
+- [x] **UI-§3-P1** — HRZone SwiftUI 内建色 → 因 PR #77 删了组件本身，自动消解
+- [x] **PM-F16** — Profile 隐私文案 — 检查后发现现有文案已与 CLAUDE.md 2026-05-08 hybrid 模型一致（描述了 V1 本地 + V1.5+ 云同步）
+- [x] **IX-F15** — Watch/iPhone 速度精度一致性测试（PR #76）
+- [x] **IX-F3** — 5s → 12s + 8s 预警（PR #55）
+- [x] **IX-F4** — Watch→iPhone ACK + outbox（已 mitigated by transferUserInfo fallback）
 
 ## 高优先级 finding（多 agent 印证 / 单 agent 高严重度）
 
@@ -23,7 +34,7 @@
   - 现状：`send(message:)` 已经走 `sendMessage` → 失败时 fallback 到 `transferUserInfo`（Apple 内置队列，survives app lifecycle，自动 retry）
   - **数据丢失风险已消除**（弱信号场景由 OS 队列兜底）
   - **剩余 UI 层 finding**（"await delivery confirmation" 按钮 loading 态）→ 拆分到 UI 批次，需用户决策视觉
-- [ ] **IX-F7** [P1] iPhone/Watch 跳过 rest 双触发去重（workoutId + restCycleId）
+- [x] **IX-F7** [P1] iPhone「跳过」双击防抖（PR #86 2026-05-14）— Watch 端 `advanced` flag 已有，iPhone 端 dedup 已补齐
   - File: `LiveWorkoutView.swift:380-396`, `WatchScreens.swift:418-424`
 
 ### B2 · 关键 UX（需用户确认设计）
@@ -46,7 +57,7 @@
 
 ### B3 · 视觉一致性（视觉 token / 颜色 / 字号）
 
-- [ ] **UI-§3-P0** [P0] `Color.orange` 写死 8 处 → 跟随 `accent`（GoalTheme）
+- [ ] **UI-§3-P0** [P0] `Color.orange` 写死 8 处 → 跟随 `accent`（GoalTheme）— **需用户决策**：写死 orange（按 V4 设计稿）还是改为 accent（GoalTheme 变色）。本身是 token 替换，但视觉默认会变（如果用户改训练目标到耐力 → 黄变蓝）
   - Files: `LiveWorkoutView.swift:200-201,235,258,415,436,489`、`TodayView.swift:235,258`
 - [ ] **UI-§1-P0** [P0] `Tokens.Font` 扩档 + 全局替换 401 处 `.font(.system(size:))` 
   - 大改动，可能要分多个 PR 按文件目录批量推
@@ -74,7 +85,7 @@
 - [ ] PM-F14：Readiness 5 维度数据采到但 UI 不全
 - [ ] UI-§2-P1：iOS LiveWorkout 大数字 56/96/40/88 横跳无规律
 - [ ] UI-§2-P1：RedesignComponents 内部 SectionHeader 13pt vs TodayHeader 30pt 阶梯异常
-- [ ] UI-§3-P1：HRZone 颜色 `.blue/.green/.orange/.red` 用 SwiftUI 内建色
+- [x] UI-§3-P1：HRZone 颜色 — 因 PR #77 删除 HeartRateZonesDonut 组件本身，自动消解
 - [ ] UI-§4-P1：4pt grid 系统性破坏（spacing 10/14/18 等非 token 值散落）
 - [ ] UI-§5-P1：7 处手搓 RoundedRectangle 卡片 → 抽 `CardContainer` modifier
 - [ ] UI-§5-P1：primary CTA 按钮重复实现 3 次 → 抽 `PrimaryCTAButtonStyle(accent:)`
@@ -95,10 +106,10 @@
 ### P2 · 低优先级
 
 - [ ] PM-F6：M9 本地备份只有导出没恢复
-- [ ] PM-F12：HRZonesDonut 是孤儿组件，WorkoutDetail 没引用
+- [x] PM-F12：HRZonesDonut 是孤儿组件 — PR #77 已删 (2026-05-14)
 - [ ] PM-F13：5 种 PR 平级列在深处
 - [ ] PM-F15：HealthKit 部分数据采了但 UI 完全不读（血氧 / VO2Max / 步数）
-- [ ] PM-F16：Profile 文案 "V1 阶段数据仅本地" 与 CLAUDE.md 2026-05-08 修订冲突
+- [x] PM-F16：Profile 文案 — 检查后发现已与 hybrid 模型对齐（描述 V1 本地 + V1.5+ 可选云同步，HealthKit 永不上云）
 - [ ] PM-F17：训练模式术语 SettingsView vs TodayView 不一致
 - [ ] UI-§3-P2：`aiHue` private 在组件内 + TodayView 又复制一份 → 提为 `Tokens.Color.ai`
 - [ ] UI-§4-P2：Section header 上下间距各处不一 → 抽 `.sectionPadding()`
@@ -106,7 +117,7 @@
 - [ ] UI-§6-P1：Watch chip 用 `.blue` 实色不友好 OLED
 - [ ] IX-F13 [P2] iPhone RestView 88pt 倒计时在 SE 屏裁切
 - [ ] IX-F14 [P2] WorkoutDetail 综合时间轴横屏过渡突兀
-- [ ] IX-F15 [P2] Watch/iPhone 速度精度一致性测试用例（防止以后 drift）
+- [x] IX-F15 [P2] Watch/iPhone 速度精度一致性测试 — PR #76 (2 tests) merged 2026-05-14
 - [ ] USR-F9 [P2] Watch 休息倒计时 ±10s 按钮触控目标太小（与 UI-§6 重叠）
 
 ## Round 2 触发条件
