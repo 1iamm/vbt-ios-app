@@ -81,13 +81,19 @@ final class TabsUITest: XCTestCase {
 
         // ── 11 · ProfileEditor (from Profile) ──────────────────────────
         app.tabBars.buttons["我的"].tap()
-        let editRow = app.buttons["profile.editProfileRow"]
+        Thread.sleep(forTimeInterval: 0.6)
+        // NavigationLink inside Form renders as a cell, not a button in
+        // XCUITest. Try `descendants(.any)` so the accessibilityIdentifier
+        // on the inner HStack still matches.
+        let editRow = app.descendants(matching: .any)["profile.editProfileRow"].firstMatch
         if editRow.waitForExistence(timeout: 4) {
             editRow.tap()
             Thread.sleep(forTimeInterval: 0.8)
             attachScreenshot("11-profile-editor")
             // Pop back to the tab stack
-            app.navigationBars.buttons.firstMatch.tap()
+            if app.navigationBars.buttons.count > 0 {
+                app.navigationBars.buttons.firstMatch.tap()
+            }
             Thread.sleep(forTimeInterval: 0.4)
         }
 

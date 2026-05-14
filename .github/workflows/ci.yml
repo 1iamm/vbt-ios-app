@@ -426,7 +426,7 @@ jobs:
             const tag_marker = '<!-- pr-screenshots -->';
 
             let body = `${tag_marker}\n## 🎬 自动验收 · 截图 (${sha})\n\n`;
-            body += `测试跑通 \`OnboardingUITest.testOnboardingFlow\`，按以下顺序展示动线：\n\n`;
+            body += `${pngs.length} 张截图覆盖：onboarding 4 步 + 5 个主 tab + 深层交互（Tweaks / Profile editor / 新模板编辑器）\n\n`;
             body += `<table><tr>\n`;
             for (const png of pngs) {
               const url = `${baseUrl}/${encodeURIComponent(png)}`;
