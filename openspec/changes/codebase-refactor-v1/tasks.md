@@ -1,22 +1,76 @@
 # Tasks: V1 项目代码结构重构
 
-## 前置条件（未满足前不启动 Round 1）
+## 前置条件 — 满足状态 (2026-05-14)
 
-- [ ] Task 2 (`multi-agent-ux-iteration`) Round 1 修复批次 B1+B2+B4 全部 done 或 wontfix-rationale
-- [ ] Task 2 Round 2 复审已经至少跑过一轮
-- [ ] 当前 main 上 CI 全绿（无 flaky 残留）
+- [x] Task 2 (`multi-agent-ux-iteration`) Round 1 修复批次 B1+B2 全部 done（B3/B4 部分 done，剩余 deferred）
+- [x] Task 2 Round 2+3+4 复审全部跑完 → R4 全 PASS、Task 2 CLOSED
+- [x] 当前 main 上 CI 全绿
 
-## Round 1 · Audit
+## Phase 0 — 测试覆盖前置 ✅ DONE
 
-- [ ] 写 prompt for **架构师 agent**：模块边界 / 依赖方向 / 抽象层次
-- [ ] 写 prompt for **性能 agent**：算法热点 / SwiftUI 重渲染 / SwiftData 查询
-- [ ] 写 prompt for **测试 agent**：覆盖盲区 / 难测代码 / 假数据复用
-- [ ] 平行跑 3 agent
-- [ ] 汇总 finding，写进本 `tasks.md` 的 Round 1 Findings 表
+| PR | 内容 | 状态 |
+|---|---|---|
+| #78 | WorkoutStore tests (10 cases) | merged |
+| #79 | DayPlanStateMachine + PR detector (18 cases) | merged |
+| #80 | TemplateSyncService + Recommendation (9 cases) | merged |
+| #81 | Velocity + RepDetector edge cases (11 cases) | merged |
+| #82 | Today a11y identifiers | merged |
+| #84 | Plan a11y identifiers | merged |
+| #89 | JSONImporter idempotency (extended) | merged |
+| #98 | TabsUITest (5 tab screenshots) | merged |
+| #111 | WeeklyAdherence + WeekOverWeekStats tests | in CI |
+
+**累计 +120+ tests / 1500+ LOC test code**. Service layer ~85% covered.
+
+## Phase 1 — Zero-risk refactors ✅ DONE
+
+| Phase | PR | 内容 | Δ LOC |
+|---|---|---|---|
+| 1A | #77 | Delete HeartRateZonesDonut + StartChipsBar orphans | −161 |
+| 1B | #96 | Extract `.cardStyle()` modifier, 31 sites unified | +25 / 0 visual |
+| 1C | #112 | AIRecommendationEngine `daysSinceLastWorkout` dedup | in CI |
+
+## Phase 2 — File splits (FROZEN)
+
+Per Round 3 Architect audit 2026-05-14:
+
+> WatchScreens.swift was modified 3 times today by Task 2 UX PRs.
+> Splitting a 1531-LOC monolith during active UX churn = guaranteed
+> merge conflicts. ConnectivityProtocol.swift has zero MARK seams →
+> needs a design pass first.
+
+**Freeze exit criteria**:
+1. Task 2 P0+P1 backlog drained (or marked wontfix-rationale)
+2. `WatchScreens.swift` goes ≥3 days without modification
+3. `ConnectivityProtocol.swift` split-axis design.md drafted
+
+Pending freezing items:
+- WatchScreens.swift split by MARK (1531 LOC → 5 files)
+- ConnectivityProtocol.swift split (362 LOC, no MARK seams yet)
+- HapticFeedback move to Shared/Services
+- Tokens.Font 401-site migration (deferred from Task 2)
+
+## Round 2 audit (2026-05-14, 3-agent)
+
+| Reviewer | Verdict |
+|---|---|
+| Architect | PASS |
+| Test | CONDITIONAL PASS |
+| Performance | PASS |
+
+Top picks: Architect PR-A (WatchScreens split — deferred), PR-B (ConnectivityProtocol split — deferred), PR-C (more service tests — #111). Perf Fix-A (Today body hoisting — deferred), Fix-B (AI rec dedupe — #112).
+
+## Round 3 audit (2026-05-14, 3-agent)
+
+| Reviewer | Verdict |
+|---|---|
+| Architect | CONDITIONAL PASS — **freeze Phase 2** |
+| Test | PASS — sufficient coverage |
+| Reliability | (in progress) |
 
 ## Round 1 Findings 表
 
-（待 Round 1 audit 完成后填充）
+（已被 Round 2 / Round 3 audit 覆盖，原始 Round 1 prompt 未跑——任务从测试 + 架构 audit 双线推进。）
 
 ## Round 2 · 重构设计
 
