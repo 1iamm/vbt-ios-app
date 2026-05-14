@@ -37,22 +37,27 @@ struct MainTabsView: View {
             TodayView()
                 .tabItem { Label("今天", systemImage: "sun.max.fill") }
                 .tag(Tab.today)
+                .accessibilityIdentifier("tab.today")
 
             PlansListView()
                 .tabItem { Label("计划", systemImage: "doc.on.doc.fill") }
                 .tag(Tab.plan)
+                .accessibilityIdentifier("tab.plan")
 
             HistoryView()
                 .tabItem { Label("历史", systemImage: "calendar") }
                 .tag(Tab.history)
+                .accessibilityIdentifier("tab.history")
 
             StatsView()
                 .tabItem { Label("统计", systemImage: "chart.bar.fill") }
                 .tag(Tab.stats)
+                .accessibilityIdentifier("tab.stats")
 
             ProfileView()
                 .tabItem { Label("我的", systemImage: "person.crop.circle") }
                 .tag(Tab.profile)
+                .accessibilityIdentifier("tab.profile")
         }
         .tint(Tokens.Color.accent)
         .onReceive(NotificationCenter.default.publisher(for: .vbtSwitchToPlanTab)) { _ in
