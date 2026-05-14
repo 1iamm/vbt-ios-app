@@ -31,6 +31,7 @@ struct ProfileView: View {
                                 }
                             }
                         }
+                        .accessibilityIdentifier("profile.editProfileRow")
                     } header: {
                         Text("个人资料")
                     }
