@@ -119,6 +119,7 @@ targets:
         excludes:
           - "AlgorithmTests/LiveWorkoutControllerVLTests.swift"
           - "UITests"  # XCUITest 在 UITests target 里编译，不属于 unit-test target
+          - "WatchUITests"  # watchOS UITest 在 VBTrainerWatchUITests target 里编译
       - path: Shared
     dependencies:
       - target: VBTrainer
@@ -148,6 +149,28 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.vbtrainer.app.uitests
         TEST_TARGET_NAME: VBTrainer
 
+  # ─────────────────────────────────────────────────────────────
+  # Watch UI Tests (XCUITest on watchOS sim)
+  # Separate target — same rationale as VBTrainerUITests but
+  # platform=watchOS. PR #119 attempted to capture Watch screenshots
+  # via raw `simctl io` and failed in CI; doing it via a real
+  # XCUITest bundle is the supported path.
+  # ─────────────────────────────────────────────────────────────
+  VBTrainerWatchUITests:
+    type: bundle.ui-testing
+    platform: watchOS
+    deploymentTarget: "10.0"
+    sources:
+      - path: Tests/WatchUITests
+    dependencies:
+      - target: VBTrainerWatch Watch App
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vbtrainer.app.watchkitapp.uitests
+        TEST_TARGET_NAME: "VBTrainerWatch Watch App"
+        TARGETED_DEVICE_FAMILY: "4"
+        WATCHOS_DEPLOYMENT_TARGET: "10.0"
+
 schemes:
   VBTrainer:
     build:
@@ -169,5 +192,10 @@ schemes:
     build:
       targets:
         VBTrainerWatch Watch App: all
+        VBTrainerWatchUITests: [test]
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - VBTrainerWatchUITests

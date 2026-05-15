@@ -262,14 +262,13 @@ jobs:
             CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/build-ios.log
 
       - name: Build watchOS (simulator)
-        # Standalone compile-only gate (watchOS scheme has no tests).
-        # Note: we use a specific simulator (not 'generic') so the build
-        # output is installable for the screenshot step that follows.
+        # Build the Watch scheme (which now includes VBTrainerWatchUITests)
+        # against a specific Watch sim so the test bundle + host app are
+        # both ready for the test step that follows.
         id: build_watch
         run: |
           set -o pipefail
           # Pick a Watch simulator that's compatible with deploymentTarget 10.0.
-          # The macos-26 runner has multiple — take the first listed Series.
           WATCH_UDID=$(xcrun simctl list devices available --json | python3 -c '
           import json, sys
           data = json.load(sys.stdin)
@@ -285,7 +284,7 @@ jobs:
           echo "udid=$WATCH_UDID" >> $GITHUB_OUTPUT
           echo "Picked Watch sim: $WATCH_UDID"
 
-          xcodebuild build \
+          xcodebuild build-for-testing \
             -project VBTrainer.xcodeproj \
             -scheme "VBTrainerWatch Watch App" \
             -destination "platform=watchOS Simulator,id=$WATCH_UDID" \
@@ -295,66 +294,54 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/build-watch.log
 
-      - name: Capture watchOS screenshots
-        # Boot the Watch sim, install the app, launch, and take one
-        # `xcrun simctl io ... screenshot` shot. Bypasses watchOS
-        # XCUITest (historically flaky on simulators). Pure shell.
-        #
-        # Hardening (after first run hung past the 25-min job timeout):
-        #   - every external command wrapped in `timeout N` so a stuck
-        #     simctl doesn't waste the whole CI budget
-        #   - extensive logging so failures are diagnosable
-        #   - non-fatal at every step — Watch capture is best-effort,
-        #     iOS pipeline must not block on it
+      - name: Run watchOS UI tests
+        # Real XCUITest on watchOS sim — replaces the previous fragile
+        # `simctl io` shell capture (PR #119 attempted, never produced
+        # an image in CI). The test bundle attaches its own .keepAlways
+        # screenshot named `20-watch-root` which xcparse extracts after
+        # the run, alongside the iOS shots.
         if: needs.fast-fail.outputs.has_ui == 'true'
-        env:
-          WATCH_UDID: ${{ env.WATCH_UDID }}
-        timeout-minutes: 5
+        continue-on-error: true
+        timeout-minutes: 8
         run: |
-          set +e  # never fail the whole step
-          mkdir -p /tmp/screenshots
-          echo "=== Watch screenshot capture ==="
-          if [ -z "$WATCH_UDID" ]; then
-            echo "No Watch sim UDID — skipping."
-            exit 0
-          fi
-          echo "Using Watch sim UDID: $WATCH_UDID"
+          set +e  # tolerate failures — Watch UI tests are best-effort
+          rm -rf /tmp/WatchUITestResults.xcresult
+          xcodebuild test-without-building \
+            -project VBTrainer.xcodeproj \
+            -scheme "VBTrainerWatch Watch App" \
+            -destination "platform=watchOS Simulator,id=$WATCH_UDID" \
+            -only-testing:VBTrainerWatchUITests \
+            -derivedDataPath /tmp/watch-dd \
+            -resultBundlePath /tmp/WatchUITestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" 2>&1 | tee /tmp/watch-uitest.log
+          echo "watch test exit: $?"
+          ls -la /tmp/WatchUITestResults.xcresult 2>&1 || echo "No xcresult bundle (test may have failed before producing output)."
 
-          echo "--- Locate built app ---"
-          APP_PATH=$(find /tmp/watch-dd/Build/Products -type d -name "VBTrainerWatch Watch App.app" -path "*watchsimulator*" 2>/dev/null | head -1)
-          if [ -z "$APP_PATH" ]; then
-            echo "Watch .app not found; listing /tmp/watch-dd/Build/Products:"
-            find /tmp/watch-dd/Build/Products -maxdepth 4 2>&1 | head -50 || true
-            exit 0
-          fi
-          echo "App: $APP_PATH"
-
-          echo "--- Boot Watch sim (60s timeout) ---"
-          timeout 60 xcrun simctl boot "$WATCH_UDID" 2>&1 || echo "(boot returned $?; may already be booted)"
-          timeout 90 xcrun simctl bootstatus "$WATCH_UDID" -b 2>&1 || echo "(bootstatus timed out)"
-
-          echo "--- Install (60s timeout) ---"
-          timeout 60 xcrun simctl install "$WATCH_UDID" "$APP_PATH" 2>&1
-          INSTALL_RC=$?
-          echo "install exit: $INSTALL_RC"
-          if [ "$INSTALL_RC" -ne 0 ]; then
-            echo "Install failed; skipping launch."
-            exit 0
-          fi
-
-          echo "--- Launch (30s timeout) ---"
-          timeout 30 xcrun simctl launch "$WATCH_UDID" com.vbtrainer.app.watchkitapp 2>&1 || echo "(launch returned $?)"
-
-          echo "--- Wait for first paint (10s) + screenshot ---"
-          sleep 10
-          timeout 30 xcrun simctl io "$WATCH_UDID" screenshot /tmp/screenshots/20-watch-root.png 2>&1
-          if [ -f /tmp/screenshots/20-watch-root.png ]; then
-            ls -la /tmp/screenshots/20-watch-root.png
-            echo "✅ Watch screenshot captured."
-          else
-            echo "❌ Watch screenshot file not created (non-fatal)."
-          fi
-          exit 0
+      - name: Extract watchOS screenshots
+        # Same xcparse pattern as iOS UI tests — pulls .keepAlways
+        # XCTAttachment(screenshot:) into /tmp/screenshots/, where the
+        # iOS pipeline already deposits its files. The release-upload
+        # step picks them all up.
+        if: always() && needs.fast-fail.outputs.has_ui == 'true'
+        continue-on-error: true
+        run: |
+          {
+            mkdir -p /tmp/screenshots
+            if [ ! -d /tmp/WatchUITestResults.xcresult ]; then
+              echo "No watch xcresult — skipping watch screenshot extraction."
+              exit 0
+            fi
+            # xcparse already installed by the iOS extract step earlier;
+            # if not present (build job ordering), install on demand.
+            command -v xcparse >/dev/null 2>&1 || brew install chargepoint/xcparse/xcparse
+            xcparse screenshots /tmp/WatchUITestResults.xcresult /tmp/screenshots/ 2>&1
+            find /tmp/screenshots -mindepth 2 -type f -name "*.png" -exec mv -n {} /tmp/screenshots/ \; 2>/dev/null || true
+            find /tmp/screenshots -mindepth 1 -type d -empty -delete 2>/dev/null || true
+            echo "Watch screenshot dir contents:"
+            ls -la /tmp/screenshots/ 2>&1 | grep -i watch || true
+          } | tee /tmp/extract-watch.log
 
       - name: Wait for simulator boot complete
         run: |
