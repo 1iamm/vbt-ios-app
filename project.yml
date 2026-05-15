@@ -119,6 +119,7 @@ targets:
         excludes:
           - "AlgorithmTests/LiveWorkoutControllerVLTests.swift"
           - "UITests"  # XCUITest 在 UITests target 里编译，不属于 unit-test target
+          - "WatchUITests"  # watchOS UITest 在 VBTrainerWatchUITests target 里编译
       - path: Shared
     dependencies:
       - target: VBTrainer
